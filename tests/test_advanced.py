@@ -40,7 +40,7 @@ def test_idm_preconfirmed_only():
     pivots=[Pivot("LOW",2,98,4),Pivot("LOW",6,99,8)]
     breaks=[br(9,"BULLISH",Pivot("HIGH",7,110,8))]
     x=find_idm(pivots,breaks)
-    assert len(x)==1 and x[0].source_index==2
+    assert len(x)==1 and x[0].source_index==6  # latest confirmed opposing pivot
 
 def test_atr_missing_and_ratio():
     assert not qualify_atr(None,100).accepted
