@@ -10,6 +10,7 @@ from .backtest import BacktestConfig, walk_forward_backtest
 from .csv_data import read_candles_csv
 from .historical_replay import ReplayConfig, SMCReplay
 from .data_quality import audit_1m, drop_terminal_1530
+from .structure_diagnostics import audit_choch_link
 
 
 def summarize_snapshots(snapshots):
@@ -78,6 +79,7 @@ def main() -> None:
         "snapshots":len(engine.snapshots),
         "signals_emitted":sum(x.signal is not None for x in engine.snapshots),
         "signal_diagnostics":summarize_snapshots(engine.snapshots),
+        "structure_link_diagnostics":audit_choch_link(ltf),
         "trades":len(report.trades),
         "signals_rejected":report.signals_rejected,
         "signals_skipped":report.signals_skipped,
