@@ -11,7 +11,7 @@ from zoneinfo import ZoneInfo
 from .models import Candle
 
 IST=ZoneInfo("Asia/Kolkata")
-MASTER_URL="https://margincalculator.angelone.in/OpenAPI_File/files/OpenAPIScripMaster.json"
+MASTER_URL="https://margincalculator.angelbroking.com/OpenAPI_File/files/OpenAPIScripMaster.json"
 INTERVALS={"ONE_MINUTE":(timedelta(minutes=1),29),"ONE_HOUR":(timedelta(hours=1),399)}
 INDICES={"NIFTY":("NSE","NIFTY"),"SENSEX":("BSE","SENSEX")}
 
@@ -27,10 +27,21 @@ class HistoryResult:
 def resolve_token(master:list[dict],symbol:str)->str:
     if symbol not in INDICES: raise ValueError("unknown symbol")
     exchange,name=INDICES[symbol]
-    found={str(x.get("token","")).strip() for x in master
-           if str(x.get("name","")).upper().strip()==name
-           and str(x.get("exch_seg","")).upper().strip()==exchange
-           and str(x.get("token","")).strip()}
+    # The instrument master exposes index names in both "name" and
+    # "symbol" fields, depending on the record/version. Do not accidentally
+    # select a derivative with a similar name or another exchange.
+    aliases={"NIFTY":{"NIFTY","NIFTY 50"},"SENSEX":{"SENSEX"}}[symbol]
+    matches=[x for x in master
+             if str(x.get("exch_seg","")).upper().strip()==exchange
+             and (str(x.get("name","")).upper().strip() in aliases
+                  or str(x.get("symbol","")).upper().strip() in aliases)
+             and str(x.get("token","")).strip()]
+    # Prefer index-specific instrument types over duplicate ordinary symbols.
+    indices=[x for x in matches
+             if str(x.get("instrumenttype","")).upper().strip() in ("AMXIDX","INDEX")]
+    if indices:
+        matches=indices
+    found={str(x["token"]).strip() for x in matches}
     if len(found)!=1: raise HistoryError("INDEX_TOKEN_MISSING_OR_AMBIGUOUS")
     return found.pop()
 
