@@ -12,6 +12,7 @@ from .data_quality import audit_1m,drop_terminal_1530
 from .historical_replay import ReplayConfig
 from .multiday_replay import replay_by_session,validate_hourly
 from .structure_diagnostics import audit_choch_link
+from .research_sessions import regular_november_2026, regular_htf_without_special
 
 
 def summarize_snapshots(snapshots):
@@ -44,10 +45,17 @@ def main():
     parser.add_argument("--setups-out",help="One row per unique sweep (diagnostic CSV)")
     parser.add_argument("--drop-terminal-1530",action="store_true",
                         help="Exclude isolated closing record after 15:15; never interpolate")
+    parser.add_argument("--nov-2026-regular-only",action="store_true",
+                        help="Research profile: exclude known 8 Nov Muhurat session and all records after 15:15 on regular days")
     args=parser.parse_args()
     ltf=read_candles_csv(args.ltf)
     htf=read_candles_csv(args.htf)
-    if args.drop_terminal_1530:
+    normalized=None
+    if args.nov_2026_regular_only:
+        normalized=regular_november_2026(ltf)
+        ltf=list(normalized.candles)
+        htf=list(regular_htf_without_special(htf))
+    elif args.drop_terminal_1530:
         ltf=list(drop_terminal_1530(ltf))
     audit=audit_1m(ltf)
     if not audit.safe_for_replay:
@@ -86,6 +94,11 @@ def main():
         counts.update(session.unique_sweep_outcomes)
     print(json.dumps({
         "mode":"INDEX_POINTS_ONLY_NOT_OPTION_PNL",
+        "nov_2026_research_profile":({"excluded_special_candles":normalized.removed_special,
+                                     "excluded_closing_tail_records":normalized.removed_closing_tail,
+                                     "truncated_at":"15:15 IST",
+                                     "note":"Not full-day CAS coverage or complete special session replay"}
+                                    if normalized else None),
         "ltf_bars":len(ltf),"htf_bars":len(htf),
         "htf_full_hour_bars":len(verified),
         "htf_terminal_partial_bars_excluded":excluded,

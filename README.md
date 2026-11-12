@@ -131,3 +131,28 @@ python -m smc.replay_cli --ltf data/nifty_1m.csv --htf data/nifty_1h.csv --symbo
 ```
 
 `setup_diagnostics.csv` provides **one final evaluation per observed sweep**, including stage, timestamps, entry and sweep stop where available. A preliminary `MISSING_VERIFIED_LIQUIDITY_TARGET` means the entry-only stage was deliberately run without a target. It is **not** a broker failure or a final verified risk rejection. The net result remains INDEX POINTS, NOT option premium P&L.
+
+## November 2026 normal-session research profile
+
+The actual November 2–11 NIFTY history can include a special Muhurat session
+on **Sunday November 8, 2026**, and inconsistent broker closing-tail timestamps
+(15:29 or 15:30 after 15:15). Do **not** interpret these as a complete normal
+1-minute stream or as verified regular 1-minute candles.
+
+The **explicit**, narrowly scoped flag `--nov-2026-regular-only` removes
+the known special date (November 8) and retains regular-day close-timestamps
+only through **15:15 IST**. It also excludes that special date from HTF.
+The remaining LTF still passes the strict continuity gate; no arbitrary
+gaps are accepted or filled. This is a conservative research subset, **not**
+complete session coverage, and it is not a universal exchange calendar.
+
+```powershell
+python -m smc.replay_cli --ltf data/nifty_multi_1m.csv --htf data/nifty_1h.csv --symbol NIFTY --htf-minutes 60 --nov-2026-regular-only --out trades_multi.csv --setups-out setup_diagnostics_multi.csv
+```
+
+NSE confirmed the November 8 special Muhurat session (14:20 onward):
+https://archives.nseindia.com/content/circulars/FAOP76940.pdf
+
+If the strict 1-hour HTF validator raises a missing-slot error, inspect the
+broker hourly dataset against the trading-day/session calendar; do not
+manufacture hour bars to make the test pass.
