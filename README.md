@@ -183,3 +183,58 @@ excursions; worst-case stop-first ordering still controls the trade.
 The starting dataset is too small to validate profitability. Future phases
 need multiple out-of-sample market regimes, 5M confirmation variants, real
 option bid/ask and Greeks, and market-calendar verified session definitions.
+
+## Phase 6 — observed option premium research (initial implementation)
+
+**Goal:** Seek genuine CE/PE option-buying opportunities with a gross premium
+gain of 20–25 points per unit, **without fixing a cheap-premium price range**.
+No daily return is guaranteed. This is not an auto-trading system.
+
+1. Phase 5 generates *causally approved index* signals (no future bars).
+2. For each signal, select an actual historical quote **strictly after** its
+   1-minute bar-close timestamp. Only same-side NIFTY/SENSEX contracts, valid
+   expiry, positive liquidity, and acceptable bid–ask spread qualify.
+3. Buy at observed **ask**, exit at observed **bid** at the first seen premium
+   stop or target, or at an observed time exit. Missing quotes and intraday
+   gaps are *unobservable*, **not filled**. One completed trade per session;
+   overlapping setups are skipped rather than combined.
+4. Target/stop/fees are per-option-unit; report 1-lot indicative rupees from
+   the supplied historical lot size. At least 2R after per-unit costs is
+   mandatory. Targets are observed quote thresholds, not promised fills.
+5. No index-points-to-premium conversion, imaginary delta/IV forecasts,
+   exchange data downloads, authenticated brokerage orders, live signals,
+   calendar inference or no-data profits.
+
+### Commands
+
+```powershell
+git switch sandbox
+git pull origin sandbox
+python -m pytest -q
+python -u -m smc.phase5_cli --ltf data/nifty_multi_1m.csv --htf data/nifty_1h.csv --symbol NIFTY --strategy ALL --nov-2026-regular-only --signals-out phase5_signals.csv --result-out phase5_result.json
+# ONLY once you have genuine timestamped historical option bid/ask quotes:
+python -m smc.phase6_cli --signals phase5_signals.csv --quotes data/nifty_option_quotes.csv --target 25 --stop 10 --cost-per-unit 1 --out phase6_trades.csv --result-out phase6_result.json
+```
+
+The option tape CSV must be sorted by quote timestamp (many contracts may
+share a timestamp), with these columns:
+
+`timestamp,symbol,side,strike,expiry,bid,ask,lot_size,volume,delta`
+
+All timestamps are offset-aware ISO 8601, e.g.
+`2026-11-11T12:15:30+05:30`; expiry also requires offset.
+`side` is `CE` or `PE`, symbol `NIFTY` or `SENSEX`. Delta is optional
+and not used to project premium returns. Volume represents provider-reported
+option volume; it is not invented. Price range has no arbitrary upper/lower
+limit. Different contracts at the same earliest quote instant are ranked by
+spread and volume, **not** by later returns. Provider quote coverage must
+be independently audited before any performance interpretation.
+
+**Limitations and next work:** add richer bid/ask/size/orderbook quote
+quality checks, contract-specific trading calendars and lot sizes, robust
+multi-quote intrabar sampling, signal/quote alignment and one-position-at-a-time
+across overlapping strategies (rather than today's one-completed-trade-per-day
+research safeguard), fees/slippage model, premium-vs-index joint attribution,
+walk-forward train/validation splits, forward paper trading, and broker-specific
+historical data adapter after source capabilities/licensing are verified.
+Never turn on live orders by default.
