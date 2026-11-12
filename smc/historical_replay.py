@@ -50,6 +50,7 @@ class ReplaySnapshot:
     htf_bars_available: int
     entry_state_counts: tuple[tuple[str,int], ...] = ()
     entry_reason_counts: tuple[tuple[str,int], ...] = ()
+    rejection_detail: dict | None = None
 
 
 class SMCReplay:
@@ -138,8 +139,21 @@ class SMCReplay:
                          candidate.stop,target,True,"REPLAY_RESEARCH_V1")
         validation=validate_index_setup(setup)
         if not validation.accepted:
+            risk=abs(candidate.entry-candidate.stop)
+            reward=(target-candidate.entry if candidate.side==Side.CE
+                    else candidate.entry-target)
+            detail={"sweep_time":candles[candidate.sweep_index].timestamp.isoformat(),
+                    "confirmation_time":now.isoformat(),
+                    "side":candidate.side.value,
+                    "entry":candidate.entry,
+                    "stop":candidate.stop,
+                    "target":target,
+                    "risk_points":risk,
+                    "reward_points":reward,
+                    "index_rr":reward/risk if risk>0 else None,
+                    "reason":",".join(validation.reasons)}
             return ReplaySnapshot(None,"NO_TRADE",",".join(validation.reasons),
-                                  len(candles),len(htf))
+                                  len(candles),len(htf),rejection_detail=detail)
         # Option Greeks unavailable: signal is INDEX research only.
         return ReplaySnapshot(Signal(setup,latest),"INDEX_RESEARCH_CANDIDATE",
                               "OPTION_DATA_NOT_VALIDATED",len(candles),len(htf))

@@ -97,6 +97,9 @@ def main():
         "signals_emitted":sum(s.signal is not None for s in result.snapshots),
         "signal_diagnostics":summarize_snapshots(result.snapshots),
         "unique_sweep_outcomes":dict(sorted(counts.items())),
+        "risk_rejection_details":[{"date":session.date,**snapshot.rejection_detail}
+             for session in result.sessions for snapshot in session.snapshots
+             if snapshot.rejection_detail is not None],
         "unique_sweeps_total":sum(counts.values()),
         "structure_link_diagnostics_by_day":{
              s.date:audit_choch_link([c for c in ltf

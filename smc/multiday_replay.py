@@ -79,6 +79,16 @@ def validate_hourly(htf:Sequence[Candle],ltf:Sequence[Candle],duration_minutes:i
         approved.append(c)
     if not approved:
         raise ValueError("NO_FULL_HOURLY_HTF_CANDLES")
+    # For each observed HTF session require the complete regular six full
+    # hourly slots. Otherwise an unobserved hourly gap can alter HTF bias.
+    # No claim is made that an entirely absent calendar day is a holiday.
+    by_day={}
+    for bar in approved:
+        stamp=bar.timestamp.astimezone(IST)
+        by_day.setdefault(stamp.date(),set()).add(stamp.time())
+    expected={time(h,15) for h in range(9,15)}
+    if any(slots!=expected for slots in by_day.values()):
+        raise ValueError("HTF_MISSING_OR_DUPLICATE_FULL_HOUR_SLOT")
     if approved[0].timestamp>=ltf[0].timestamp:
         raise ValueError("HTF_HISTORY_MUST_PRECEDE_LTF")
     return tuple(approved),dropped
