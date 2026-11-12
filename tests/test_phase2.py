@@ -41,9 +41,9 @@ def test_sweep_and_run_differ_by_close():
     assert classify_liquidity_events(cs2,[lev])[0].kind=="RUN"
 
 
-def test_new_level_not_swept_by_its_own_candle():
+def test_new_swing_level_not_swept_by_its_own_confirmation_candle():
     cs = make([100,120], [98,100], [99,110])
-    lev = LiquidityLevel("PDH",110,1,(0,),1)
+    lev = LiquidityLevel("BSL",110,1,(0,),2)
     assert classify_liquidity_events(cs,[lev])==[]
 
 
