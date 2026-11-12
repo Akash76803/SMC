@@ -49,3 +49,27 @@ The demo uses **synthetic index candles only**. `smc.backtest.walk_forward_backt
 Conservative intrabar treatment: if a candle touches both stop and target, stop wins. Gaps beyond exits fill at open, not the old threshold. Fees/slippage inputs are **index-point-equivalent illustration**, *not* actual option fees. Result `total_net_index_points` must never be reported as rupee profit or option premium P&L.
 
 **Not yet implemented:** automatic reconstruction of complete historic SMC/HTF signals, a real historical market-data loader, historical option bid/ask and Greeks, exchange calendars, actual option-premium P&L, broker fills, validated strategy performance, and live trading.
+
+## Phase 3.5: historical CSV loader and causal SMC research replay
+
+Use two independently sourced CSV files with the exact headers:
+```csv
+timestamp,open,high,low,close,volume
+2026-11-12T09:16:00+05:30,25000,25010,24990,25004,100000
+2026-11-12T09:17:00+05:30,25004,25012,24998,25008,100500
+```
+
+- **LTF timestamps are bar CLOSE times**, e.g. a 09:15–09:16 1-minute candle has timestamp 09:16.
+- **HTF timestamps are bar START times** for this phase, e.g. a 09:15–10:15 hourly candle is recorded at 09:15. Only its close at 10:15 becomes visible during replay.
+- CSV ISO-8601 timestamp MUST contain a UTC offset; no naive timestamps. Every OHLC row must be complete and strictly time ordered.
+- You must supply **real, independently validated historical market CSVs** yourself. There is no bundled market feed or option data. Inadequate history or unconfirmed structure appropriately produces zero signals.
+- Historical signal reconstruction re-runs closed-candle swing/liquidity, structure, provisional OB/IDM, FVG, HTF bias, target, ATR and index RR checks on each prefix. Historical option Greeks, option spread, premium PnL and actual broker fills are **not** checked; this experiment must NOT be interpreted as the full live option strategy.
+- Requires sufficient HTF warmup (at least `2*external_k+2` fully closed HTF candles) plus LTF ATR warmup, with additional historical structure needed for actual candidates.
+
+Run from project root after installing the editable package:
+```powershell
+python -m smc.replay_cli --ltf data\nifty_1m.csv --htf data\nifty_1h.csv --symbol NIFTY --htf-minutes 60 --out trades.csv
+```
+For SENSEX, change symbol and paths. This writes per-trade INDEX-points research results in `trades.csv`. `total_net_index_points` is **not rupees, option premium or a live trading return**. Review time conventions carefully to prevent accidental lookahead.
+
+Phase 3.5 is an early backtest research adapter, NOT a benchmark result. No strategy profitability can be inferred until independently verified real-data history, correct market hours, options pricing and out-of-sample evaluation are added.
