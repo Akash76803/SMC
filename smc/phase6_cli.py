@@ -27,6 +27,13 @@ def main():
                                   Side(row['side'].strip().upper()),
                                   row['strategy'].strip()))
     if not signals:p.error("NO_APPROVED_SIGNALS")
+    quote_path=Path(args.quotes)
+    if not quote_path.is_file():
+        p.error("OPTION_QUOTES_FILE_NOT_FOUND: "+str(quote_path)+". "
+                "Phase 6 requires REAL historical option bid/ask quotes with "
+                "timestamp,symbol,side,strike,expiry,bid,ask,lot_size,volume. "
+                "NIFTY index candles or option OHLC candles are NOT bid/ask quotes. "
+                "No synthetic premium P&L will be generated.")
     try:
         quotes=read_quotes(args.quotes)
         cfg=Settings(target_points=args.target,stop_points=args.stop,
