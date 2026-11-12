@@ -3,6 +3,9 @@ __pycache__/
 .pytest_cache/
 *.py[cod]
 .env
+.env.*
+logs/
+data/
 *.sqlite*
 dist/
 build/
