@@ -31,6 +31,7 @@ class ArchetypeResult:
     max_drawdown_points:float
     bar_envelope_mfe:tuple[float,...]
     bar_envelope_mae:tuple[float,...]
+    approved_signals:tuple[dict,...]
 
 def replay_archetype(ltf:Sequence[Candle],htf:Sequence[Candle],
                      config:ReplayConfig,strategy:str,
@@ -41,6 +42,7 @@ def replay_archetype(ltf:Sequence[Candle],htf:Sequence[Candle],
     trades=[]
     diagnostics=Counter()
     rejects=[]
+    approved=[]
     emitted=rejected=skipped=0
     mfe=[]
     mae=[]
@@ -55,6 +57,11 @@ def replay_archetype(ltf:Sequence[Candle],htf:Sequence[Candle],
         if progress is not None:
             progress(day,len(bars))
         for d in adapter.decisions:
+            if d.signal is not None:
+                approved.append({"timestamp":bars[d.signal.signal_index].timestamp.isoformat(),
+                                 "symbol":d.signal.setup.symbol,
+                                 "side":d.signal.setup.side.value,
+                                 "strategy":strategy})
             if d.entry is not None and d.signal is None:
                 rejects.append({"date":day,"strategy":strategy,"reason":d.reason,
                                 "entry":d.entry,"stop":d.stop,"target":d.target,
@@ -88,4 +95,4 @@ def replay_archetype(ltf:Sequence[Candle],htf:Sequence[Candle],
                            sum(t.net_index_points>0 for t in trades)/len(trades)
                            if trades else None,
                            gains/losses if losses else None,drawdown,
-                           tuple(mfe),tuple(mae))
+                           tuple(mfe),tuple(mae),tuple(approved))

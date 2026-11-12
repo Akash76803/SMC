@@ -34,6 +34,7 @@ def main():
     parser.add_argument("--strategy",choices=STRATEGIES+("ALL",),default="ALL")
     parser.add_argument("--nov-2026-regular-only",action="store_true")
     parser.add_argument("--trades-out",help="Output CSV for any backtested trades")
+    parser.add_argument("--signals-out",help="Approved close-time signals for observed-options replay")
     parser.add_argument("--result-out",help="Optional JSON output file")
     args=parser.parse_args()
     progress("Loading historical CSVs")
@@ -58,6 +59,7 @@ def main():
     strategies=STRATEGIES if args.strategy=="ALL" else (args.strategy,)
     results={}
     rows=[]
+    signal_rows=[]
     for strategy in strategies:
         progress(f"Starting {strategy}")
         report=replay_archetype(ltf,verified,config,strategy,BacktestConfig(),
@@ -74,6 +76,7 @@ def main():
             "profit_factor":report.profit_factor,
             "max_drawdown_points":report.max_drawdown_points
         }
+        signal_rows.extend(report.approved_signals)
         for trade in report.trades:
             rows.append((strategy,trade.symbol,trade.side.value,
                          trade.signal_index,trade.entry_index,trade.exit_index,
@@ -89,6 +92,13 @@ def main():
                              "exit_index","entry_price","exit_price","stop",
                              "target","exit_reason","net_index_points"])
             writer.writerows(rows)
+    if args.signals_out:
+        path=Path(args.signals_out)
+        path.parent.mkdir(parents=True,exist_ok=True)
+        with path.open('w',newline='',encoding='utf-8') as handle:
+            writer=csv.DictWriter(handle,fieldnames=['timestamp','symbol','side','strategy'])
+            writer.writeheader()
+            writer.writerows(sorted(signal_rows,key=lambda d:d['timestamp']))
     output={
        "mode":"INDEX_POINTS_ONLY_NOT_OPTION_PNL",
        "ltf_bars":len(ltf),
