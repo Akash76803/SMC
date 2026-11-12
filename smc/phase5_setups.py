@@ -9,6 +9,7 @@ liquidity, no guaranteed signals, no option premiums or Greeks.
 from __future__ import annotations
 from dataclasses import dataclass
 from collections import Counter
+from functools import lru_cache
 from datetime import timedelta
 from typing import Sequence
 
@@ -37,15 +38,20 @@ class SetupDecision:
     target:float|None=None
     rr:float|None=None
 
-def _active_htf_bias(htf:Sequence[Candle], now,config:ReplayConfig)->str|None:
-    length=timedelta(minutes=config.htf_duration_minutes)
-    eligible=[c for c in htf if c.timestamp+length<=now]
+@lru_cache(maxsize=96)
+def _bias_for_closed_htf(eligible:tuple[Candle,...],config:ReplayConfig)->str|None:
+    """Memoize only FULLY closed HTF prefixes, never future 1H candles."""
     if len(eligible)<2*config.external_k+2:
         return None
-    structure=detect_structure(eligible,internal_k=config.internal_k,
+    structure=detect_structure(list(eligible),internal_k=config.internal_k,
                                external_k=config.external_k)
     external=[e for e in structure if e.tier=="EXTERNAL"]
     return external[-1].direction if external else None
+
+def _active_htf_bias(htf:Sequence[Candle], now,config:ReplayConfig)->str|None:
+    length=timedelta(minutes=config.htf_duration_minutes)
+    eligible=tuple(c for c in htf if c.complete and c.timestamp+length<=now)
+    return _bias_for_closed_htf(eligible,config)
 
 def evaluate_setup(candles:Sequence[Candle],htf:Sequence[Candle],
                    config:ReplayConfig,strategy:str,
