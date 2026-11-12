@@ -103,3 +103,19 @@ The independent index-only replay can then read the two exported files:
 ```powershell
 python -m smc.replay_cli --ltf data/nifty_1m.csv --htf data/nifty_1h.csv --symbol NIFTY --htf-minutes 60 --out trades.csv
 ```
+
+## Phase 4.2 — session continuity quality gate (NIFTY/SENSEX 1M)
+
+Run the auditor before interpreting any historical backtest:
+```powershell
+python -m smc.data_quality_cli --ltf data/nifty_1m.csv
+```
+Exit code `2` means the auditor found a quality issue. A 2026-11-11 NIFTY sample has 09:16–15:15 continuous close timestamps and an isolated 15:30 record after a 14-minute gap. This record is labeled **TERMINAL_1530_UNCLASSIFIED**, **not** an authenticated 1-minute CAS candle or validated closing price. No missing OHLC values are invented.
+
+The replay CLI now rejects 1M CSVs with intraday gaps by default. For the **specific** terminal 15:15→15:30 pattern only, you can explicitly exclude the final isolated record:
+```powershell
+python -m smc.replay_cli --ltf data/nifty_1m.csv --htf data/nifty_1h.csv --symbol NIFTY --htf-minutes 60 --drop-terminal-1530 --out trades.csv
+```
+This removes the anomalous final record; it does not interpolate or mark missing candles as valid. All other intraday gaps remain fatal. Additionally, the current backtester does **not** model overnight next-bar fills, so replay rejects multi-day LTF input until session-aware backtesting is built. This is a deliberate safety gate; the separate download service may still collect multiple days.
+
+Exchange CAS is only for eligible cash stocks in phase 1; never automatically categorize a NIFTY index bar as CAS solely from its timestamp. See NSE's official CAS page: https://www.nseindia.com/static/products-services/closing-auction-session . Holiday calendar, partial early-closes, HTF completeness and full session-specific rule validation remain pending.

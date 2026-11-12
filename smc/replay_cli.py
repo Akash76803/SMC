@@ -8,6 +8,7 @@ from pathlib import Path
 from .backtest import BacktestConfig, walk_forward_backtest
 from .csv_data import read_candles_csv
 from .historical_replay import ReplayConfig, SMCReplay
+from .data_quality import audit_1m, drop_terminal_1530
 
 
 def main() -> None:
@@ -18,9 +19,22 @@ def main() -> None:
     parser.add_argument("--htf-minutes",type=int,default=60)
     parser.add_argument("--max-target-atr",type=float,default=4.0)
     parser.add_argument("--out",help="Write per-trade CSV report")
+    parser.add_argument("--drop-terminal-1530",action="store_true",help="Explicitly drop isolated 15:30 record after 15:15; no synthetic candles")
     args=parser.parse_args()
     ltf=read_candles_csv(args.ltf)
     htf=read_candles_csv(args.htf)
+    if args.drop_terminal_1530:
+        ltf=list(drop_terminal_1530(ltf))
+    quality=audit_1m(ltf)
+    if not quality.safe_for_replay:
+        details=','.join(sorted({x.code for x in quality.issues}))
+        parser.error(f'LTF data quality gate failed ({details}); run python -m smc.data_quality_cli --ltf PATH')
+    # Strict next-bar fills are unsafe across trading-day boundaries in the
+    # current index replay engine. Refuse rather than misrepresent overnight
+    # fills as immediate next-minute executions.
+    if quality.days>1:
+        parser.error('MULTI_DAY_REPLAY_NOT_YET_SESSION_SAFE; use a single-day LTF CSV')
+
     engine=SMCReplay(ReplayConfig(args.symbol,
                          htf_duration_minutes=args.htf_minutes,
                          max_target_atr=args.max_target_atr),htf)
