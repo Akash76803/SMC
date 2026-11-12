@@ -23,7 +23,7 @@ def bars(highs, lows, closes, *, incomplete_last=False):
 def fixture():
     # Sweep high at index 1; bearish CHoCH at 2; FVG at 3; retest at 5.
     c = bars([110, 114, 106, 104, 102, 105],
-             [102, 101, 98, 94, 91, 97],
+             [102, 101, 98, 94, 91, 95],
              [105, 105, 99, 96, 93, 96])
     level = LiquidityLevel("BSL", 111, 0, (0,), 1)
     sweep = LiquidityEvent("SWEEP", level, 1, "BULLISH", 3)
@@ -86,7 +86,7 @@ def test_candidate_only_after_valid_target():
 def test_sweep_extreme_break_invalidates():
     c,s,co,g=fixture()
     # Stop=114; future bar 115 invalidates before any entry.
-    broken = c[:5]+bars([115],[97],[96])[-1:]
+    broken = c[:5]+bars([115],[95],[96])[-1:]
     x=broken[-1]
     broken[-1]=Candle(c[5].timestamp,x.open,x.high,x.low,x.close)
     result=evaluate_entry(broken,[s],[co],symbol="SENSEX",
