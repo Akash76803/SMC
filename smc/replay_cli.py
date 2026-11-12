@@ -3,12 +3,21 @@ from __future__ import annotations
 import argparse
 import csv
 import json
+from collections import Counter
 from pathlib import Path
 
 from .backtest import BacktestConfig, walk_forward_backtest
 from .csv_data import read_candles_csv
 from .historical_replay import ReplayConfig, SMCReplay
 from .data_quality import audit_1m, drop_terminal_1530
+
+
+def summarize_snapshots(snapshots):
+    """Aggregate research-only reasons; counts are evaluated snapshots, not independent trades."""
+    return {
+        "states": dict(sorted(Counter(s.state for s in snapshots).items())),
+        "reasons": dict(sorted(Counter(s.reason for s in snapshots).items())),
+    }
 
 
 def main() -> None:
@@ -57,6 +66,7 @@ def main() -> None:
         "htf_bars":len(htf),
         "snapshots":len(engine.snapshots),
         "signals_emitted":sum(x.signal is not None for x in engine.snapshots),
+        "signal_diagnostics":summarize_snapshots(engine.snapshots),
         "trades":len(report.trades),
         "signals_rejected":report.signals_rejected,
         "signals_skipped":report.signals_skipped,
