@@ -48,8 +48,15 @@ def detect_structure(candles: list[Candle], *,
             # data is ignored rather than emitting contradictory breaks.
             possible = []
             for kind, direction in (("HIGH", "BULLISH"), ("LOW", "BEARISH")):
-                p = active.get(kind)
-                if not p or i <= p.confirmed_at or (p.kind, p.index) in broken:
+                # On a reversal, the protected swing remains the required
+                # boundary even when a newer same-side pivot becomes active.
+                # Never mistake a break of that newer (unprotected) pivot
+                # for CHoCH, or discard the protected level prematurely.
+                reversal = trend is not None and trend != direction
+                p = (protected if reversal and protected is not None
+                     else active.get(kind))
+                if (p is None or p.kind != kind or i <= p.confirmed_at
+                        or (p.kind, p.index) in broken):
                     continue
                 if (kind == "HIGH" and c.close > p.price + buffer) or (
                     kind == "LOW" and c.close < p.price - buffer
@@ -62,12 +69,6 @@ def detect_structure(candles: list[Candle], *,
             # protected-swing proxy; fine-grained IDM rules remain pending.
             opposite = active.get("LOW" if direction == "BULLISH" else "HIGH")
             kind = "CHoCH" if trend is not None and trend != direction else "BOS"
-            if kind == "CHoCH" and protected is not None:
-                # Change of character requires breaking the prior protected swing.
-                # If it is not that level, do not call it a confirmed CHoCH.
-                if p.kind != protected.kind or p.index != protected.index:
-                    broken.add((p.kind, p.index))
-                    continue
             events.append(StructuralBreak(kind, direction, tier, p, i, protected))
             broken.add((p.kind, p.index))
             trend = direction
