@@ -66,3 +66,17 @@ def test_duplicate_conflict_and_timestamp_range():
         download_history(API([dict(status=True,data=[ROW])]),symbol="NIFTY",
                          token="1",interval="ONE_MINUTE",start=A+timedelta(days=1),
                          end=A+timedelta(days=1))
+
+def test_index_token_from_symbol_alias_and_instrument_type():
+    master=[
+        {"symbol":"Nifty 50","name":"NIFTY","token":"99926000",
+         "exch_seg":"NSE","instrumenttype":"AMXIDX"},
+        {"symbol":"NIFTY","name":"NIFTY","token":"999999",
+         "exch_seg":"NSE","instrumenttype":"FUTIDX"},
+        {"symbol":"NIFTY","name":"NIFTY","token":"111111",
+         "exch_seg":"NFO","instrumenttype":"OPTIDX"},
+    ]
+    assert resolve_token(master,"NIFTY")=="99926000"
+    assert resolve_token([{"symbol":"Nifty 50","name":"",
+                          "token":"99926000","exch_seg":"NSE",
+                          "instrumenttype":"AMXIDX"}],"NIFTY")=="99926000"
