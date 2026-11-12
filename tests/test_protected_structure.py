@@ -47,5 +47,6 @@ def test_reversal_requires_confirmed_protected_pivot(monkeypatch):
             Pivot("HIGH",2,110,4),
             Pivot("LOW",3,95,11)] if p.confirmed_at<len(candles)]
     monkeypatch.setattr(structure,"confirmed_pivots",pivots)
-    result=structure.detect_structure(candles())
+    result=structure.detect_structure(candles()[:11])
     assert all(x.kind!="CHoCH" for x in result)
+    assert all(x.broken_pivot.confirmed_at<x.candle_index for x in result)
