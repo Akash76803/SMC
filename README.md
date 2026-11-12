@@ -156,3 +156,30 @@ https://archives.nseindia.com/content/circulars/FAOP76940.pdf
 If the strict 1-hour HTF validator raises a missing-slot error, inspect the
 broker hourly dataset against the trading-day/session calendar; do not
 manufacture hour bars to make the test pass.
+
+## Phase 5 — separate setup experiments
+
+Opt-in `--phase5` runs two **independent**, same-day research backtests
+alongside the existing conservative sweep → CHoCH → FVG reversal baseline:
+
+* `BOS_FVG_CONTINUATION`: confirmed internal BOS in HTF direction, followed
+  by a same-direction FVG and a later closed-candle retest/rejection.
+* `PIVOT_BREAKOUT_RETEST`: confirmed internal BOS through an old pivot level,
+  followed by a **separate** candle touching that level and closing beyond it.
+
+Both use the **existing** verified opposing liquidity target selection and
+unchanged index 2R / 50-point NIFTY / 100-point SENSEX risk gates. No fixed
+price targets are fabricated. The backtester enters no earlier than the
+following bar open and never carries a position between sessions.
+
+```powershell
+python -m smc.replay_cli --ltf data/nifty_multi_1m.csv --htf data/nifty_1h.csv --symbol NIFTY --htf-minutes 60 --nov-2026-regular-only --phase5 --out trades_multi.csv --setups-out setup_diagnostics_multi.csv --phase5-trades-out phase5_trades.csv
+```
+
+Results in `phase5_independent_archetype_results` are **not additive** and
+must never be advertised as a combined strategy or option P&L. MFE/MAE are
+full OHLC **bar-envelope diagnostics**, not verified pre-exit intrabar
+excursions; worst-case stop-first ordering still controls the trade.
+The starting dataset is too small to validate profitability. Future phases
+need multiple out-of-sample market regimes, 5M confirmation variants, real
+option bid/ask and Greeks, and market-calendar verified session definitions.

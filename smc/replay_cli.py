@@ -13,6 +13,8 @@ from .historical_replay import ReplayConfig
 from .multiday_replay import replay_by_session,validate_hourly
 from .structure_diagnostics import audit_choch_link
 from .research_sessions import regular_november_2026, regular_htf_without_special
+from .phase5_setups import STRATEGIES
+from .phase5_report import replay_archetype
 
 
 def summarize_snapshots(snapshots):
@@ -45,6 +47,8 @@ def main():
     parser.add_argument("--setups-out",help="One row per unique sweep (diagnostic CSV)")
     parser.add_argument("--drop-terminal-1530",action="store_true",
                         help="Exclude isolated closing record after 15:15; never interpolate")
+    parser.add_argument("--phase5",action="store_true",help="Run independent experimental continuation and breakout backtests as well")
+    parser.add_argument("--phase5-trades-out",help="Optional per-strategy trades CSV")
     parser.add_argument("--nov-2026-regular-only",action="store_true",
                         help="Research profile: exclude known 8 Nov Muhurat session and all records after 15:15 on regular days")
     args=parser.parse_args()
@@ -89,11 +93,49 @@ def main():
             for session in result.sessions:
                 for item in session.unique_setups:
                     writer.writerow({"date":session.date,**item})
+    phase5={}
+    phase5_trades=[]
+    if args.phase5:
+        for strategy in STRATEGIES:
+            research=replay_archetype(ltf,verified,config,strategy,BacktestConfig())
+            phase5[strategy]={
+                "sessions":research.sessions,
+                "signals_emitted":research.signals_emitted,
+                "trades":len(research.trades),
+                "signals_rejected":research.signals_rejected,
+                "signals_skipped":research.signals_skipped,
+                "diagnostics":research.diagnostics,
+                "rejected_candidate_details":list(research.risk_rejections),
+                "net_index_points":research.net_index_points,
+                "win_rate":research.win_rate,
+                "profit_factor":research.profit_factor,
+                "max_drawdown_points":research.max_drawdown_points,
+                "trade_bar_envelope_mfe_points":list(research.bar_envelope_mfe),
+                "trade_bar_envelope_mae_points":list(research.bar_envelope_mae),
+            }
+            for trade,mfe,mae in zip(research.trades,research.bar_envelope_mfe,
+                                      research.bar_envelope_mae):
+                phase5_trades.append([strategy,trade.symbol,trade.side.value,
+                    trade.signal_index,trade.entry_index,trade.exit_index,
+                    trade.entry_price,trade.exit_price,trade.stop,trade.target,
+                    trade.exit_reason.value,trade.net_index_points,mfe,mae])
+    if args.phase5_trades_out and args.phase5:
+        path=Path(args.phase5_trades_out)
+        path.parent.mkdir(parents=True,exist_ok=True)
+        with path.open("w",newline="",encoding="utf-8") as f:
+            w=csv.writer(f)
+            w.writerow(["strategy","symbol","side","signal_index","entry_index",
+                "exit_index","entry_price","exit_price","stop","target",
+                "exit_reason","net_index_points","bar_envelope_mfe_points",
+                "bar_envelope_mae_points"])
+            w.writerows(phase5_trades)
     counts=Counter()
     for session in result.sessions:
         counts.update(session.unique_sweep_outcomes)
     print(json.dumps({
         "mode":"INDEX_POINTS_ONLY_NOT_OPTION_PNL",
+        "phase5_independent_archetype_results":phase5 if args.phase5 else None,
+        "phase5_note":"Results are independent strategy experiments; NOT an aggregated portfolio. OHLC MFE/MAE envelopes may include prices after a stop or target within an exit candle." if args.phase5 else None,
         "nov_2026_research_profile":({"excluded_special_candles":normalized.removed_special,
                                      "excluded_closing_tail_records":normalized.removed_closing_tail,
                                      "truncated_at":"15:15 IST",
