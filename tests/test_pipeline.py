@@ -39,7 +39,7 @@ def fixture():
                 liquidity_events=[sweep],liquidity_levels=[level,target],
                 order_blocks=[ob],idm_candidates=[idm],
                 option_quotes=[q],spot=85096,now=now,
-                htf_duration_minutes=60,fvg_zones=[gap])
+                htf_duration_minutes=60,fvg_zones=[gap],max_target_atr=15.0)
 
 
 def test_full_pipeline_research_candidate():
