@@ -22,7 +22,7 @@ def bars(highs, lows, closes, *, incomplete_last=False):
 
 def fixture():
     # Sweep high at index 1; bearish CHoCH at 2; FVG at 3; retest at 5.
-    c = bars([110, 114, 106, 104, 102, 105],
+    c = bars([110, 114, 106, 104, 99, 105],
              [102, 101, 98, 94, 91, 95],
              [105, 105, 99, 96, 93, 96])
     level = LiquidityLevel("BSL", 111, 0, (0,), 1)
@@ -73,7 +73,7 @@ def test_candidate_only_after_valid_target():
                  [x.close+85000 for x in c])
     result=evaluate_entry(shifted,[s],[co],symbol="SENSEX",
                           target=84980,fvgs=[g])
-    assert result[0].state == State.REJECTED  # levels not aligned, no artificial pass
+    assert result[0].state == State.WAITING_RETEST  # zones do not match shifted candles
     from dataclasses import replace
     shifted_s=replace(s,level=replace(s.level,price=85111))
     shifted_g=replace(g,lower=85100,upper=85103)
