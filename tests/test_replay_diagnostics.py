@@ -11,4 +11,6 @@ def test_snapshot_diagnostics_reason_counts():
     assert result["reasons"]=={
         "HTF_BIAS_MISMATCH":1,"HTF_WARMUP":1,"NO_SWEEP_SETUP":2
     }
-    assert summarize_snapshots([])=={"states":{},"reasons":{}}
+    empty=summarize_snapshots([])
+    assert empty["states"]=={} and empty["reasons"]=={}
+    assert empty["entry_state_observations"]=={}
