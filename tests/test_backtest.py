@@ -11,17 +11,17 @@ def bars(prices):
 
 def long_signal(prefix):
     if len(prefix)==2:
-        return Signal(IndexSetup("NIFTY",Side.CE,100,90,120,True,"RESEARCH"),1)
+        return Signal(IndexSetup("NIFTY",Side.CE,100,90,160,True,"RESEARCH"),1)
     return None
 
 def short_signal(prefix):
     if len(prefix)==2:
-        return Signal(IndexSetup("NIFTY",Side.PE,100,110,80,True,"RESEARCH"),1)
+        return Signal(IndexSetup("NIFTY",Side.PE,100,110,40,True,"RESEARCH"),1)
     return None
 
 def test_next_bar_open_entry_no_same_bar_fill():
     cs=bars([(100,102,98,100),(100,102,98,100),
-             (101,108,100,106),(108,122,103,121)])
+             (101,108,100,106),(108,162,103,161)])
     r=walk_forward_backtest(cs,long_signal)
     assert len(r.trades)==1
     assert r.trades[0].signal_index==1
@@ -31,18 +31,18 @@ def test_next_bar_open_entry_no_same_bar_fill():
 
 def test_stop_wins_when_both_touch_same_bar():
     cs=bars([(100,101,99,100),(100,101,99,100),
-             (101,125,89,110)])
+             (101,165,89,110)])
     r=walk_forward_backtest(cs,long_signal)
     assert r.trades[0].exit_reason==ExitReason.STOP
     assert r.trades[0].exit_price==90
 
 def test_short_trade_and_transaction_cost():
     cs=bars([(100,101,99,100),(100,101,99,100),
-             (99,100,77,79)])
+             (99,100,37,39)])
     r=walk_forward_backtest(cs,short_signal,
                             BacktestConfig(round_trip_cost_points=3))
     assert r.trades[0].exit_reason==ExitReason.TARGET
-    assert r.trades[0].net_index_points==16
+    assert r.trades[0].net_index_points==56
 
 def test_gap_through_stop_uses_open():
     cs=bars([(100,101,99,100),(100,101,99,100),
@@ -54,7 +54,7 @@ def test_gap_through_stop_uses_open():
 
 def test_gap_outside_bracket_skips_entry():
     cs=bars([(100,101,99,100),(100,101,99,100),
-             (125,130,121,128)])
+             (165,170,161,168)])
     r=walk_forward_backtest(cs,long_signal)
     assert len(r.trades)==0 and r.signals_skipped==1
 
@@ -106,9 +106,9 @@ def test_time_exit_and_max_drawdown():
 
 def test_no_option_pnl_claim_and_fee_slippage():
     cs=bars([(100,101,99,100),(100,101,99,100),
-             (101,121,100,120)])
+             (101,161,100,160)])
     r=walk_forward_backtest(cs,long_signal,BacktestConfig(
         entry_slippage_points=1,exit_slippage_points=1,
         round_trip_cost_points=2))
     assert r.mode=="INDEX_POINTS_ONLY_NOT_OPTION_PNL"
-    assert r.trades[0].net_index_points==14
+    assert r.trades[0].net_index_points==55
