@@ -36,3 +36,16 @@ Option pricing uses **explicit scenario exit bid estimates supplied by a pricing
 4. Desktop chart UI, alerts, paper fills and backtests with fees/slippage.
 
 **Market disclaimer:** Demonstration code only. No live trade advice. Index points do not equal option premium points.
+
+## Phase 3.4: walk-forward historical research backtest
+
+```powershell
+python -m smc.backtest_cli
+python -m pytest -q
+```
+
+The demo uses **synthetic index candles only**. `smc.backtest.walk_forward_backtest(candles, signal_fn)` supplies `signal_fn` only the candle prefix available at each historical close. The callback should return `Signal(IndexSetup(...), signal_index=len(prefix)-1)` or `None`. An accepted signal fills at the NEXT completed candle's open, never retroactively at the signal close. A pending trade is rejected if that opening price lies outside its bracket.
+
+Conservative intrabar treatment: if a candle touches both stop and target, stop wins. Gaps beyond exits fill at open, not the old threshold. Fees/slippage inputs are **index-point-equivalent illustration**, *not* actual option fees. Result `total_net_index_points` must never be reported as rupee profit or option premium P&L.
+
+**Not yet implemented:** automatic reconstruction of complete historic SMC/HTF signals, a real historical market-data loader, historical option bid/ask and Greeks, exchange calendars, actual option-premium P&L, broker fills, validated strategy performance, and live trading.
