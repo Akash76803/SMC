@@ -7,7 +7,7 @@ MFE/MAE are full-bar OHLC ENVELOPES, not proven pre-exit intrabar excursions.
 from __future__ import annotations
 from collections import Counter
 from dataclasses import dataclass,replace
-from typing import Sequence
+from typing import Callable,Sequence
 
 from .backtest import BacktestConfig,BacktestTrade,walk_forward_backtest
 from .historical_replay import ReplayConfig
@@ -34,7 +34,8 @@ class ArchetypeResult:
 
 def replay_archetype(ltf:Sequence[Candle],htf:Sequence[Candle],
                      config:ReplayConfig,strategy:str,
-                     backtest_config:BacktestConfig=BacktestConfig())->ArchetypeResult:
+                     backtest_config:BacktestConfig=BacktestConfig(),
+                     *,progress:Callable[[str,int],None]|None=None)->ArchetypeResult:
     if strategy not in STRATEGIES:
         raise ValueError("UNKNOWN_STRATEGY")
     trades=[]
@@ -51,6 +52,8 @@ def replay_archetype(ltf:Sequence[Candle],htf:Sequence[Candle],
         diagnostics.update(summarize_decisions(adapter.decisions))
         rejected+=result.signals_rejected
         skipped+=result.signals_skipped
+        if progress is not None:
+            progress(day,len(bars))
         for d in adapter.decisions:
             if d.entry is not None and d.signal is None:
                 rejects.append({"date":day,"strategy":strategy,"reason":d.reason,
