@@ -7,7 +7,7 @@ name = "smc-trading-terminal"
 version = "0.1.0"
 description = "Experimental SMC trading analysis engine (sandbox)"
 requires-python = ">=3.11"
-dependencies = []
+dependencies = ["tzdata>=2025.2; platform_system == 'Windows'"]
 
 [project.optional-dependencies]
 dev = ["pytest>=8"]
