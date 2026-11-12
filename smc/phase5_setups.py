@@ -93,11 +93,13 @@ def evaluate_setup(candles:Sequence[Candle],htf:Sequence[Candle],
             if not zones:
                 rejected_reason="NO_POST_BOS_FVG"
                 continue
-            # Latest zone is preferred; retest must occur on current candle.
-            zone=max(zones,key=lambda z:z.created_at)
-            touched=cs[i].low<=zone.upper and cs[i].high>=zone.lower
-            confirmed=cs[i].close>zone.upper if side==Side.CE else cs[i].close<zone.lower
-            if not(touched and confirmed):
+            # Prefer the newest eligible zone that ACTUALLY retests now.
+            # A newer unrelated FVG must not hide an older valid retest.
+            chosen=next((z for z in sorted(zones,key=lambda z:z.created_at,reverse=True)
+                         if cs[i].low<=z.upper and cs[i].high>=z.lower
+                         and (cs[i].close>z.upper if side==Side.CE
+                              else cs[i].close<z.lower)),None)
+            if chosen is None:
                 continue
             stop=min(cs[j].low for j in range(trigger,i+1)) if side==Side.CE else max(
                 cs[j].high for j in range(trigger,i+1))
@@ -143,8 +145,15 @@ class StrategyReplay:
         self.htf=tuple(htf)
         self.strategy=strategy
         self.decisions:list[SetupDecision]=[]
+        self._emitted_triggers:set[int]=set()
     def __call__(self,prefix:tuple[Candle,...])->Signal|None:
         result=evaluate_setup(prefix,self.htf,self.config,self.strategy)
+        if result.signal is not None and result.trigger_index in self._emitted_triggers:
+            result=SetupDecision(self.strategy,None,"DUPLICATE_TRIGGER_SUPPRESSED",
+                                 result.trigger_index,result.side,result.entry,
+                                 result.stop,result.target,result.rr)
+        elif result.signal is not None and result.trigger_index is not None:
+            self._emitted_triggers.add(result.trigger_index)
         self.decisions.append(result)
         return result.signal
 
