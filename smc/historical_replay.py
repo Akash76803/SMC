@@ -48,6 +48,8 @@ class ReplaySnapshot:
     reason: str
     ltf_bars: int
     htf_bars_available: int
+    entry_state_counts: tuple[tuple[str,int], ...] = ()
+    entry_reason_counts: tuple[tuple[str,int], ...] = ()
 
 
 class SMCReplay:
@@ -101,7 +103,14 @@ class SMCReplay:
         current=[e for e in detected if e.transition_index==latest and
                  e.entry is not None and e.choch_index is not None]
         if not current:
-            return ReplaySnapshot(None,"WAIT","NO_CURRENT_RETEST",len(candles),len(htf))
+            # Sweeps in the list can include previously expired events.
+            # Counts summarize per-prefix observations, not distinct trades.
+            from collections import Counter
+            states=Counter(x.state.value for x in detected)
+            reasons=Counter(x.reason for x in detected)
+            return ReplaySnapshot(None,"WAIT","NO_CURRENT_RETEST",len(candles),len(htf),
+                                  tuple(sorted(states.items())),
+                                  tuple(sorted(reasons.items())))
         candidate=max(current,key=lambda x:x.sweep_index)
         direction="BULLISH" if candidate.side==Side.CE else "BEARISH"
         if direction!=bias:

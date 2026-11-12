@@ -14,9 +14,20 @@ from .data_quality import audit_1m, drop_terminal_1530
 
 def summarize_snapshots(snapshots):
     """Aggregate research-only reasons; counts are evaluated snapshots, not independent trades."""
+    state_counts=Counter()
+    reason_counts=Counter()
+    for snapshot in snapshots:
+        state_counts.update(dict(getattr(snapshot,"entry_state_counts",())))
+        reason_counts.update(dict(getattr(snapshot,"entry_reason_counts",())))
+    last=next((s for s in reversed(snapshots)
+               if getattr(s,"entry_state_counts",())),None)
     return {
         "states": dict(sorted(Counter(s.state for s in snapshots).items())),
         "reasons": dict(sorted(Counter(s.reason for s in snapshots).items())),
+        "entry_state_observations": dict(sorted(state_counts.items())),
+        "entry_reason_observations": dict(sorted(reason_counts.items())),
+        "last_evaluated_entry_states": dict(getattr(last,"entry_state_counts",())) if last else {},
+        "note": "Observations repeat historical sweeps across prefixes; NOT independent signals/trades.",
     }
 
 
