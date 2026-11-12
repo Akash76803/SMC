@@ -16,10 +16,10 @@ def hour(day,hour):
     return Candle(t,100,102,98,100)
 
 def test_partial_hourly_excluded():
-    h=[hour(9,9),hour(9,10),hour(9,15)]
+    h=[hour(9,h) for h in range(9,16)]
     full,drop=validate_hourly(h,[bar(11,0)],60)
     assert drop==1
-    assert [x.timestamp.hour for x in full]==[9,10]
+    assert [x.timestamp.hour for x in full]==[9,10,11,12,13,14]
 def test_bad_hourly_alignment_and_interval():
     with pytest.raises(ValueError,match="60_MINUTE"):
         validate_hourly([hour(9,9)],[bar(11,0)],30)
@@ -40,7 +40,7 @@ def test_unique_sweeps_are_not_repeated_prefix_observations():
     assert records==()
 def test_replay_call_scoped_to_each_session(monkeypatch):
     ltf=[bar(11,i) for i in range(4)]+[bar(12,i) for i in range(4)]
-    h=[hour(9,9),hour(9,10),hour(9,11),hour(9,12)]
+    h=[hour(9,h) for h in range(9,15)]
     sizes=[]
     def fake_run(bars,engine,config):
         sizes.append(len(bars))
