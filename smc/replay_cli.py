@@ -1,4 +1,4 @@
-"""CSV-to-index-replay command. No live quotes and no option premium PnL."""
+"""Date-scoped SMC research replay; never carries fills overnight."""
 from __future__ import annotations
 import argparse
 import csv
@@ -6,90 +6,110 @@ import json
 from collections import Counter
 from pathlib import Path
 
-from .backtest import BacktestConfig, walk_forward_backtest
+from .backtest import BacktestConfig
 from .csv_data import read_candles_csv
-from .historical_replay import ReplayConfig, SMCReplay
-from .data_quality import audit_1m, drop_terminal_1530
+from .data_quality import audit_1m,drop_terminal_1530
+from .historical_replay import ReplayConfig
+from .multiday_replay import replay_by_session,validate_hourly
 from .structure_diagnostics import audit_choch_link
 
 
 def summarize_snapshots(snapshots):
-    """Aggregate research-only reasons; counts are evaluated snapshots, not independent trades."""
-    state_counts=Counter()
-    reason_counts=Counter()
-    for snapshot in snapshots:
-        state_counts.update(dict(getattr(snapshot,"entry_state_counts",())))
-        reason_counts.update(dict(getattr(snapshot,"entry_reason_counts",())))
-    last=next((s for s in reversed(snapshots)
-               if getattr(s,"entry_state_counts",())),None)
+    states=Counter(s.state for s in snapshots)
+    reasons=Counter(s.reason for s in snapshots)
+    entry_states=Counter()
+    entry_reasons=Counter()
+    for s in snapshots:
+        entry_states.update(dict(getattr(s,"entry_state_counts",())))
+        entry_reasons.update(dict(getattr(s,"entry_reason_counts",())))
+    last=next((s for s in reversed(snapshots) if getattr(s,"entry_state_counts",())),None)
     return {
-        "states": dict(sorted(Counter(s.state for s in snapshots).items())),
-        "reasons": dict(sorted(Counter(s.reason for s in snapshots).items())),
-        "entry_state_observations": dict(sorted(state_counts.items())),
-        "entry_reason_observations": dict(sorted(reason_counts.items())),
-        "last_evaluated_entry_states": dict(getattr(last,"entry_state_counts",())) if last else {},
-        "note": "Observations repeat historical sweeps across prefixes; NOT independent signals/trades.",
+        "states":dict(sorted(states.items())),
+        "reasons":dict(sorted(reasons.items())),
+        "entry_state_observations":dict(sorted(entry_states.items())),
+        "entry_reason_observations":dict(sorted(entry_reasons.items())),
+        "last_evaluated_entry_states":dict(getattr(last,"entry_state_counts",())) if last else {},
+        "note":"Observations repeat historical sweeps across prefixes; NOT independent signals/trades."
     }
 
 
-def main() -> None:
-    parser=argparse.ArgumentParser(description="SMC historical INDEX research replay")
-    parser.add_argument("--ltf",required=True,help="LTF CSV with CLOSE timestamps")
-    parser.add_argument("--htf",required=True,help="HTF CSV with START timestamps")
-    parser.add_argument("--symbol",required=True,choices=["SENSEX","NIFTY"])
+def main():
+    parser=argparse.ArgumentParser(description="Session-safe experimental INDEX replay")
+    parser.add_argument("--ltf",required=True)
+    parser.add_argument("--htf",required=True)
+    parser.add_argument("--symbol",required=True,choices=("NIFTY","SENSEX"))
     parser.add_argument("--htf-minutes",type=int,default=60)
     parser.add_argument("--max-target-atr",type=float,default=4.0)
-    parser.add_argument("--out",help="Write per-trade CSV report")
-    parser.add_argument("--drop-terminal-1530",action="store_true",help="Explicitly drop isolated 15:30 record after 15:15; no synthetic candles")
+    parser.add_argument("--out",help="Trades CSV")
+    parser.add_argument("--setups-out",help="One row per unique sweep (diagnostic CSV)")
+    parser.add_argument("--drop-terminal-1530",action="store_true",
+                        help="Exclude isolated closing record after 15:15; never interpolate")
     args=parser.parse_args()
     ltf=read_candles_csv(args.ltf)
     htf=read_candles_csv(args.htf)
     if args.drop_terminal_1530:
         ltf=list(drop_terminal_1530(ltf))
-    quality=audit_1m(ltf)
-    if not quality.safe_for_replay:
-        details=','.join(sorted({x.code for x in quality.issues}))
-        parser.error(f'LTF data quality gate failed ({details}); run python -m smc.data_quality_cli --ltf PATH')
-    # Strict next-bar fills are unsafe across trading-day boundaries in the
-    # current index replay engine. Refuse rather than misrepresent overnight
-    # fills as immediate next-minute executions.
-    if quality.days>1:
-        parser.error('MULTI_DAY_REPLAY_NOT_YET_SESSION_SAFE; use a single-day LTF CSV')
-
-    engine=SMCReplay(ReplayConfig(args.symbol,
-                         htf_duration_minutes=args.htf_minutes,
-                         max_target_atr=args.max_target_atr),htf)
-    report=walk_forward_backtest(ltf,engine,BacktestConfig())
+    audit=audit_1m(ltf)
+    if not audit.safe_for_replay:
+        parser.error("LTF_DATA_QUALITY_GATE_FAILED: "+",".join(sorted({x.code for x in audit.issues})))
+    config=ReplayConfig(args.symbol,htf_duration_minutes=args.htf_minutes,
+                        max_target_atr=args.max_target_atr)
+    try:
+        verified,excluded=validate_hourly(htf,ltf,args.htf_minutes)
+        result=replay_by_session(ltf,htf,config,BacktestConfig())
+    except ValueError as exc:
+        parser.error(str(exc))
     if args.out:
         path=Path(args.out)
+        path.parent.mkdir(parents=True,exist_ok=True)
         with path.open("w",newline="",encoding="utf-8") as f:
             writer=csv.writer(f)
-            writer.writerow(["symbol","side","signal_index","entry_index",
-                             "exit_index","entry_price","exit_price","stop",
-                             "target","exit_reason","net_index_points"])
-            for t in report.trades:
-                writer.writerow([t.symbol,t.side.value,t.signal_index,
-                                 t.entry_index,t.exit_index,t.entry_price,
-                                 t.exit_price,t.stop,t.target,t.exit_reason.value,
+            writer.writerow(["symbol","side","signal_index","entry_index","exit_index",
+                             "entry_price","exit_price","stop","target","exit_reason","net_index_points"])
+            for t in result.trades:
+                writer.writerow([t.symbol,t.side.value,t.signal_index,t.entry_index,t.exit_index,
+                                 t.entry_price,t.exit_price,t.stop,t.target,t.exit_reason.value,
                                  t.net_index_points])
+    if args.setups_out:
+        path=Path(args.setups_out)
+        path.parent.mkdir(parents=True,exist_ok=True)
+        with path.open("w",newline="",encoding="utf-8") as f:
+            writer=csv.DictWriter(f,fieldnames=["date","sweep_time","liquidity_kind",
+                 "liquidity_price","side","state","reason","choch_time","fvg_time",
+                 "entry","stop","target","index_rr"])
+            writer.writeheader()
+            for session in result.sessions:
+                for item in session.unique_setups:
+                    writer.writerow({"date":session.date,**item})
+    counts=Counter()
+    for session in result.sessions:
+        counts.update(session.unique_sweep_outcomes)
     print(json.dumps({
-        "mode":report.mode,
-        "ltf_bars":len(ltf),
-        "htf_bars":len(htf),
-        "snapshots":len(engine.snapshots),
-        "signals_emitted":sum(x.signal is not None for x in engine.snapshots),
-        "signal_diagnostics":summarize_snapshots(engine.snapshots),
-        "structure_link_diagnostics":audit_choch_link(ltf),
-        "trades":len(report.trades),
-        "signals_rejected":report.signals_rejected,
-        "signals_skipped":report.signals_skipped,
-        "total_net_index_points":report.total_net_index_points,
-        "win_rate":report.win_rate,
-        "profit_factor":report.profit_factor,
-        "max_drawdown_points":report.max_drawdown_points,
-        "warning":"NOT OPTION PREMIUM PNL / NOT VERIFIED STRATEGY PERFORMANCE"
+        "mode":"INDEX_POINTS_ONLY_NOT_OPTION_PNL",
+        "ltf_bars":len(ltf),"htf_bars":len(htf),
+        "htf_full_hour_bars":len(verified),
+        "htf_terminal_partial_bars_excluded":excluded,
+        "sessions":len(result.sessions),
+        "session_breakdown":[{"date":s.date,"ltf_bars":s.candles,
+             "unique_sweeps":len(s.unique_setups),
+             "trades":len(s.trades)} for s in result.sessions],
+        "snapshots":len(result.snapshots),
+        "signals_emitted":sum(s.signal is not None for s in result.snapshots),
+        "signal_diagnostics":summarize_snapshots(result.snapshots),
+        "unique_sweep_outcomes":dict(sorted(counts.items())),
+        "unique_sweeps_total":sum(counts.values()),
+        "structure_link_diagnostics_by_day":{
+             s.date:audit_choch_link([c for c in ltf
+              if c.timestamp.astimezone(__import__("zoneinfo").ZoneInfo("Asia/Kolkata")).date().isoformat()==s.date])
+             for s in result.sessions},
+        "trades":len(result.trades),"signals_rejected":result.rejected,
+        "signals_skipped":result.skipped,
+        "total_net_index_points":result.total_net_index_points,
+        "win_rate":result.win_rate,
+        "profit_factor":result.profit_factor,
+        "max_drawdown_points":result.max_drawdown_points,
+        "warning":"SESSION-SCOPED INDEX ONLY; NO OPTION PREMIUM OR VERIFIED PERFORMANCE"
     },indent=2))
-
 
 if __name__=="__main__":
     main()

@@ -119,3 +119,15 @@ python -m smc.replay_cli --ltf data/nifty_1m.csv --htf data/nifty_1h.csv --symbo
 This removes the anomalous final record; it does not interpolate or mark missing candles as valid. All other intraday gaps remain fatal. Additionally, the current backtester does **not** model overnight next-bar fills, so replay rejects multi-day LTF input until session-aware backtesting is built. This is a deliberate safety gate; the separate download service may still collect multiple days.
 
 Exchange CAS is only for eligible cash stocks in phase 1; never automatically categorize a NIFTY index bar as CAS solely from its timestamp. See NSE's official CAS page: https://www.nseindia.com/static/products-services/closing-auction-session . Holiday calendar, partial early-closes, HTF completeness and full session-specific rule validation remain pending.
+
+## Phase 4.4 — safe multi-day research replay
+
+The replay runs **one session per trading date** and resets the backtest position and pending signal at each boundary. A position that remains open at day-end uses the last eligible LTF bar close (END_OF_DATA); no overnight fills and no cross-session trades. LTF must pass the existing 1M continuity quality gate, including the explicit `--drop-terminal-1530` option. No synthetic candles are ever created. Every day is rescanned independently: **prior-day LTF context (PDH/PDL and morning warmup) is not yet imported**, so the multi-day setup count is deliberately incomplete.
+
+HTF data is validated as exact 60-minute bars aligned to 09:15, 10:15, ... 14:15 IST. The 15:15 START timestamp is a potentially partial final hour and is **excluded from HTF bias**, rather than incorrectly treated as a 60-minute bar. Unsupported HTF timings or missing HTF warmup fail closed or produce WAIT; market-holiday and broker-data-level completeness still require independent validation.
+
+```powershell
+python -m smc.replay_cli --ltf data/nifty_1m.csv --htf data/nifty_1h.csv --symbol NIFTY --htf-minutes 60 --drop-terminal-1530 --out trades.csv --setups-out setup_diagnostics.csv
+```
+
+`setup_diagnostics.csv` provides **one final evaluation per observed sweep**, including stage, timestamps, entry and sweep stop where available. A preliminary `MISSING_VERIFIED_LIQUIDITY_TARGET` means the entry-only stage was deliberately run without a target. It is **not** a broker failure or a final verified risk rejection. The net result remains INDEX POINTS, NOT option premium P&L.
