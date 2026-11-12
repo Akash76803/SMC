@@ -73,3 +73,33 @@ python -m smc.replay_cli --ltf data\nifty_1m.csv --htf data\nifty_1h.csv --symbo
 For SENSEX, change symbol and paths. This writes per-trade INDEX-points research results in `trades.csv`. `total_net_index_points` is **not rupees, option premium or a live trading return**. Review time conventions carefully to prevent accidental lookahead.
 
 Phase 3.5 is an early backtest research adapter, NOT a benchmark result. No strategy profitability can be inferred until independently verified real-data history, correct market hours, options pricing and out-of-sample evaluation are added.
+
+## Phase 4.1: Angel One historical candle download (read-only)
+
+The downloader uses the official Angel One Historical API. API supports ONE_MINUTE (up to 30 days per request) and ONE_HOUR (up to 400 days per request); downloader splits into slightly shorter windows, checks response status, deduplicates by timestamp, and refuses conflicting candles. It **does not** place orders. Source: https://smartapi.angelone.in/docs
+
+Install optional SDK dependencies:
+```powershell
+python -m pip install -e ".[dev,angel]"
+```
+
+**First verify login and the registered outbound static IP.** API login success does not guarantee Historical API access. Authentication fields are typed at runtime and are NEVER saved. The SDK logger is disabled before login because some versions print sensitive headers. If you used an earlier login script that logged request headers, inspect/remove local `logs/` files safely. Never put TOTP secret, API key, MPIN, access tokens or full SDK logs in commits or chat. `.gitignore` excludes `data/`, `logs/`, and `.env*`.
+
+Test a **small** NIFTY sample first:
+```powershell
+python -m smc.angel_history_cli --symbol NIFTY --interval ONE_MINUTE --from-date 2026-11-10 --to-date 2026-11-10 --out data/nifty_1m.csv
+```
+Then 1-hour candles:
+```powershell
+python -m smc.angel_history_cli --symbol NIFTY --interval ONE_HOUR --from-date 2026-10-01 --to-date 2026-11-10 --out data/nifty_1h.csv
+```
+For SENSEX change `--symbol SENSEX` and output paths to `data/sensex_1m.csv` / `data/sensex_1h.csv`. The downloader resolves tokens by exact *index name and exchange* from Angel One's official instrument master; if that fails, verify current token in the master and supply `--token VERIFIED_TOKEN`. Never guess tokens or use options tokens for index candles. Use `--master-file path/to/OpenAPIScripMaster.json` if a local official master is available.
+
+**Timestamp contract:** broker historical timestamps are candle START timestamps. ONE_MINUTE adds one minute and writes **close** timestamps for the replay CSV loader. ONE_HOUR retains **start** timestamps, because the replay expects HTF starts. All exported timestamps are Asia/Kolkata offsets. This convention currently applies only to 1M and 1H.
+
+**Data quality:** duplicate conflicting bars and API failures abort the download (no partial CSV). This first version does not validate full market-session completeness or holiday calendars: inspect gaps before drawing conclusions. Neither market-data entitlements nor a six-month historical lookback is guaranteed. No real option premium, Greeks, IV or broker execution model is included.
+
+The independent index-only replay can then read the two exported files:
+```powershell
+python -m smc.replay_cli --ltf data/nifty_1m.csv --htf data/nifty_1h.csv --symbol NIFTY --htf-minutes 60 --out trades.csv
+```
