@@ -105,7 +105,19 @@ def simulate(events:tuple[IndexEvent,...],series:OptionSeries,
     by_timestamp={c.timestamp:c for c in quotes}
     trades=[]
     counts=Counter()
+    # Multiple strategy labels at the same instant, side and symbol describe
+    # ONE market entry opportunity, not independent fills or P&L.
+    grouped={}
     for event in events:
+        if event.timestamp.tzinfo is None:
+            raise ValueError("SIGNAL_TIME_REQUIRES_OFFSET")
+        key=(event.timestamp,event.symbol,event.side)
+        grouped.setdefault(key,set()).add(event.strategy)
+    counts["DUPLICATE_STRATEGY_LABELS_COLLAPSED"]=len(events)-len(grouped)
+    unique_events=(IndexEvent(timestamp,symbol,side,"+".join(sorted(labels)))
+                   for (timestamp,symbol,side),labels in sorted(
+                       grouped.items(),key=lambda x:x[0][0]))
+    for event in unique_events:
         if event.side!=series.side or not series.trading_symbol.startswith(event.symbol):
             counts["SIGNAL_CONTRACT_MISMATCH"]+=1
             continue
