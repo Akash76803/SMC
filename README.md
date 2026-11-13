@@ -238,3 +238,29 @@ research safeguard), fees/slippage model, premium-vs-index joint attribution,
 walk-forward train/validation splits, forward paper trading, and broker-specific
 historical data adapter after source capabilities/licensing are verified.
 Never turn on live orders by default.
+
+## Phase 6.3 — independent premium OHLC comparison
+
+The quote-tape replay (`smc.phase6_cli`) **still requires actual bid/ask**.
+For broker option OHLC files, use this separate, strictly labeled educational
+scenario runner instead:
+
+```powershell
+python -u -m smc.phase5_cli --ltf data/nifty_multi_1m.csv --htf data/nifty_1h.csv --symbol NIFTY --strategy ALL --nov-2026-regular-only --signals-out phase5_signals.csv --result-out phase5_result.json
+python -m smc.phase6_ohlc_cli --signals phase5_signals.csv --option-ohlc data/nifty_25350_ce_1m.csv data/nifty_25400_ce_1m.csv --target 25 --stop 10 --holding-bars 24 --out phase6_ohlc_trades.csv --result-out phase6_ohlc_result.json
+```
+
+Each Phase 5 signal at minute close T allows an option scenario entry ONLY at
+the **open of the option candle closing T+1 minute**. Index decision and
+option timestamps must be aligned; future close cannot be used as entry.
+An independent hypothetical scenario is evaluated for each matching CE/PE
+contract, not a live contract selection algorithm. A threshold touched by
+a bar is assigned a hypothetical threshold exit; where both stop and target
+are inside a bar, STOP wins. Intraday gaps, missing option entry bars, and
+trades lacking an observed exit within the holding window are excluded.
+Session ends at the last regular continuous 15:15 IST minute-close candle.
+No overlapping scenario results may be added into a portfolio return.
+There are no bid/ask fills, brokerage, spreads, slippage or option orderbook
+available here. `max_favorable_envelope` / `max_adverse_envelope` include
+the OHLC exit bar and do NOT prove intrabar ordering. Results cannot establish
+whether a genuine ₹20–₹25 premium scalp was executable.
