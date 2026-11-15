@@ -5,13 +5,14 @@ from datetime import datetime
 from pathlib import Path
 from .models import Side
 from .phase6_premium import Signal,Settings,read_quotes,replay
+from .premium_feasibility_v3 import evaluate_premium_bracket
 
 def main():
     p=argparse.ArgumentParser(description="Research only: observed CE/PE premium bid-ask replay")
     p.add_argument("--signals",required=True,help="Phase5 --signals-out CSV")
     p.add_argument("--quotes",required=True,help="Actual historical option quotes CSV")
-    p.add_argument("--target",type=float,default=25)
-    p.add_argument("--stop",type=float,default=10)
+    p.add_argument("--target",type=float,default=15)
+    p.add_argument("--stop",type=float,default=3)
     p.add_argument("--cost-per-unit",type=float,default=1)
     p.add_argument("--out",default="phase6_trades.csv")
     p.add_argument("--result-out",default="phase6_result.json")
@@ -35,6 +36,10 @@ def main():
                 "NIFTY index candles or option OHLC candles are NOT bid/ask quotes. "
                 "No synthetic premium P&L will be generated.")
     try:
+        feasibility=evaluate_premium_bracket(target_points=args.target,
+            stop_points=args.stop,round_trip_cost_per_unit=args.cost_per_unit)
+        if not feasibility.accepted:
+            p.error(feasibility.reason + ": target >= 15 premium points and net RR >= 3 required")
         quotes=read_quotes(args.quotes)
         cfg=Settings(target_points=args.target,stop_points=args.stop,
                      cost_per_unit=args.cost_per_unit)
@@ -58,6 +63,7 @@ def main():
           "skipped":skipped,"target_premium_points":args.target,
           "stop_premium_points":args.stop,
           "cost_per_unit":args.cost_per_unit,
+          "minimum_net_rr":3.0,"net_bracket_rr":feasibility.net_rr,
           "net_one_lot_rupees_sequential_sum":total,
           "warning":"No execution guarantee; sparse quotes and market impact remain unobserved. One lot per trade assumed; never aggregate independent strategies as proven live profits."}
     dst=Path(args.result_out)
