@@ -33,3 +33,11 @@ Each phase: confirm source method, define deterministic rule and counterexamples
 - A 15 point target / 5 point stop is gross 3R but net less than 3R with positive costs and is rejected. The 15/3/1 example gives 14/4 = 3.5R **hypothetical**.
 - `smc/premium_feasibility_v3.py` is separately testable, and `smc/phase6_cli.py` invokes it before observed quote replay. Existing `Settings` defaults and `phase6_ohlc_cli` remain unchanged for reproducible legacy research; OHLC does not provide observed bid/ask and must not claim verified net 3R.
 - This gate checks only configured bracket arithmetic, NOT market feasibility (liquidity, actual attainable target, slippage, fills, or strategy profitability). It may be strict for real market conditions. No live order execution.
+
+## V3.1 Setup Confirmation Orchestrator — 2026-11-15
+- New opt-in `smc/setup_confirmation_v3.py` with explicit `REVERSAL` and `CONTINUATION` stage sequences. Each `PASS` requires source ID + offset-aware confirmation timestamp.
+- `assess_setup` combines stage evidence, stale-data gate, underlying index bracket, verified option-data flag and 15+ gross premium-point / >=3 cost-adjusted option R:R policy into explainable `DATA_BLOCKED`, `WAIT`, `NO_TRADE`, `RESEARCH_READY` responses.
+- Missing evidence defaults to WAIT, failed evidence / setup expiry produce NO_TRADE, and future evidence is rejected. JSON-ready stage progress and next confirmation provided for a future frontend.
+- `tests/test_setup_confirmation_v3.py`: 15 isolated tests passed in an independent local harness, **repository-wide regression still requires user's Windows checkout**.
+- This is a DTO/orchestrator, NOT a complete automatic setup detector. Stage evidence and quote health remain supplied by separately verified upstream modules; no signal is emitted by default; no live execution.
+- Test: `python -m pytest -q tests/test_setup_confirmation_v3.py` then `python -m pytest -q`.
