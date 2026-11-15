@@ -41,3 +41,11 @@ Each phase: confirm source method, define deterministic rule and counterexamples
 - `tests/test_setup_confirmation_v3.py`: 15 isolated tests passed in an independent local harness, **repository-wide regression still requires user's Windows checkout**.
 - This is a DTO/orchestrator, NOT a complete automatic setup detector. Stage evidence and quote health remain supplied by separately verified upstream modules; no signal is emitted by default; no live execution.
 - Test: `python -m pytest -q tests/test_setup_confirmation_v3.py` then `python -m pytest -q`.
+
+## V3.2 Automatic LTF Evidence Adapter — 2026-11-15
+- New opt-in `smc/evidence_adapter_v3.py`: takes independently quality-gated, fully completed 1-minute LTF candles and uses existing `phase2.scan` plus `entry_v1.evaluate_entry` to produce a traceable V3 reversal setup assessment.
+- Each real closed-candle liquidity sweep can be marked PASS with timestamp/source. An internal CHoCH is **not** automatically a full ICT MSS; it remains PENDING with a candidate source reference until verified. A three-candle FVG is not proof of displacement; it also remains PENDING. A closed-candle FVG retest/rejection may be marked PASS only when entry_v1 returns the causal retest event. All HTF bias/HTF POI evidence requires separate, independently checked inputs; no HTF claims are derived from LTF.
+- Disqualifying entry expiry/invalidation is mapped to FAIL. A chosen source event is the latest sweep, never selected using hindsight performance. No candidate returns WAIT; missing/incomplete candles or no independently verified feed health returns DATA_BLOCKED.
+- Separate bracket/premium/verified option quote inputs are never fabricated. No live signal, P&L, or executable advice. Adapter is NOT wired to replay/live execution yet. It provides explainable DTOs for upcoming UI.
+- `tests/test_evidence_adapter_v3.py` adds 11 tests. An additional HTF-prior-to-sweep test was added to `tests/test_setup_confirmation_v3.py`. These repository tests require local run; GitHub connector cannot execute code and this environment cannot reach GitHub via network.
+- Validate with `python -m pytest -q tests/test_evidence_adapter_v3.py tests/test_setup_confirmation_v3.py` then `python -m pytest -q`.
