@@ -10,7 +10,7 @@ Research/paper-only user-friendly NIFTY/SENSEX terminal. Explain M/W/D bias, liq
 - [x] P0A Inspect baseline architecture, structure_v2 and liquidity implementation
 - [x] P0B Introduce V3 decision DTO, fail-closed reasoning and isolated unit tests (9 passed locally)
 - [ ] P0C Run complete existing pytest suite on a checkout and record regression baseline; GitHub connector itself cannot execute code
-- [ ] P1 Causal structure policy: IDM, protected swings, STH/STL, ITH/ITL, inside bars and wick/close semantics
+- [~] P1 Initial opt-in `smc/structure_v3.py` hierarchy + wick/close structure events + candidate IDM and `tests/test_structure_v3.py` committed; inside-bar/full IDM source fixtures and local pytest verification still pending
 - [ ] P2 External/internal liquidity and targets, eligibility and sweeps
 - [ ] P3 Time/price, multi-timeframe bias and dealing ranges, conflict states
 - [ ] P4 Standard and advanced blocks, FVG overlaps and POI selection
