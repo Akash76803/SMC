@@ -105,10 +105,10 @@ def adapt_reversal_candles(*, symbol: str, candles: list[Candle],
             idx, candles,
         ))
         if selected.choch_index is not None:
-            stages.append(_pass(
-                "MSS_CONFIRMED",
-                "Internal CHoCH proxy (not independently verified ICT MSS)",
-                selected.choch_index, candles,
+            stages.append(ObservedStage(
+                "MSS_CONFIRMED", CheckState.PENDING,
+                "Internal CHoCH detected; ICT MSS/displacement verification pending",
+                source_id=f"ltf:choch:{selected.choch_index}",
             ))
         if selected.fvg_index is not None:
             stages.append(ObservedStage(
