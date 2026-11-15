@@ -91,7 +91,8 @@ def assess_setup(*, symbol: str, kind: SetupKind, direction: str,
         if stage.confirmed_at is not None and stage.confirmed_at > observed_at:
             raise ValueError("FUTURE_STAGE_EVIDENCE")
         if (setup_created_at is not None and stage.confirmed_at is not None
-                and stage.confirmed_at < setup_created_at):
+                and stage.confirmed_at < setup_created_at
+                and stage.code not in ("HTF_BIAS", "HTF_POI")):
             raise ValueError("STAGE_PREDATES_SETUP")
     checks = []
     progress = []
