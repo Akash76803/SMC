@@ -111,10 +111,10 @@ def adapt_reversal_candles(*, symbol: str, candles: list[Candle],
                 selected.choch_index, candles,
             ))
         if selected.fvg_index is not None:
-            stages.append(_pass(
-                "DISPLACEMENT_FVG",
-                "Directional three-candle FVG proxy (displacement not verified)",
-                selected.fvg_index, candles,
+            stages.append(ObservedStage(
+                "DISPLACEMENT_FVG", CheckState.PENDING,
+                "Directional FVG found; displacement strength requires independent confirmation",
+                source_id=f"ltf:fvg:{selected.fvg_index}",
             ))
         if selected.entry is not None and selected.fvg_index is not None:
             stages.append(_pass(
