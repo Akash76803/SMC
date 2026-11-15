@@ -61,7 +61,7 @@ def test_wick_sweep_requires_close_beyond_wick_for_bos():
     e = [x for x in detect_hierarchical_structure(c) if x.tier == "SHORT"
          and x.origin_index == 1 and x.direction == "BULLISH"]
     assert [(x.kind, x.confirmed_at) for x in e] == [
-        ("SWEEP", 3), ("BOS", 5)]
+        ("SWEEP", 3), ("SWEEP", 4), ("BOS", 5)]
     assert e[-1].level == 121
 
 
