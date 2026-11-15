@@ -62,7 +62,7 @@ def test_duplicate_htf_rejected():
         run(verified_htf=(stage,stage))
 
 def test_candidate_premium_and_bracket_cannot_bypass_missing_confirmations():
-    a=run(index_bracket=ResearchBracket(25000,24970,25080,"BULLISH"),
+    a=run(index_bracket=ResearchBracket(25000,25030,24920,"BEARISH"),
           premium_plan=PremiumPlan(15,3,1),option_data_verified=True)
     assert a.assessment.decision.status is DecisionStatus.WAIT
 
