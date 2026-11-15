@@ -96,3 +96,11 @@ def test_both_index_and_premium_gates_required():
 def test_no_future_setup_creation():
     with pytest.raises(ValueError,match="SETUP_CREATED_IN_FUTURE"):
         assess(setup_created_at=NOW+timedelta(minutes=1))
+
+def test_preexisting_htf_bias_is_allowed_before_ltf_sweep():
+    historical=ObservedStage("HTF_BIAS",CheckState.PASS,
+          "Previously closed HTF candle",NOW-timedelta(minutes=120),"htf:close:10")
+    others=tuple(x for x in stages() if x.code!="HTF_BIAS")
+    report=assess(stages=(historical,)+others,
+                  setup_created_at=NOW-timedelta(minutes=30))
+    assert report.decision.status is DecisionStatus.RESEARCH_READY
