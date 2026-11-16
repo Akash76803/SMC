@@ -41,3 +41,23 @@ def test_empty_api_rejected_not_synthesized():
     with pytest.raises(HistoryError,match="NO_CANDLES"):
         download_option(API([]),token="12345",interval="ONE_MINUTE",start=NOW,end=NOW,
                         pause_seconds=0)
+
+def test_bfo_sensex_option_exact_identity_history_and_csv(tmp_path):
+    contract={
+        "symbol":"SENSEX26NOV80000CE","exch_seg":"BFO",
+        "instrumenttype":"OPTIDX","token":"BFO123",
+        "expiry":"26NOV2026","strike":"8000000",
+    }
+    identity=resolve_option([contract],"SENSEX26NOV80000CE")
+    assert identity["exchange"]=="BFO"
+    api=API([["2026-11-11T09:15:00+05:30",99,103,98,100,200]])
+    result=download_option(api,token="BFO123",exchange="BFO",
+                           interval="ONE_MINUTE",start=NOW,end=NOW,pause_seconds=0)
+    assert api.calls[0]["exchange"]=="BFO"
+    path=tmp_path/"sensex_bfo.csv"
+    export_option_ohlc(result,path,identity)
+    from smc.phase6_ohlc import read_series
+    series=read_series(path)
+    assert series.trading_symbol=="SENSEX26NOV80000CE"
+    assert len(series.candles)==1
+    assert list(csv.DictReader(path.open()))[0]["exchange"]=="BFO"
