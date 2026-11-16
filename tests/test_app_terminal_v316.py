@@ -127,3 +127,46 @@ def test_live_structure_warmup_must_remain_wait(tmp_path):
     status = _tail_live(stream)
     assert status["status"] == "WAIT"
     assert status["reason"] == "STRUCTURE_WARMUP"
+
+def test_live_feed_status_atomic_and_secret_free(tmp_path):
+    from smc.angel_stream_cli_v312 import write_live_status
+    from smc.app_terminal_v316 import _feed_status
+    target = tmp_path / "feed_status.json"
+    write_live_status(str(target), "AUTHENTICATION_REQUIRED",
+                      "ENTER_LOCAL_TOTP_TO_CONNECT")
+    info = json.loads(target.read_text())
+    assert info["research_only"] is True
+    assert info["orders_enabled"] is False
+    assert _feed_status(None, target)["status"] == "AUTHENTICATION_REQUIRED"
+    write_live_status(str(target), "CANCELLED", "LOCAL_AUTH_OR_STREAM_INTERRUPTED")
+    assert _feed_status(None, target)["status"] == "CANCELLED"
+    assert not list(tmp_path.glob("*.tmp"))
+
+
+def test_api_live_readable_without_reloading_history(tmp_path):
+    from smc.angel_stream_cli_v312 import write_live_status
+    csv, report = fixture_paths(tmp_path)
+    status = tmp_path / "status.json"
+    write_live_status(str(status), "AUTHENTICATION_REQUIRED", "ENTER_TOTP")
+    server = ThreadingHTTPServer(
+        ("127.0.0.1", 0),
+        make_handler(str(csv), str(report), None, str(status)))
+    thread = Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    try:
+        base = f"http://127.0.0.1:{server.server_port}"
+        with urlopen(base + "/api/live") as response:
+            assert json.load(response)["status"] == "AUTHENTICATION_REQUIRED"
+        # Historical files may be temporarily unavailable after startup:
+        # polling must not reopen them.
+        csv.unlink()
+        report.unlink()
+        write_live_status(str(status), "CANCELLED", "LOCAL_AUTH_OR_STREAM_INTERRUPTED")
+        with urlopen(base + "/api/live") as response:
+            assert json.load(response)["status"] == "CANCELLED"
+        with urlopen(base + "/api/snapshot") as response:
+            assert json.load(response)["sessions"][0]["date"] == "2026-11-02"
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join(timeout=3)
