@@ -19,6 +19,7 @@ from .csv_data import read_candles_csv
 from .session_reconciliation_v314 import reconcile_sessions
 from .live_setup_screen_v317 import build_setup_screen
 from .angel_option_live_v318 import read_option_snapshot
+from .option_quote_tape_v319 import live_momentum
 
 APP_BUILD = "SMC-DUAL-MARKET-2026-11-16-R2"
 
@@ -65,7 +66,7 @@ pre{white-space:pre-wrap;overflow-wrap:anywhere;font-size:12px;color:#a7bfdf}
 <div class="setup-grid" id="setupmetrics"></div></div>
 <div><h2>Confirmation checklist</h2><div id="setupevidence" class="muted"></div>
 <p class="warn">INDEX LEVELS ≠ OPTION PREMIUM. NO BROKER ORDERS.</p></div></div></section>
-<section class="panel" style="margin-bottom:15px"><h2>LIVE INDEX CANDLES <small>tick-sampled, not certified exchange OHLC</small></h2><canvas id="liveChart"></canvas><small id="liveChartNote">No verified live candles yet.</small></section><section class="panel" style="margin-bottom:15px"><h2>ATM / ITM CE–PE OPTION QUOTES <small>Actual broker bid/ask only</small></h2><p id="optionStatus" class="warn">OPTION QUOTES UNAVAILABLE</p><div id="optionRows" style="overflow-x:auto"></div><small>No inferred option exit prices or premium SL/TP. Greeks may be unavailable, especially SENSEX.</small></section><div id="cards"></div>
+<section class="panel" style="margin-bottom:15px"><h2>LIVE INDEX CANDLES <small>tick-sampled, not certified exchange OHLC</small></h2><canvas id="liveChart"></canvas><small id="liveChartNote">No verified live candles yet.</small></section><section class="panel" style="margin-bottom:15px"><h2>ATM / ITM CE–PE OPTION QUOTES <small>Actual broker bid/ask only</small></h2><p id="optionStatus" class="warn">OPTION QUOTES UNAVAILABLE</p><h2>OPTION MOMENTUM RANKING · OTM INCLUDED</h2><p id="momentumStatus" class="muted">Broker quote history required.</p><div id="momentumRows" style="overflow-x:auto"></div><div id="optionRows" style="overflow-x:auto"></div><small>No inferred option exit prices or premium SL/TP. Greeks may be unavailable, especially SENSEX.</small></section><div id="cards"></div>
 <div class="bar"><label>Session <select id="day"></select></label>
 <label>Direction <select id="direction"><option>ALL</option><option>BULLISH</option><option>BEARISH</option></select></label>
 <span class="warn" id="quality"></span></div>
@@ -129,6 +130,17 @@ function draw(bars,canvasId='chart'){
 }
 function renderSetup(live){
  const q=live.options||{status:'UNAVAILABLE',contracts:[]};
+ const mom=live.momentum||{status:'NO_VERIFIED_OPTION_TAPE',candidates:[]};
+ document.getElementById('momentumStatus').textContent=
+  'Observed quote samples: '+(mom.observed_samples||0)+' | '+mom.status+
+  ' · Momentum is research only, NOT an entry authorization.';
+ document.getElementById('momentumRows').innerHTML=(mom.candidates||[]).length?
+ '<table><thead><tr><th>Contract</th><th>Side</th><th>OTM steps</th><th>Momentum</th><th>Volume Δ</th><th>Bid</th><th>Entry Ask ref</th><th>Spread %</th><th>Status</th></tr></thead><tbody>'+
+ mom.candidates.map(c=>'<tr><td>'+esc(c.trading_symbol)+'</td><td>'+esc(c.side)+'</td><td>'+esc(c.otm_steps)+
+ '</td><td>'+esc(c.bid_change_pct)+'%</td><td>'+esc(c.volume_growth)+'</td><td>'+esc(c.last_bid)+
+ '</td><td>'+esc(c.entry_ask_reference)+'</td><td>'+esc(c.spread_pct)+
+ '</td><td>RESEARCH · NO TRADE</td></tr>').join('')+'</tbody></table>':
+ '<p class="muted">Need at least 3 recent observed premium quotes with increasing bid, volume and acceptable spread.</p>';
  document.getElementById('optionStatus').textContent=
   'OPTION DATA: '+(q.status||'UNAVAILABLE')+' | '+(q.reason||'NO FRESH QUOTES');
  document.getElementById('optionRows').innerHTML=(q.contracts||[]).length?
@@ -331,7 +343,8 @@ def _latest_live_event(path: str | Path | None) -> dict | None:
 def live_screen_payload(live_path: str | Path | None,
                         status_path: str | Path | None,
                         option_path: str | Path | None = None,
-                        symbol: str | None = None) -> dict:
+                        symbol: str | None = None,
+                        tape_path: str | Path | None = None) -> dict:
     feed=_feed_status(live_path,status_path)
     event=_latest_live_event(live_path)
     feed["setup"]=build_setup_screen(event,live_status=feed["status"])
@@ -358,6 +371,18 @@ def live_screen_payload(live_path: str | Path | None,
     feed["options"]=read_option_snapshot(
         option_path if feed["status"]=="RECENT_BAR" else None,
         symbol=selected)
+    feed["momentum"] = {
+        "symbol":selected,"status":"LIVE_OPTION_HISTORY_UNVERIFIED",
+        "candidates":[],"observed_samples":0,
+        "research_only":True,"orders_enabled":False,
+    }
+    if (feed["status"]=="RECENT_BAR" and isinstance(event,dict)
+        and isinstance(event.get("last_candle_close"),(float,int))
+        and tape_path is not None):
+        feed["momentum"]=live_momentum(
+            tape_path,symbol=selected,
+            spot=float(event["last_candle_close"]),
+            now=datetime.now().astimezone())
     feed["sampled_live_candles"] = (
         event.get("sampled_live_candles", []) if event is not None
         and feed["status"] == "RECENT_BAR" else [])
@@ -457,7 +482,9 @@ def make_handler(csv_path: str, report_path: str, live_path: str | None,
                         live_file,status_file,
                         live_files["options"] if multi_root is not None
                         and selected in live_symbols else None,
-                        symbol=selected)},
+                        symbol=selected,
+                        tape_path=(live_files["option_tape"] if multi_root is not None
+                                   and selected in live_symbols else None))},
                     allow_nan=False).encode()
                 status, mime = 200, "application/json"
             elif path == "/api/live":
@@ -465,7 +492,9 @@ def make_handler(csv_path: str, report_path: str, live_path: str | None,
                     live_file,status_file,
                     live_files["options"] if multi_root is not None
                     and selected in live_symbols else None,
-                    symbol=selected)).encode()
+                    symbol=selected,
+                    tape_path=(live_files["option_tape"] if multi_root is not None
+                               and selected in live_symbols else None))).encode()
                 status, mime = 200, "application/json"
             else:
                 payload, mime, status = b"Not found", "text/plain", 404
