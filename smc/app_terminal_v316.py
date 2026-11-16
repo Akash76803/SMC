@@ -12,7 +12,7 @@ from collections import Counter
 from datetime import datetime
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from urllib.parse import urlparse
+from urllib.parse import urlparse, parse_qs
 
 from .csv_data import read_candles_csv
 from .session_reconciliation_v314 import reconcile_sessions
@@ -46,6 +46,15 @@ pre{white-space:pre-wrap;overflow-wrap:anywhere;font-size:12px;color:#a7bfdf}
 <body><header><h1>SMC / MARKET RESEARCH TERMINAL</h1>
 <small>Local read-only terminal • index candles ≠ option premiums • AUTO-ORDERS DISABLED</small></header>
 <main>
+<div class="bar" style="align-items:center;padding:12px 15px;background:#17283e;border-radius:12px">
+<strong>MARKET</strong> <select id="market" aria-label="Choose NIFTY or SENSEX">
+<option value="NIFTY">NIFTY 50</option><option value="SENSEX">SENSEX</option></select>
+<button id="allowAlerts" style="background:#295d96;color:white;border:0;border-radius:8px;padding:10px;cursor:pointer">Enable desktop alerts</button>
+<strong class="warn" id="marketWarning"></strong></div>
+<div id="bigAlert" role="alert" aria-live="assertive" style="display:none;position:fixed;left:3%;right:3%;top:9%;z-index:1000;background:#193750;border:3px solid #f5be51;border-radius:16px;box-shadow:0 10px 60px #000; padding:25px">
+<h1 id="bigAlertTitle">SMC RESEARCH CANDIDATE</h1>
+<p id="bigAlertBody" style="font-size:21px"></p>
+<button id="dismissAlert" style="background:#f5be51;border:0;border-radius:8px;padding:12px 28px;cursor:pointer">Dismiss alert</button></div>
 <section class="panel" style="margin-bottom:15px"><h2>LIVE SMC TRADE SETUP · NIFTY / SENSEX</h2>
 <div class="setup-layout"><div><div id="setupstate" class="status">WAIT · MARKET DATA NOT VERIFIED</div>
 <p id="setupreason" class="muted">Checking source and confirmation stages…</p>
@@ -66,7 +75,34 @@ pre{white-space:pre-wrap;overflow-wrap:anywhere;font-size:12px;color:#a7bfdf}
 <section class="panel" style="margin-top:15px"><h2>Independent ICT lifecycle (not order signals)</h2>
 <div id="lifecycles"></div></section></main>
 <script>
-const sel=document.getElementById('day'), direction=document.getElementById('direction');
+const sel=document.getElementById('day'), direction=document.getElementById('direction'),
+      market=document.getElementById('market');
+let lastAlertId=null; const observedAlerts=new Set();
+document.getElementById('dismissAlert').onclick=()=>{document.getElementById('bigAlert').style.display='none'};
+document.getElementById('allowAlerts').onclick=async()=>{
+ if(!('Notification' in window)){alert('Desktop notification not supported; in-app alerts remain enabled');return}
+ try{const state=await Notification.requestPermission();
+ document.getElementById('allowAlerts').textContent='Desktop alerts: '+state}
+ catch(e){document.getElementById('allowAlerts').textContent='Desktop alerts unavailable'}
+};
+function notifyIfNew(live){
+ const a=live.alert;
+ if(!a||a.type!=='SMC_RETEST_RESEARCH'||!a.id||live.status!=='RECENT_BAR')return;
+ const key=(snapshot?.symbol||market.value)+'|'+a.id;
+ if(observedAlerts.has(key))return;
+ observedAlerts.add(key);
+ document.getElementById('bigAlertTitle').textContent='SMC RETEST OBSERVED · RESEARCH ONLY';
+ document.getElementById('bigAlertBody').textContent=
+  (snapshot?.symbol||market.value)+' '+(a.direction||'')+
+  ' at '+(a.at||'')+'. No verified Entry / SL / Option strike. NO TRADE AUTHORIZATION.';
+ document.getElementById('bigAlert').style.display='block';
+ if('Notification' in window && Notification.permission==='granted'){
+   new Notification('SMC retest observed — research only',{
+     body:document.getElementById('bigAlertBody').textContent,
+     tag:key
+   });
+ }
+}
 let snapshot=null;
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 function draw(bars,canvasId='chart'){
@@ -127,11 +163,13 @@ function render(){
  if(!session){session=(snapshot.sessions||[]).at(-1); if(session)sel.value=session.date}
  const live=snapshot.live||{}, observations=(session?.observations||[]).filter(o=>direction.value==='ALL'||o.direction===direction.value);
  renderSetup(live);
+ notifyIfNew(live);
  document.getElementById('cards').innerHTML=[
  ['Historical sessions',snapshot.sessions.length],['Observations',snapshot.observation_count],
  ['ICT complete',snapshot.ict_complete],['Paper brackets',snapshot.index_brackets],['Lifecycle retests',snapshot.retest_confirmed],
  ['Live state',live.status||'NOT_CONNECTED']
  ].map(x=>'<div class="card">'+esc(x[0])+'<strong>'+esc(x[1])+'</strong></div>').join('');
+ document.getElementById('marketWarning').textContent=snapshot.historical_available===false?'AUDITED HISTORY UNAVAILABLE FOR '+snapshot.symbol:'';
  document.getElementById('quality').textContent='Source audit: '+snapshot.excluded_count+' excluded • '+snapshot.quarantined_count+' quarantined extra bars';
  document.getElementById('live').innerHTML='<p>Status: <b class="'+(live.status==='RECENT_BAR'?'good':'warn')+'">'+esc(live.status)+'</b></p>'+
  '<p>Last closed candle: '+esc(live.last_candle_close_at||'Unavailable')+'</p>'+
@@ -152,15 +190,16 @@ function render(){
  draw(session?.candles||[]);
 }
 async function refresh(){
- try{let r=await fetch('/api/snapshot',{cache:'no-store'}); if(!r.ok)throw new Error('API error');
+ try{let r=await fetch('/api/snapshot?symbol='+encodeURIComponent(market.value),{cache:'no-store'}); if(!r.ok)throw new Error('API error');
  let next=await r.json();let prior=sel.value;snapshot=next;
  sel.innerHTML=(snapshot.sessions||[]).map(s=>'<option value="'+esc(s.date)+'">'+esc(s.date)+'</option>').join('');
  if((snapshot.sessions||[]).some(s=>s.date===prior))sel.value=prior;
  render();
  }catch(e){document.getElementById('quality').textContent='DATA NOT AVAILABLE: '+e.message}
 }
+market.onchange=()=>{snapshot=null;sel.innerHTML='';document.getElementById('bigAlert').style.display='none';refresh()};
 sel.onchange=render;direction.onchange=render;window.onresize=render;
-refresh();setInterval(async()=>{try{let r=await fetch('/api/live',{cache:'no-store'});if(r.ok&&snapshot){snapshot.live=await r.json();render()}}catch(e){}},5000);
+refresh();setInterval(async()=>{try{let r=await fetch('/api/live?symbol='+encodeURIComponent(market.value),{cache:'no-store'});if(r.ok&&snapshot){snapshot.live=await r.json();render()}}catch(e){}},5000);
 </script></body></html>"""
 
 
@@ -310,27 +349,56 @@ def build_snapshot(csv_path: str | Path, report_path: str | Path,
 
 
 def make_handler(csv_path: str, report_path: str, live_path: str | None,
-                 status_path: str | None = None):
-    historical = build_snapshot(csv_path, report_path)
+                 status_path: str | None = None,
+                 multi_root: str | Path | None = None,
+                 live_symbols: tuple[str, ...] = ()):
+
+    if multi_root is not None:
+        from .dual_market_v318 import get_historical_snapshots
+        historical_by_symbol = get_historical_snapshots(multi_root)
+    else:
+        historical = build_snapshot(csv_path, report_path)
+        historical_by_symbol = {historical["symbol"]: historical}
     class Handler(BaseHTTPRequestHandler):
         def log_message(self, format, *args):
             # Routine browser polls should not flood PowerShell.
             return
 
         def do_GET(self):
-            path = urlparse(self.path).path
+            parsed = urlparse(self.path)
+            path = parsed.path
+            from .dual_market_v318 import select_symbol, market_paths
+            try:
+                selected = select_symbol(parse_qs(parsed.query).get("symbol", ["NIFTY"])[0])
+            except ValueError:
+                payload, mime, status = b'{"error":"INVALID_MARKET_SYMBOL"}', "application/json", 400
+                self._respond(status, mime, payload)
+                return
+            if multi_root is not None:
+                live_files = market_paths(multi_root, selected)
+                live_file = live_files["live"] if selected in live_symbols else None
+                status_file = live_files["status"] if selected in live_symbols else None
+            else:
+                live_file, status_file = live_path, status_path
             if path == "/":
                 payload, mime, status = HTML.encode(), "text/html; charset=utf-8", 200
             elif path == "/api/snapshot":
+                chosen = historical_by_symbol.get(selected)
+                if chosen is None:
+                    from .dual_market_v318 import unavailable_snapshot
+                    chosen = unavailable_snapshot(selected, "HISTORY_NOT_LOADED")
                 payload = json.dumps(
-                    {**historical, "live": live_screen_payload(live_path, status_path)},
+                    {**chosen, "live": live_screen_payload(live_file, status_file)},
                     allow_nan=False).encode()
                 status, mime = 200, "application/json"
             elif path == "/api/live":
-                payload = json.dumps(live_screen_payload(live_path, status_path)).encode()
+                payload = json.dumps(live_screen_payload(live_file, status_file)).encode()
                 status, mime = 200, "application/json"
             else:
                 payload, mime, status = b"Not found", "text/plain", 404
+            self._respond(status, mime, payload)
+
+        def _respond(self, status, mime, payload):
             self.send_response(status)
             self.send_header("Content-Type", mime)
             self.send_header("Content-Length", str(len(payload)))
