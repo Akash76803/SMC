@@ -84,7 +84,7 @@ def launch(csv_path: str | Path, results_dir: str | Path) -> None:
     root.geometry("1230x790")
     root.minsize(870, 600)
     root.configure(bg="#101828")
-    state: dict[str, Any] = {"sessions": (), "current": None, "selected": None}
+    state: dict[str, Any] = {"sessions": (), "current": None, "selected": None, "focus": None}
 
     header = tk.Frame(root, bg="#101828", padx=18, pady=13)
     header.pack(fill="x")
@@ -134,7 +134,12 @@ def launch(csv_path: str | Path, results_dir: str | Path) -> None:
             chart.create_text(30, 40, anchor="w", fill="#f8fafc",
                               text="Load validated candles and optional replay JSON.")
             return
-        bars = view.candles[-min(100, len(view.candles)):]
+        focus = state["focus"]
+        if focus is None:
+            bars = view.candles[-min(100, len(view.candles)):]
+        else:
+            start = max(0, min(focus - 50, max(0, len(view.candles) - 100)))
+            bars = view.candles[start:start + 100]
         w = max(chart.winfo_width(), 400)
         h = max(chart.winfo_height(), 180)
         left, right, top_y, bottom_y = 70, 80, 36, 42
@@ -186,6 +191,7 @@ def launch(csv_path: str | Path, results_dir: str | Path) -> None:
         date = selected_day.get()
         view = next((s for s in state["sessions"] if s.date == date), None)
         state["current"] = view
+        state["focus"] = None
         tree.delete(*tree.get_children())
         if view is None:
             draw()
@@ -210,6 +216,10 @@ def launch(csv_path: str | Path, results_dir: str | Path) -> None:
         if view is None or not selection:
             return
         obs = view.observations[int(selection[0])]
+        at = obs.get("timestamp")
+        state["focus"] = next((i for i, c in enumerate(view.candles)
+                               if c.timestamp.isoformat() == at), None)
+        draw()
         diag = obs.get("diagnostics") or {}
         detail.set(
             f"Event {obs.get('timestamp', '')} | "
@@ -234,6 +244,12 @@ def launch(csv_path: str | Path, results_dir: str | Path) -> None:
             selected_day.set(sessions[-1].date)
             choose_session()
 
+    def show_close():
+        state["focus"] = None
+        draw()
+
+    tk.Button(toolbar, text="Latest candles", command=show_close, bg="#475569",
+              fg="#ffffff", relief="flat", padx=12).pack(side="right", padx=6)
     tk.Button(toolbar, text="Reload", command=load, bg="#2563eb",
               fg="#ffffff", relief="flat", padx=12).pack(side="right")
     load()
