@@ -226,7 +226,7 @@ def launch(csv_path: str | Path, results_dir: str | Path) -> None:
         selection = tree.selection()
         if view is None or not selection:
             return
-        obs = state["visible_events"][int(selection[0])
+        obs = state["visible_events"][int(selection[0])]
         at = obs.get("timestamp")
         state["focus"] = next((i for i, c in enumerate(view.candles)
                                if c.timestamp.isoformat() == at), None)
