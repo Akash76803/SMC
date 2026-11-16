@@ -22,9 +22,6 @@ from .data_quality import drop_terminal_1530, audit_1m
 from .historical_brackets_v313 import analyze_trade_references
 from .market_context_v310 import _check
 
-IST = ZoneInfo("Asia/Kolk")
-
-
 def _ist():
     return ZoneInfo("Asia/Kolkata")
 
