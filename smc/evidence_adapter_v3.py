@@ -26,6 +26,7 @@ class EvidenceAdapterReport:
     entry_reason: str | None
     liquidity_events_count: int
     structure_events_count: int
+    selected_direction: str | None = None
 
     def as_dict(self) -> dict:
         data = self.assessment.as_dict()
@@ -35,6 +36,7 @@ class EvidenceAdapterReport:
             "entry_reason": self.entry_reason,
             "liquidity_events_count": self.liquidity_events_count,
             "structure_events_count": self.structure_events_count,
+            "selected_direction": self.selected_direction,
         }
         return data
 
@@ -149,4 +151,5 @@ def adapt_reversal_candles(*, symbol: str, candles: list[Candle],
         selected.reason if selected else None,
         len(result.liquidity_events) if result else 0,
         len(result.structure_events) if result else 0,
+        ("BEARISH" if selected.side.value == "PE" else "BULLISH") if selected else None,
     )
