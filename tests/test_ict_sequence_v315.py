@@ -82,3 +82,13 @@ def test_historical_replay_includes_ict_without_promoting_to_orders():
         assert "ict_sequence" in candidate
         assert candidate["broker_order_eligible"] is False
         assert candidate["ict_sequence"]["as_of"] == candidate["confirmed_at"]
+
+def test_offline_ict_csv_reports_missing_stages(tmp_path):
+    from smc.historical_replay_v314_cli import export_ict_csv
+    payload = analyze_downloaded(symbol="NIFTY", candles=bars(360))
+    output = tmp_path / "ict.csv"
+    export_ict_csv(payload, output)
+    text = output.read_text(encoding="utf-8")
+    assert "LIQUIDITY_SWEEP" in text
+    assert "MITIGATION_RETEST" in text
+    assert "missing_stages" in text
