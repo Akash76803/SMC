@@ -116,3 +116,21 @@ def test_no_shortcut_trade_wins_or_option_pnl():
         monthly=[],weekly=[],daily=[],data_healthy=True)
     assert r.as_dict()["option_pnl"] is None
     assert r.diagnostic_brackets==0
+
+def test_v38_observation_diagnostics_are_json_safe():
+    from smc.replay_v3 import ReplayObservation
+    o=ReplayObservation(
+        3,"2026-11-16T09:19:00+05:30","NO_TRADE","MSS_CONFIRMED",
+        "BULLISH",None,(),diagnostics={
+            "pending_stages":["MSS_CONFIRMED"],
+            "nearest_target_level":None,
+            "index_entry":None})
+    value=o.as_dict()
+    assert value["diagnostics"]["pending_stages"]==["MSS_CONFIRMED"]
+    assert value["level_outcomes"]==[]
+
+def test_v38_no_observations_still_has_safe_serialization():
+    c=bars([(100,101,99,100)]*18)
+    result=replay_unified_reversal(
+        symbol="NIFTY",ltf=c,monthly=[],weekly=[],daily=[],data_healthy=False)
+    assert result.as_dict()["observations"]==[]
