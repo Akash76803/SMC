@@ -63,8 +63,9 @@ def read_series(file:str|Path)->OptionSeries:
         for line,row in enumerate(reader,2):
             try:
                 identity=(row["trading_symbol"].strip().upper(),
-                          row["token"].strip(),row["expiry"].strip())
-                if row["exchange"].strip().upper()!="NFO" or not identity[0].endswith(("CE","PE")):
+                          row["token"].strip(),row["expiry"].strip(),
+                          row["exchange"].strip().upper())
+                if identity[3] not in ("NFO","BFO") or not identity[0].endswith(("CE","PE")):
                     raise ValueError("INVALID_OPTION_CONTRACT")
                 if contract is None:contract=identity
                 if contract!=identity:raise ValueError("MIXED_OPTION_CONTRACTS")
@@ -77,7 +78,7 @@ def read_series(file:str|Path)->OptionSeries:
                 raise ValueError(f"INVALID_OPTION_ROW_{line}: {exc}") from exc
             candles.append(c)
     if not candles:raise ValueError("NO_OPTION_OHLC_CANDLES")
-    return OptionSeries(*contract,tuple(candles))
+    return OptionSeries(*contract[:3],tuple(candles))
 
 def read_events(path:str|Path)->tuple[IndexEvent,...]:
     events=[]
