@@ -103,3 +103,30 @@ def test_recent_valid_event_can_populate_chart_but_never_buy(tmp_path):
     assert result["sampled_live_candles"]
     assert result["setup"]["order_eligible"] is False
     assert result["setup"]["option_strike"] is None
+
+def test_research_bracket_reference_is_visible_but_never_trade_permission():
+    data=event()
+    data["index_bracket_research"]={
+        "research_only": True,
+        "status": "RESEARCH_INDEX_BRACKET_PASSES",
+        "entry_close_reference":25500.0,
+        "stop_reference":25470.0,
+        "targets":[{"price":25565.0},{"price":25620.0}],
+    }
+    result=build_setup_screen(data,live_status="RECENT_BAR")
+    assert result["index_research_entry"]==25500.0
+    assert result["index_research_stop"]==25470.0
+    assert result["index_research_targets"]==[25565.0,25620.0]
+    assert result["entry"] is None
+    assert result["structural_stop"] is None
+    assert result["t1"] is None
+    assert result["order_eligible"] is False
+
+
+def test_dual_market_notification_uses_source_symbol_and_polls_both():
+    assert "for(const symbol of ['NIFTY','SENSEX'])" in HTML
+    assert "const symbol=a.symbol||'UNKNOWN'" in HTML
+    assert "id=\"market\"" in HTML
+    assert "id=\"bigAlert\"" in HTML
+    assert "Option bid / ask" in HTML
+    assert "T1 · RESEARCH" in HTML
