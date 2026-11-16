@@ -119,3 +119,12 @@ def test_multiday_context_cannot_feed_future_to_past():
                           context_candles=first+nextday)
     assert report["qualified_trades"] == 0
     assert report["live_orders_enabled"] is False
+
+def test_unknown_verified_calendar_marker_is_rejected():
+    c = session(2) + session(3, base=120)
+    with pytest.raises(ValueError, match="UNOBSERVED_WEEK_END_MARKER"):
+        contextual_liquidity(candles=c, as_of=c[-1].timestamp,
+                             verified_week_ends=frozenset({"2026-11-06"}))
+    with pytest.raises(ValueError, match="UNOBSERVED_PREDECESSOR_MARKER"):
+        contextual_liquidity(candles=c, as_of=c[-1].timestamp,
+                             verified_predecessors=frozenset({"2026-11-06"}))
