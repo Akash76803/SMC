@@ -38,7 +38,7 @@ Write-Host "NO LIVE ORDERS | INDEX RESEARCH ONLY | NO VERIFIED OPTION PNL"
 
 $argsList = @("-m","smc.app_terminal_v316","--symbol",$Symbol,
               "--csv",$raw,"--report",$report,"--live-jsonl",$liveFile,
-              "--port",$Port)
+              "--port",$Port,"--open-browser")
 if ($Live) {
     $argsList += "--start-live"
     if ($Token.Trim()) { $argsList += @("--token",$Token.Trim()) }
