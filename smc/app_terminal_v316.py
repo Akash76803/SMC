@@ -89,12 +89,13 @@ document.getElementById('allowAlerts').onclick=async()=>{
 function notifyIfNew(live){
  const a=live.alert;
  if(!a||a.type!=='SMC_RETEST_RESEARCH'||!a.id||live.status!=='RECENT_BAR')return;
- const key=(snapshot?.symbol||market.value)+'|'+a.id;
+ const symbol=a.symbol||'UNKNOWN';
+ const key=symbol+'|'+a.id;
  if(observedAlerts.has(key))return;
  observedAlerts.add(key);
  document.getElementById('bigAlertTitle').textContent='SMC RETEST OBSERVED · RESEARCH ONLY';
  document.getElementById('bigAlertBody').textContent=
-  (snapshot?.symbol||market.value)+' '+(a.direction||'')+
+  symbol+' '+(a.direction||'')+
   ' at '+(a.at||'')+'. No verified Entry / SL / Option strike. NO TRADE AUTHORIZATION.';
  document.getElementById('bigAlert').style.display='block';
  if('Notification' in window && Notification.permission==='granted'){
@@ -174,7 +175,6 @@ function render(){
  if(!session){session=(snapshot.sessions||[]).at(-1); if(session)sel.value=session.date}
  const live=snapshot.live||{}, observations=(session?.observations||[]).filter(o=>direction.value==='ALL'||o.direction===direction.value);
  renderSetup(live);
- notifyIfNew(live);
  document.getElementById('cards').innerHTML=[
  ['Historical sessions',snapshot.sessions.length],['Observations',snapshot.observation_count],
  ['ICT complete',snapshot.ict_complete],['Paper brackets',snapshot.index_brackets],['Lifecycle retests',snapshot.retest_confirmed],
@@ -201,8 +201,10 @@ function render(){
  draw(session?.candles||[]);
 }
 async function refresh(){
- try{let r=await fetch('/api/snapshot?symbol='+encodeURIComponent(market.value),{cache:'no-store'}); if(!r.ok)throw new Error('API error');
- let next=await r.json();let prior=sel.value;snapshot=next;
+ const desired=market.value;
+ try{let r=await fetch('/api/snapshot?symbol='+encodeURIComponent(desired),{cache:'no-store'}); if(!r.ok)throw new Error('API error');
+ let next=await r.json();if(market.value!==desired)return;
+ let prior=sel.value;snapshot=next;
  sel.innerHTML=(snapshot.sessions||[]).map(s=>'<option value="'+esc(s.date)+'">'+esc(s.date)+'</option>').join('');
  if((snapshot.sessions||[]).some(s=>s.date===prior))sel.value=prior;
  render();
@@ -210,7 +212,21 @@ async function refresh(){
 }
 market.onchange=()=>{snapshot=null;sel.innerHTML='';document.getElementById('bigAlert').style.display='none';refresh()};
 sel.onchange=render;direction.onchange=render;window.onresize=render;
-refresh();setInterval(async()=>{try{let r=await fetch('/api/live?symbol='+encodeURIComponent(market.value),{cache:'no-store'});if(r.ok&&snapshot){snapshot.live=await r.json();render()}}catch(e){}},5000);
+refresh();
+async function pollMarkets(){
+ for(const symbol of ['NIFTY','SENSEX']){
+  try{
+   const r=await fetch('/api/live?symbol='+symbol,{cache:'no-store'});
+   if(!r.ok)continue;
+   const feed=await r.json();
+   notifyIfNew(feed);
+   if(snapshot && market.value===symbol && snapshot.symbol===symbol){
+    snapshot.live=feed;render();
+   }
+  }catch(e){}
+ }
+}
+pollMarkets();setInterval(pollMarkets,5000);
 </script></body></html>"""
 
 
