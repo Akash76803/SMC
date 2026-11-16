@@ -9,10 +9,10 @@ Research/paper-only user-friendly NIFTY/SENSEX terminal. Explain M/W/D bias, liq
 ## Phases
 - [x] P0A Inspect baseline architecture, structure_v2 and liquidity implementation
 - [x] P0B Introduce V3 decision DTO, fail-closed reasoning and isolated unit tests (9 passed locally)
-- [ ] P0C Run complete existing pytest suite on a checkout and record regression baseline; GitHub connector itself cannot execute code
+- [x] P0C User confirmed 187/187 regression tests passed locally (V3.2 baseline, before V3.3 changes)
 - [~] P1 Initial opt-in `smc/structure_v3.py` hierarchy + wick/close structure events + candidate IDM and `tests/test_structure_v3.py` committed; inside-bar/full IDM source fixtures and local pytest verification still pending
 - [ ] P2 External/internal liquidity and targets, eligibility and sweeps
-- [ ] P3 Time/price, multi-timeframe bias and dealing ranges, conflict states
+- [~] P3 Initial opt-in Monthly/Weekly/Daily confirmed external-break bias, dealing range EQ/premium/discount, strict conflict/neutral handling and sweep-time causal HTF adapter committed; calendar/close timestamp adapters and historical validation pending
 - [ ] P4 Standard and advanced blocks, FVG overlaps and POI selection
 - [ ] P5 Versioned per-strategy setup state machines and expiry/invalidation
 - [ ] P6 Conservative ATM/ITM option/quote gates, slippage/fees and paper engine
@@ -49,3 +49,11 @@ Each phase: confirm source method, define deterministic rule and counterexamples
 - Separate bracket/premium/verified option quote inputs are never fabricated. No live signal, P&L, or executable advice. Adapter is NOT wired to replay/live execution yet. It provides explainable DTOs for upcoming UI.
 - `tests/test_evidence_adapter_v3.py` adds 11 tests. An additional HTF-prior-to-sweep test was added to `tests/test_setup_confirmation_v3.py`. These repository tests require local run; GitHub connector cannot execute code and this environment cannot reach GitHub via network.
 - Validate with `python -m pytest -q tests/test_evidence_adapter_v3.py tests/test_setup_confirmation_v3.py` then `python -m pytest -q`.
+
+## V3.3 HTF Bias + Dealing Range — 2026-11-16
+- `smc/htf_context_v3.py` computes independent Monthly/Weekly/Daily **confirmed external structure-break proxy** (using existing `structure_v2.detect_structure`), or NEUTRAL if no recent verified event. Bias agreement is strict: all three same direction = aligned; conflicting directions = CONFLICT; missing/neutral data = UNVERIFIED. Neither conflict nor neutral means reversal.
+- `confirmed_pivots` defines a preliminary dealing range from the latest confirmed HIGH and LOW. Midpoint EQ = (high + low)/2; PREMIUM/DISCOUNT labels describe the last close position versus EQ, not guaranteed prices or target fills. No HTF_POI pass is inferred from range alone.
+- `bias_stage` converts verified aligned context to `HTF_BIAS=PASS` with causal evidence/source timestamps. Other cases remain PENDING.
+- `adapt_reversal_with_htf` links this HTF stage into the V3.2 reversal adapter. For any selected liquidity sweep, it filters all M/W/D input candles to those closing **no later than the sweep candle**, preventing future HTF confirmation being assigned retroactively. Selected candidate direction is provided explicitly by V3.2.
+- Assumption: all input HTF timestamps are the actual **candle CLOSE**, not broker start timestamps; all candles must be complete and ordered. Unsupported market calendar, stale datasets, timeframe aggregation, market-session validation and complete Lecture 9 time/price rules remain unfinished. Do not drive live execution.
+- `tests/test_htf_context_v3.py` adds 14 tests for alignment, bearish/bullish, conflict, range, neutral, invalid input, future data, and integration. Run `python -m pytest -q tests/test_htf_context_v3.py tests/test_evidence_adapter_v3.py`, then full `python -m pytest -q`; GitHub connector cannot execute full suite. Previous local verified baseline = 187 tests before this milestone.
