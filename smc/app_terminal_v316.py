@@ -233,6 +233,7 @@ def main() -> int:
     p.add_argument("--report", default="results/v315_nifty_report.json")
     p.add_argument("--live-jsonl", default="results/live_nifty.jsonl")
     p.add_argument("--port", type=int, default=8765)
+    p.add_argument("--open-browser", action="store_true")
     p.add_argument("--start-live", action="store_true",
                    help="Start separate read-only Angel stream process with local login")
     p.add_argument("--live-seconds", type=int, default=14400)
@@ -260,6 +261,9 @@ def main() -> int:
         make_handler(args.csv, args.report, args.live_jsonl))
     print(f"LOCAL_SMC_TERMINAL: http://127.0.0.1:{args.port}")
     print("LOCALHOST_ONLY | RESEARCH_ONLY | NO_ORDERS")
+    if args.open_browser:
+        import webbrowser
+        webbrowser.open(f"http://127.0.0.1:{args.port}/")
     try:
         server.serve_forever()
     except KeyboardInterrupt:
