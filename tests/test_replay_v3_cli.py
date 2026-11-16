@@ -51,3 +51,14 @@ def test_clean_data_unchanged():
     valid = continuous()
     retained, removed = prepare_ltf_for_replay(valid, drop_isolated_terminal_1530=True)
     assert retained == valid and removed == 0
+
+def test_replay_json_export_is_parseable_by_strict_json_parser(tmp_path):
+    import json
+    from smc.replay_v3_cli import write_replay_json
+    path = tmp_path / "v38.json"
+    payload = {"schema_version": "3.7", "htf_aggregation": {"daily": 1}}
+    write_replay_json(path, payload)
+    raw = path.read_bytes()
+    assert raw[-2:] != bytes((92, 110))  # literal backslash + n must not be appended
+    assert raw.endswith(bytes((10,)))
+    assert json.loads(raw.decode("utf-8")) == payload
