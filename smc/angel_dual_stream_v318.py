@@ -182,8 +182,8 @@ def main() -> int:
         poller.start()
         for s in SYMBOLS:
             paths[s]["live"].parent.mkdir(parents=True,exist_ok=True)
-        with paths["NIFTY"]["live"].open("w",encoding="utf-8") as n, \
-             paths["SENSEX"]["live"].open("w",encoding="utf-8") as b:
+        with paths["NIFTY"]["live"].open("a",encoding="utf-8") as n, \
+             paths["SENSEX"]["live"].open("a",encoding="utf-8") as b:
             totals=run_dual_stream(
                 ws=ws,tokens=tokens,outputs={"NIFTY":n,"SENSEX":b},
                 statuses={s:str(paths[s]["status"]) for s in SYMBOLS},
