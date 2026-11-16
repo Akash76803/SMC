@@ -174,8 +174,13 @@ def replay_unified_reversal(*, symbol: str, ltf: list[Candle],
         status_counts[report.status.value] += 1
         reasons[report.primary_reason] += 1
         transition = report.selected_transition_index
-        # Never claim a prior resolved event as a new event today.
-        if transition is None or transition != i or transition in seen_transitions:
+        # WAIT states can change their transition index on each new candle;
+        # count those under per-bar status totals only, not unique setups.
+        # Log only a terminal retest decision or a terminal expiry/failure.
+        terminal = report.evidence.entry_state in (
+            "CANDIDATE", "REJECTED", "INVALIDATED", "EXPIRED")
+        if (transition is None or transition != i or
+                transition in seen_transitions or not terminal):
             continue
         seen_transitions.add(transition)
         bracket = report.index_bracket
