@@ -284,3 +284,48 @@ notepad .env   # fill API key, client ID, MPIN locally; do NOT put TOTP seed her
 
 This CLI must run on the user's own machine with their broker access; CI
 tests only mock credentials and quotes.
+
+## V3.12 — read-only live WebSocket / 1-minute close / SMC snapshots
+
+New sandbox modules:
+- `angel_stream_v312.py`: validates the actual SmartWebSocketV2 decoded
+  packet structure (`subscription_mode`, numeric exchange type,
+  `token`, integer paise LTP, millisecond exchange timestamp,
+  monotonic sequence) and rejects stale/future ticks.
+- `angel_secure_ws_v312.py`: enforces verified TLS certificate and
+  hostname checking in the upstream SDK WebSocket adapter.
+- `live_candles_v312.py`: aggregates observed exchange-timed ticks into
+  1m OHLC. The candle is only emitted after a tick in the next minute.
+  Gaps or reconnects permanently set `quality_blocked` until a new
+  clean engine instance; no interpolation or assumed 1m OHLC completeness.
+  Index tick volume is unknown, reported as 0 **unverified**.
+- `live_research_v312.py`: accepts only closed 1m candles from the
+  conservative builder and returns structural BOS/CHoCH, continuation
+  observations and 1h/15m/5m context, all research-only.
+- `angel_stream_cli_v312.py`: live SmartAPI login from local `.env`
+  and optional keyring TOTP, authenticated WebSocket V2 subscription,
+  limited local JSONL recording, and logout. It never touches order APIs.
+
+**Test from user Windows shell during regular market session:**
+
+```powershell
+cd E:\Project\SMC
+git switch sandbox
+git pull --ff-only origin sandbox
+.\.venv\Scripts\python.exe -m pip install -e ".[angel,dev]"
+.\.venv\Scripts\python.exe -m pytest -q
+.\.venv\Scripts\python.exe -m smc.angel_stream_cli_v312 `
+  --symbol NIFTY --seconds 180 `
+  --out "results\v312_nifty_live.jsonl"
+```
+
+If CLI reports `ticks=0` outside 09:15–15:15 IST, it cannot be
+counted as a live streaming success. No guessed price, candles or
+trade setups are generated from a disconnected or stale feed.
+A clean chart session should be started again after a connection gap.
+Tests mock the SDK boundary. CI cannot authenticate to the user's broker.
+
+**Limitations:** This only checks basic packet freshness and session
+continuity. Sequence gaps, network packet loss and fully sampled exchange
+OHLC are not independently verified. No order execution, broker-side
+stop orders, option Greeks, fills, P&L or live tradable signals.
