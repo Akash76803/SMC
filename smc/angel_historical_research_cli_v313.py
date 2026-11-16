@@ -22,6 +22,7 @@ from .continuation_validation_cli import build_report
 from .data_quality import drop_terminal_1530, audit_1m
 from .historical_brackets_v313 import analyze_trade_references
 from .market_context_v310 import _check
+from .session_reconciliation_v314 import reconcile_sessions
 
 def _ist():
     return ZoneInfo("Asia/Kolkata")
@@ -38,37 +39,18 @@ def analyze_downloaded(*, symbol: str, candles: list, source_requests: int = 0) 
     """Reject bad sessions rather than interpolate; no future HTF data at setups."""
     if symbol not in ("NIFTY", "SENSEX") or not candles:
         raise ValueError("INVALID_HISTORICAL_RESEARCH_INPUT")
-    # Explicitly remove Angel's known isolated index terminal 15:30 record.
-    cleaned = list(drop_terminal_1530(candles))
-    audit_1m(cleaned)  # enforces chronological timestamps
-    by_day = {}
-    for c in cleaned:
-        day = c.timestamp.astimezone(_ist()).date().isoformat()
-        by_day.setdefault(day, []).append(c)
-    verified = []
-    excluded = []
-    for day, items in by_day.items():
-        if len(items) != 360:
-            excluded.append({"date": day, "reason": "INCOMPLETE_REGULAR_360_BARS",
-                             "bars": len(items)})
-            continue
-        if items[0].timestamp.astimezone(_ist()).strftime("%H:%M") != "09:16" or (
-                items[-1].timestamp.astimezone(_ist()).strftime("%H:%M") != "15:15"):
-            excluded.append({"date": day, "reason": "INVALID_SESSION_BOUNDARIES",
-                             "bars": len(items)})
-            continue
-        if not audit_1m(items).safe_for_replay:
-            excluded.append({"date": day, "reason": "INTRADAY_GAP_OR_BAD_SOURCE",
-                             "bars": len(items)})
-            continue
-        verified.extend(items)
+    by_day, session_audit = reconcile_sessions(candles)
+    verified = [c for session in by_day.values() for c in session]
+    excluded = [
+        {"date": row["date"], "reason": row["reason"],
+         "bars": row["raw_bars"]}
+        for row in session_audit if row["status"] == "EXCLUDED"
+    ]
     if verified:
         _check(verified)
     report_days = []
     counts = Counter()
     for day, session in by_day.items():
-        if len(session) != 360 or not any(x.timestamp == session[0].timestamp for x in verified):
-            continue
         # Strictly historical context: no later day may contribute to entry.
         history = [c for c in verified if c.timestamp.date() <= session[0].timestamp.date()]
         research = build_report(symbol=symbol, candles=session,
@@ -81,6 +63,9 @@ def analyze_downloaded(*, symbol: str, candles: list, source_requests: int = 0) 
         "symbol": symbol, "api_requests": source_requests,
         "downloaded_candles": len(candles), "usable_candles": len(verified),
         "usable_sessions": len(report_days), "excluded_sessions": excluded,
+        "session_reconciliation": session_audit,
+        "recovered_sessions": sum(x["status"] == "RECOVERED_ISOLATED_POST_SESSION"
+                                  for x in session_audit),
         "outcome_counts": dict(counts), "days": report_days,
         "executed_trades": 0, "orders_enabled": False,
         "options_quotes_available": False,
