@@ -141,3 +141,15 @@ python -m smc.continuation_validation_cli --ltf "results/v38_sessions/nifty_2026
 Use optional `--monthly`, `--weekly`, and `--daily` only with independently verified **CLOSE-stamped** HTF files. Do not pass the broker 1H START-stamped CSV as an HTF close file. No option fills or order execution.
 
 Tests added: `tests/test_continuation_validation_v3.py`; run `python -m pytest -q` in the repository venv. These gates **do not** change the old V3.8 reversal replay metrics or the V3.9A desktop marker counts. Next: verified POI/protected structure, then real option quote matching and UI decision inspector integration.
+
+## V3.9C — Continuation research enrichment
+
+- `smc/continuation_evidence_v3.py`: three **fail-closed** views: (a) candidate opposite confirmed pivot available before BOS, explicitly **not verified protected structure**; (b) candidate LTF OB/FVG confluence retested by the setup close, explicitly **not verified HTF POI**; (c) `rank_liquidity_targets` T1/T2/T3 from completed as-of-setup candles, **never a guaranteed market target**.
+- `smc/continuation_validation_cli.py` now emits `evidence_review.protected_structure`, `evidence_review.poi` and `evidence_review.index_targets`, without changing `status` or `qualified_trades=0` from V3.9B.
+- Regression cases `tests/test_continuation_evidence_v3.py` cover zero lookahead, wrong dates, incomplete bars, invalid indices and no executable trade claims.
+- Use the previously saved regular session CSV:
+```powershell
+.\.venv\Scripts\python.exe -m pytest -q
+.\.venv\Scripts\python.exe -m smc.continuation_validation_cli --ltf "results\v38_sessions\nifty_2026-11-02.csv" --symbol NIFTY --out "results\v39c_nifty_02nov.json"
+```
+- The review fields are diagnostic. Genuine protected-swing confirmation, market-calendar-verified M/W/D bias, HTF POI and option chain/Greeks are still absent.
