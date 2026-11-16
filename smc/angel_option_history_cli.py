@@ -1,4 +1,4 @@
-"""NFO option contract historical OHLC only; strictly read-only SmartAPI."""
+"""NFO/BFO option contract historical OHLC only; strictly read-only SmartAPI."""
 from __future__ import annotations
 import argparse
 import logging
@@ -9,7 +9,7 @@ from .angel_history_cli import day
 from .angel_option_history import resolve_option,download_option,export_option_ohlc
 
 def main():
-    ap=argparse.ArgumentParser(description="Exact NFO OPTIDX option contract OHLC (NO orders, NOT bid/ask)")
+    ap=argparse.ArgumentParser(description="Exact NFO/BFO OPTIDX option contract OHLC (NO orders, NOT bid/ask)")
     ap.add_argument("--trading-symbol",required=True,help="Exact broker NFO symbol from current/archived instrument master")
     ap.add_argument("--token",help="Optional verified matching NFO symboltoken")
     ap.add_argument("--master-file",help="Official Angel instrument master JSON; defaults to current online master")
@@ -43,7 +43,7 @@ def main():
         if not isinstance(session,dict) or session.get("status") is not True:
             raise HistoryError("LOGIN_REJECTED")
         logged_in=True
-        result=download_option(api,token=identity["token"],interval=args.interval,
+        result=download_option(api,token=identity["token"],exchange=identity["exchange"],interval=args.interval,
                start=args.from_date.replace(hour=9,minute=15),
                end=args.to_date.replace(hour=15,minute=30))
         export_option_ohlc(result,args.out,identity)
