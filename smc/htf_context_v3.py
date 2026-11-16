@@ -147,7 +147,7 @@ def analyze_htf(*, monthly: list[Candle], weekly: list[Candle],
     frames = tuple(
         _frame(name, data, as_of, pivot_k=pivot_k,
                max_event_age_bars=max_event_age_bars)
-        for name, data in zip(TIMEFRAMES, (monthly, weekly, daily)))
+        for name, data in zip(TIMEFRAMES, (monthly, weekly, daily))
     )
     directions = {f.bias for f in frames if f.bias is not Bias.NEUTRAL}
     if any(f.bias is Bias.NEUTRAL for f in frames):
