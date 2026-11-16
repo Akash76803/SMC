@@ -12,7 +12,7 @@ Research/paper-only user-friendly NIFTY/SENSEX terminal. Explain M/W/D bias, liq
 - [x] P0C User confirmed 187/187 regression tests passed locally (V3.2 baseline, before V3.3 changes)
 - [~] P1 Initial opt-in `smc/structure_v3.py` hierarchy + wick/close structure events + candidate IDM and `tests/test_structure_v3.py` committed; inside-bar/full IDM source fixtures and local pytest verification still pending
 - [~] P2 Existing liquidity detection + new V3.4 unconsumed opposing target selection and index RR gates committed; target freshness/session completeness replay QA pending
-- [~] P3 Initial opt-in Monthly/Weekly/Daily confirmed external-break bias, dealing range EQ/premium/discount, strict conflict/neutral handling and sweep-time causal HTF adapter committed; calendar/close timestamp adapters and historical validation pending
+- [~] P3 V3.8 verified-complete regular-session 1m->5m/15m/1h/daily aggregate research added; calendar verified weekly/monthly boundaries, HTF historical validation and bias stability pending
 - [~] P4 Initial V3.4 OB/FVG overlap candidate scanner and invalidation/retest diagnostics committed; full HTF POI validation, advanced OB and real-data research pending
 - [~] P5 V3.5 opt-in explainable reversal-only unified orchestrator committed; true MSS/HTF-POI and full continuation strategy gates remain pending
 - [ ] P6 Conservative ATM/ITM option/quote gates, slippage/fees and paper engine
@@ -103,3 +103,13 @@ Each phase: confirm source method, define deterministic rule and counterexamples
 - Added `tests/test_replay_v3_cli.py` with 5 regression tests for safe opt-in exclusion and preservation of real-gap failure. Run `python -m pytest -q tests/test_replay_v3_cli.py` then full `python -m pytest -q`; new suite count expected 269 if tests pass.
 - Example: `python -m smc.replay_v3_cli --ltf "data/nifty_1m.csv" --symbol NIFTY --drop-terminal-1530 --out "results/v37_nifty.json"`.
 - This fix does not guarantee that any given historical CSV is safe: multi-day feeds with real gaps remain rejected. For long datasets, replay can be computationally expensive because it recalculates a prefix for each closed bar.
+
+## V3.8 Initial HTF Aggregation + Rejection Diagnostics — 2026-11-16
+- New `smc/htf_aggregation_v3.py` verifies strict 1-minute data quality and **complete 360 one-minute regular sessions** (09:16..15:15 IST). It constructs candle-CLOSE timestamps for 5m (72/session), 15m (24/session), 1h (6/session), daily (1/session). No incomplete session can be silently promoted to confirmed Daily.
+- Weekly/Monthly outputs default EMPTY even with a complete day. They may be produced only with externally verified period-end session dates supplied by a trusted calendar source; OHLC alone cannot establish the real last trading day of a week/month, or absent sessions. The aggregation helper does not itself prove calendar completeness or holidays. Special sessions need a separate, audited model.
+- Optional CLI `--aggregate-regular-htf` writes `htf_aggregation` counts to the JSON and supplies **daily** bars to the existing V3.3 bias engine. 5m/15m/1h are included in diagnostics only, not secretly substituted for M/W/D inputs. Without separate weekly/monthly data, strict HTF alignment remains UNVERIFIED.
+- Replay terminal observations now include `diagnostics`: entry state/reason, sweep index, pending stages, HTF alignment, nearest candidate target level/kind/points/index RR and target rejection reason. A failed index target does not become a backtest trade. Currently `index_entry/index_stop` fields are present only for approved diagnostic brackets; raw rejected candidate entry/stop requires a follow-on adapter change.
+- Added 11 unit tests for HTF aggregation and two replay diagnostics serialization tests. **Last user-verified baseline: 269 passed**; expected 282 tests, subject to local execution. No claim of market predictive accuracy.
+- Test: `python -m pytest -q tests/test_htf_aggregation_v3.py tests/test_replay_v3.py tests/test_replay_v3_cli.py` then `python -m pytest -q`.
+- Replay: `python -m smc.replay_v3_cli --ltf "data/nifty_1m.csv" --symbol NIFTY --drop-terminal-1530 --aggregate-regular-htf --out "results/v38_nifty.json"`. No live execution or option P&L.
+- Remaining V3.8 tasks: broker-session calendar validation/verified market closures, independently sourced complete multiweek/month history, full M/W/D bias integration, raw rejected entry/SL diagnostics and actual NIFTY/SENSEX multi-session replay.
