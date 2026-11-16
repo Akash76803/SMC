@@ -389,3 +389,42 @@ Offline launch ignores any old prior-run live-feed file.
 
 Exit the dashboard with Ctrl+C in its main PowerShell window; do not paste
 OTP, PIN, secret, API key, or access tokens into issue reports.
+
+## Live SMC setup screen (read-only)
+
+The integrated localhost terminal now has a prominent LIVE SMC TRADE SETUP
+panel and sampled 1m index-candle chart. Its per-bar screen model is in
+`smc/live_setup_screen_v317.py`. It reports:
+
+- Broker stream state, latest closed index candle and provisional
+  bullish/bearish **bias** (not a BUY/SELL trade instruction).
+- Candidate sweep and IDM prices, order-block/FVG zones, independent
+  BOS/CHoCH lifecycle stage, reason for WAIT and explicit missing evidence.
+- Slots for verified entry, protected SL, T1/T2/T3, index R:R, CE/PE
+  strike, premium bid/ask, delta, IV and premium stop/target.
+  **Unavailable values stay UNAVAILABLE**; this is intentional.
+
+The core will not promote any recorded setup into executable trade advice
+until independently validated index targets, protected swing and
+fresh observed option bid/ask + contract/Greeks exist. The current broker
+stream only subscribes to the underlying index; index ticks CANNOT supply
+option premiums. `CE/PE BIAS` is a direction hypothesis, not a verified
+contract selection.
+
+Historical data remains audited separately. Live OHLC is marked
+`TICK_SAMPLED_UNVERIFIED_FULL_COVERAGE`: it is based on individual
+WebSocket index ticks, which may omit market events. If the feed starts
+after 09:15, breaks continuity or is stale, it stays WAIT. A new session
+requires complete market hours; do not backfill fake minute candles.
+
+To see the screen locally (PowerShell from repo root):
+
+```powershell
+git switch sandbox
+git pull --ff-only origin sandbox
+.\run_smc.ps1 -Live
+```
+
+Broker authentication happens in a separate Windows console. The localhost
+browser opens automatically. On a closed-market date expect
+NOT_CONNECTED/SUBSCRIBING/STALE, not a live setup.
