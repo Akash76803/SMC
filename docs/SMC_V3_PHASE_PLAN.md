@@ -17,7 +17,7 @@ Research/paper-only user-friendly NIFTY/SENSEX terminal. Explain M/W/D bias, liq
 - [~] P5 V3.5 opt-in explainable reversal-only unified orchestrator committed; true MSS/HTF-POI and full continuation strategy gates remain pending
 - [ ] P6 Conservative ATM/ITM option/quote gates, slippage/fees and paper engine
 - [ ] P7 Desktop chart UI, setup inspector, scan, logs and journal
-- [ ] P8 Walk-forward research, no-lookahead golden fixtures and out-of-sample evaluation
+- [~] P8 V3.7 opt-in causal historical index-only diagnostic replay plus CSV CLI and synthetic tests committed; real verified Angel One replay, walk-forward and out-of-sample evaluation pending
 
 ## First module
 `smc/decision_v3.py` returns `DATA_BLOCKED`, `NO_TRADE`, `WAIT`, `RESEARCH_READY`.
@@ -85,3 +85,13 @@ Each phase: confirm source method, define deterministic rule and counterexamples
 - The upstream HTF POI/MSS and quote validations remain unresolved; no executable READY signal is authorized.
 - `tests/test_multi_target_v3.py` adds **17 tests**, plus three integration tests to `tests/test_unified_setup_v3.py`; local regression required. Last user-verified baseline was **229 tests passed** before V3.6, new expected count 249 if all collected.
 - Test commands: `python -m pytest -q tests/test_multi_target_v3.py tests/test_unified_setup_v3.py` and `python -m pytest -q`.
+
+## V3.7 Historical Replay Diagnostics — 2026-11-16
+- New opt-in `smc/replay_v3.py`: evaluates V3.5 unified reversal **once per closed-candle prefix** and reports per-bar WAIT/NO_TRADE/DATA_BLOCKED reasoning. Terminal observations only are recorded once per transition index (not one trade per WAIT candle); research-only and never an order signal.
+- When an already qualified *index-only* bracket and T1/T2/T3 were present at the confirmation candle, `evaluate_level_outcomes` examines candles strictly AFTER confirmation. Each level independently becomes HIT, STOP_FIRST, AMBIGUOUS_SAME_BAR, DATA_GAP, TIME_EXIT or NO_FUTURE_BARS. These are historical index high/low touches, **not simulated fills, executable trades, or option profits**.
+- Safety: future HTF candle closure and post-decision target creation are disallowed by V3.5; same-bar SL/target is labeled AMBIGUOUS, not a win. Unexpected timestamp gaps fail closed with DATA_GAP. Replay remains diagnostic even if a non-executable WAIT report has a hypothetical bracket; do not interpret the number of target touches as profitable trade count.
+- `smc/replay_v3_cli.py` reads the existing `csv_data.read_candles_csv` format, runs `audit_1m` and rejects unsafe 1m feeds, writes serializable JSON. Example:
+  `python -m smc.replay_v3_cli --ltf data/nifty_1m.csv --symbol NIFTY --out results/v37.json`
+- Optional `--monthly/--weekly/--daily` require independently aggregated, actual CLOSE-timestamp completed candles. Broker ONE_HOUR timestamps are known to be START-stamped; do not confuse START with CLOSE or treat 1h as Monthly/Weekly/Daily. Missing HTF remains UNVERIFIED.
+- V3.7 does not estimate option bid-ask, delta, theta, volatility, transaction expenses or net premium P&L; no confidence/profitability claim is possible. Full M/W/D session-calendar validation, observed-options replay, and walk-forward evaluation are still pending.
+- `tests/test_replay_v3.py` adds 15 synthetic tests. GitHub connector cannot execute the repository test suite; previous user-confirmed baseline = **249 passed**. Run `python -m pytest -q tests/test_replay_v3.py` then `python -m pytest -q`; expected 264 if tests collect and pass.
