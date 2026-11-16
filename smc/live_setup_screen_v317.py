@@ -50,8 +50,18 @@ def build_setup_screen(event: dict | None, *, live_status: str = "NOT_CONNECTED"
         missing.append("FVG")
     if candidate.get("retest_at") is None:
         missing.append("MITIGATION_RETEST")
-    missing.extend(("VERIFIED_PROTECTED_SWING", "VERIFIED_LIQUIDITY_TARGET",
-                    "INDEX_RR_AT_LEAST_2", "LIVE_OPTION_BID_ASK_GREEKS"))
+    bracket = event.get("index_bracket_research")
+    if not isinstance(bracket,dict) or bracket.get("research_only") is not True:
+        bracket = None
+    bracket_passed = bool(bracket and
+        bracket.get("status") == "RESEARCH_INDEX_BRACKET_PASSES")
+    if bracket_passed:
+        missing.extend(("VERIFIED_PROTECTED_SWING", "EXECUTABLE_ENTRY_PRICE",
+                        "LIVE_OPTION_BID_ASK_GREEKS",
+                        "OPTION_STOP_AND_TARGET_EXIT_QUOTES"))
+    else:
+        missing.extend(("VERIFIED_PROTECTED_SWING", "VERIFIED_LIQUIDITY_TARGET",
+                        "INDEX_RR_AT_LEAST_2", "LIVE_OPTION_BID_ASK_GREEKS"))
     return {
         "market": event.get("symbol"), "status": "WAIT",
         "bias": direction, "instrument_side": "CE" if direction == "BULLISH" else "PE",
@@ -64,6 +74,12 @@ def build_setup_screen(event: dict | None, *, live_status: str = "NOT_CONNECTED"
         "order_block": candidate.get("ob_zone"),
         "fvg": candidate.get("fvg_zone"),
         "entry": None, "structural_stop": None,
+        "index_research_entry": bracket.get("entry_close_reference") if bracket else None,
+        "index_research_stop": bracket.get("stop_reference") if bracket else None,
+        "index_research_targets": [
+            x.get("price") for x in (bracket.get("targets") or [])[:3]
+        ] if bracket else [],
+        "index_research_bracket_status": bracket.get("status") if bracket else "UNAVAILABLE",
         "provisional_stop_reference": stop_ref,
         "t1": None, "t2": None, "t3": None,
         "index_rr": None,
@@ -83,6 +99,8 @@ def _waiting(reason: str, live_status: str) -> dict:
         "candle_at": None, "observed_index_close": None,
         "sweep_level": None, "idm_level": None, "order_block": None,
         "fvg": None, "entry": None, "structural_stop": None,
+        "index_research_entry": None, "index_research_stop": None,
+        "index_research_targets": [], "index_research_bracket_status": "UNAVAILABLE",
         "provisional_stop_reference": None, "t1": None, "t2": None,
         "t3": None, "index_rr": None, "option_strike": None,
         "option_bid": None, "option_ask": None, "option_delta": None,
