@@ -160,7 +160,7 @@ def review_liquidity_target(*, candles: list[Candle],
         # eligibility. Even a wick means the original pool has been contacted.
         touched = any(
             (c.high > lev.price if lev.kind in _UPPER else c.low < lev.price)
-            for c in candles[max(lev.eligible_from, lev.created_at+1):end+1]
+            for c in candles[max(lev.eligible_from, 0):end+1]
         )
         consumed_event = any(
             ev.level == lev and ev.candle_index <= end
