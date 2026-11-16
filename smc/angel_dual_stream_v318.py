@@ -19,6 +19,7 @@ from .angel_stream_cli_v312 import write_live_status
 from .dual_market_v318 import market_paths, SYMBOLS
 from .live_research_v312 import LiveResearchEngine
 from .angel_option_live_v318 import fetch_option_snapshot, write_option_snapshot
+from .option_quote_tape_v319 import append_snapshot
 
 
 def run_dual_stream(*, ws, tokens: dict[str,str], outputs: dict,
@@ -173,6 +174,7 @@ def main() -> int:
                             spot=float(live["last_candle_close"]),
                             received_at=datetime.now(timezone.utc))
                         write_option_snapshot(paths[market]["options"],quote)
+                        append_snapshot(paths[market]["option_tape"],quote)
                     except (TypeError,ValueError,OSError):
                         continue
                 option_stop.wait(a.option_refresh_seconds)
