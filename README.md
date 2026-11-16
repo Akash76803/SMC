@@ -286,3 +286,32 @@ Features:
 
 **Not yet built:** broker-streaming UI, chart pan/zoom, historical continuation/rally detector, verified weekly/monthly trend, full options chain with premium bid/ask/Greeks, option P&L, paper fill engine, and packaged Windows installer.
 This viewer is **not** a BUY/SELL recommendation service; yellow marks are terminal diagnostic events.
+
+## V3.9A — provisional continuation observations (sandbox)
+
+The offline desktop viewer now **also** inspects each selected audited 1-minute
+session for an INTERNAL closed-candle **BOS -> opposite-body pullback ->
+closed-candle reclaim of that pullback candle's high/low**.
+
+- Reversal replay yellow markers and continuation research blue markers are
+  clearly separated in the chart and inspector; selecting either focuses the
+  historical event.
+- Every continuation observation stays **WAIT**, with no index bracket, option
+  strike, premium forecast, paper fill, or executable trade. The pullback
+  definition and internal BOS are provisional proxies, **not independently
+  verified ICT continuation, protected structure, or HTF POI**.
+- CHoCH of the opposite direction cancels the candidate; incomplete, unordered,
+  or multi-session inputs fail closed in the new detector.
+- Continuations are computed on the local historical CSV in the desktop viewer;
+  existing 7-day reversal JSON and its 93 terminal rejections are unmodified.
+- The aim is to visualize where the continuation research stages appear on the
+  actual rally, **not** to increase accepted trades by relaxing safety gates.
+
+Run after git pull and pytest:
+```powershell
+python -m smc.desktop_v3 --ltf "data/nifty_multi_regular_1m.csv" --results-dir "results/v38_sessions"
+```
+Known gaps before real trade planning: verify 15M/1H/D/W/M regime and market
+calendar, protected swings/IDM, independently eligible opposing liquidity
+targets, retest/POI and FVG/displacement, actual option-chain bid/ask/Greeks,
+slippage and paper fills.
