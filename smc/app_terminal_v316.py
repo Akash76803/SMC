@@ -300,7 +300,8 @@ def main() -> int:
         child = subprocess.Popen(command, creationflags=flags)
     server = ThreadingHTTPServer(
         ("127.0.0.1", args.port),
-        make_handler(args.csv, args.report, args.live_jsonl,
+        make_handler(args.csv, args.report,
+                     args.live_jsonl if args.start_live else None,
                      args.status_file if args.start_live else None))
     print(f"LOCAL_SMC_TERMINAL: http://127.0.0.1:{args.port}")
     print("LOCALHOST_ONLY | RESEARCH_ONLY | NO_ORDERS")
