@@ -17,6 +17,7 @@ from urllib.parse import urlparse, parse_qs
 from .csv_data import read_candles_csv
 from .session_reconciliation_v314 import reconcile_sessions
 from .live_setup_screen_v317 import build_setup_screen
+from .angel_option_live_v318 import read_option_snapshot
 
 HTML = r"""<!doctype html>
 <html lang="en"><head><meta charset="utf-8">
@@ -61,7 +62,7 @@ pre{white-space:pre-wrap;overflow-wrap:anywhere;font-size:12px;color:#a7bfdf}
 <div class="setup-grid" id="setupmetrics"></div></div>
 <div><h2>Confirmation checklist</h2><div id="setupevidence" class="muted"></div>
 <p class="warn">INDEX LEVELS ≠ OPTION PREMIUM. NO BROKER ORDERS.</p></div></div></section>
-<section class="panel" style="margin-bottom:15px"><h2>LIVE INDEX CANDLES <small>tick-sampled, not certified exchange OHLC</small></h2><canvas id="liveChart"></canvas><small id="liveChartNote">No verified live candles yet.</small></section><div id="cards"></div>
+<section class="panel" style="margin-bottom:15px"><h2>LIVE INDEX CANDLES <small>tick-sampled, not certified exchange OHLC</small></h2><canvas id="liveChart"></canvas><small id="liveChartNote">No verified live candles yet.</small></section><section class="panel" style="margin-bottom:15px"><h2>ATM / ITM CE–PE OPTION QUOTES <small>Actual broker bid/ask only</small></h2><p id="optionStatus" class="warn">OPTION QUOTES UNAVAILABLE</p><div id="optionRows" style="overflow-x:auto"></div><small>No inferred option exit prices or premium SL/TP. Greeks may be unavailable, especially SENSEX.</small></section><div id="cards"></div>
 <div class="bar"><label>Session <select id="day"></select></label>
 <label>Direction <select id="direction"><option>ALL</option><option>BULLISH</option><option>BEARISH</option></select></label>
 <span class="warn" id="quality"></span></div>
@@ -123,6 +124,16 @@ function draw(bars,canvasId='chart'){
  ctx.textAlign='right';ctx.fillText(view[view.length-1].timestamp.slice(11,16),right,h-10);
 }
 function renderSetup(live){
+ const q=live.options||{status:'UNAVAILABLE',contracts:[]};
+ document.getElementById('optionStatus').textContent=
+  'OPTION DATA: '+(q.status||'UNAVAILABLE')+' | '+(q.reason||'NO FRESH QUOTES');
+ document.getElementById('optionRows').innerHTML=(q.contracts||[]).length?
+ '<table><thead><tr><th>Contract</th><th>Expiry</th><th>ATM/ITM</th><th>Side</th><th>Bid</th><th>Ask</th><th>Spread</th><th>Delta</th><th>IV</th></tr></thead><tbody>'+
+ q.contracts.map(c=>'<tr><td>'+esc(c.trading_symbol)+'</td><td>'+esc(c.expiry)+
+ '</td><td>'+esc(c.moneyness)+'</td><td>'+esc(c.side)+'</td><td>'+esc(c.bid)+
+ '</td><td>'+esc(c.ask)+'</td><td>'+esc(c.spread)+'</td><td>'+esc(c.delta??'UNAVAILABLE')+
+ '</td><td>'+esc(c.iv??'UNAVAILABLE')+'</td></tr>').join('')+'</tbody></table>':
+ '<p class="muted">No currently verified broker option market depth.</p>';
  const m=live.setup||{}, verified=live.status==='RECENT_BAR';
  draw(live.sampled_live_candles||[],'liveChart');
  document.getElementById('liveChartNote').textContent=verified?
@@ -293,7 +304,9 @@ def _latest_live_event(path: str | Path | None) -> dict | None:
 
 
 def live_screen_payload(live_path: str | Path | None,
-                        status_path: str | Path | None) -> dict:
+                        status_path: str | Path | None,
+                        option_path: str | Path | None = None,
+                        symbol: str | None = None) -> dict:
     feed=_feed_status(live_path,status_path)
     event=_latest_live_event(live_path)
     feed["setup"]=build_setup_screen(event,live_status=feed["status"])
@@ -314,6 +327,12 @@ def live_screen_payload(live_path: str | Path | None,
                     "message":"RETEST OBSERVED — NOT A TRADE SIGNAL"
                 }
                 break
+    selected=symbol or (event.get("symbol") if isinstance(event,dict) else None)
+    if selected not in ("NIFTY","SENSEX"):
+        selected="NIFTY"
+    feed["options"]=read_option_snapshot(
+        option_path if feed["status"]=="RECENT_BAR" else None,
+        symbol=selected)
     feed["sampled_live_candles"] = (
         event.get("sampled_live_candles", []) if event is not None
         and feed["status"] == "RECENT_BAR" else [])
@@ -405,11 +424,19 @@ def make_handler(csv_path: str, report_path: str, live_path: str | None,
                     from .dual_market_v318 import unavailable_snapshot
                     chosen = unavailable_snapshot(selected, "HISTORY_NOT_LOADED")
                 payload = json.dumps(
-                    {**chosen, "live": live_screen_payload(live_file, status_file)},
+                    {**chosen, "live": live_screen_payload(
+                        live_file,status_file,
+                        live_files["options"] if multi_root is not None
+                        and selected in live_symbols else None,
+                        symbol=selected)},
                     allow_nan=False).encode()
                 status, mime = 200, "application/json"
             elif path == "/api/live":
-                payload = json.dumps(live_screen_payload(live_file, status_file)).encode()
+                payload = json.dumps(live_screen_payload(
+                    live_file,status_file,
+                    live_files["options"] if multi_root is not None
+                    and selected in live_symbols else None,
+                    symbol=selected)).encode()
                 status, mime = 200, "application/json"
             else:
                 payload, mime, status = b"Not found", "text/plain", 404
