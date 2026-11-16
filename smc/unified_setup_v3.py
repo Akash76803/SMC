@@ -14,6 +14,8 @@ from .entry_v1 import State, evaluate_entry
 from .evidence_adapter_v3 import EvidenceAdapterReport, adapt_reversal_candles
 from .htf_context_v3 import HTFContext, analyze_htf, bias_stage
 from .models import Candle
+from .multi_target_v3 import (MultiTargetReview, PremiumLadder, PremiumScenario,
+                              rank_liquidity_targets, evaluate_premium_scenarios)
 from .phase2 import scan
 from .poi_liquidity_v3 import (
     POIReview, TargetReview, candidate_poi_stage,
@@ -34,6 +36,8 @@ class UnifiedSetupReport:
     index_bracket: ResearchBracket | None
     assessment_at: datetime
     selected_transition_index: int | None
+    multi_targets: MultiTargetReview | None = None
+    premium_ladder: PremiumLadder | None = None
 
     def as_dict(self) -> dict:
         return {
@@ -54,6 +58,8 @@ class UnifiedSetupReport:
                 "index_rr": self.index_bracket.rr,
                 "index_target_points": self.index_bracket.target_points,
             }),
+            "multi_targets": self.multi_targets.as_dict() if self.multi_targets else None,
+            "premium_ladder": self.premium_ladder.as_dict() if self.premium_ladder else None,
             "research_only": True,
             "live_orders_enabled": False,
         }
@@ -120,6 +126,13 @@ def evaluate_unified_reversal(*, symbol: str, ltf: list[Candle],
     poi_review = None
     bracket = None
     poi_stage = None
+    multi_targets = None
+    premium_ladder = None
+    if premium_plan is not None:
+        premium_ladder = evaluate_premium_scenarios(
+            stop_points=premium_plan.stop_points,
+            round_trip_cost_per_unit=premium_plan.round_trip_cost_per_unit,
+            scenarios=(PremiumScenario("USER_PROVIDED_HYPOTHETICAL", premium_plan.target_points),))
     if selected is not None and direction is not None:
         # Limit POI/target eligibility to the moment a retest or timeout was
         # resolved; later candles must not supply retroactive targets.
@@ -140,6 +153,11 @@ def evaluate_unified_reversal(*, symbol: str, ltf: list[Candle],
             bracket = index_bracket_from_target(
                 entry=selected.entry, stop=selected.stop,
                 direction=direction, review=target_review)
+            multi_targets = rank_liquidity_targets(
+                candles=partial, levels=list(history.levels),
+                events=list(history.liquidity_events), direction=direction,
+                entry=selected.entry, stop=selected.stop, symbol=symbol,
+                as_of=partial[-1].timestamp)
 
     htf_stages = tuple(s for s in (htf_stage, poi_stage) if s is not None)
     evidence = adapt_reversal_candles(
@@ -160,4 +178,5 @@ def evaluate_unified_reversal(*, symbol: str, ltf: list[Candle],
         raise ValueError("V3_5_UNVERIFIED_POI_MUST_NOT_BE_READY")
     return UnifiedSetupReport(
         status, reason, context, evidence, target_review, poi_review,
-        direction, bracket, observed_at, transition_index)
+        direction, bracket, observed_at, transition_index,
+        multi_targets, premium_ladder)
