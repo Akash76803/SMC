@@ -91,6 +91,68 @@ def select_atm_itm(master: list[dict], *, symbol: str,
     return output
 
 
+
+def select_chain_candidates(master: list[dict], *, symbol: str, spot: float,
+                            as_of: datetime, max_otm_steps: int = 8) -> list[dict]:
+    """Nearest expiry; ATM + one ITM + bounded OTM ladder on BOTH sides.
+
+    Never fabricate strikes: every row must match the current broker master.
+    The broker may cap FULL quote tokens; each market is bounded here.
+    """
+    if not 0 <= max_otm_steps <= 8:
+        raise ValueError("INVALID_OTM_HORIZON")
+    symbol=select_symbol(symbol)
+    base=select_atm_itm(master,symbol=symbol,spot=spot,as_of=as_of)
+    if not base:
+        return []
+    expiry=base[0]["expiry"]
+    side_exchange="NFO" if symbol=="NIFTY" else "BFO"
+    observed={}
+    for item in master:
+        if (str(item.get("exch_seg","")).upper()!=side_exchange or
+            str(item.get("instrumenttype","")).upper()!="OPTIDX"):
+            continue
+        name=str(item.get("symbol","")).upper()
+        if not name.startswith(symbol) or not name.endswith(("CE","PE")):
+            continue
+        try:
+            if parse_expiry(str(item.get("expiry",""))).isoformat()!=expiry:
+                continue
+            strike=_normalized_strike(str(item.get("strike","")),spot)
+            lot=int(item.get("lotsize",0))
+            token=str(item.get("token","")).strip()
+        except (ValueError,TypeError):
+            continue
+        if strike is None or lot<1 or not token:
+            continue
+        side=name[-2:]
+        key=(side,strike)
+        observed.setdefault(key,[]).append({
+            "exchange":side_exchange,"trading_symbol":name,
+            "token":token,"strike":strike,"expiry":expiry,
+            "expiry_broker":str(item["expiry"]).strip().upper(),
+            "lot_size":lot,"side":side
+        })
+    output=list(base)
+    for side in ("CE","PE"):
+        strikes=sorted(k[1] for k in observed if k[0]==side)
+        if len(strikes)<2:
+            continue
+        atm=min(strikes,key=lambda n:(abs(n-spot),n))
+        otm=sorted((n for n in strikes if n>atm),key=lambda n:n) if side=="CE" else sorted(
+            (n for n in strikes if n<atm),reverse=True)
+        for distance,strike in enumerate(otm[:max_otm_steps],start=1):
+            matches=observed[(side,strike)]
+            if len(matches)!=1:
+                continue
+            output.append({**matches[0],"moneyness":"OTM","otm_steps":distance})
+    # Malformed duplicated contracts are never looked up or ranked.
+    distinct={}
+    for candidate in output:
+        distinct.setdefault((candidate["side"],candidate["strike"]),[]).append(candidate)
+    return [c for c in output if len(distinct[(c["side"],c["strike"])])==1]
+
+
 def _exchange_time(raw) -> datetime | None:
     if not isinstance(raw,str) or not raw.strip():
         return None
@@ -149,7 +211,7 @@ def fetch_option_snapshot(client, master: list[dict], *, symbol: str,
           "status":"UNAVAILABLE","reason":"NO_VERIFIED_OPTION_DEPTH",
           "contracts":[],"research_only":True,"orders_enabled":False,
           "premium_exit_prices_verified":False}
-    contracts=select_atm_itm(master,symbol=symbol,spot=spot,as_of=received_at)
+    contracts=select_chain_candidates(master,symbol=symbol,spot=spot,as_of=received_at)
     if not contracts:
         return {**base,"reason":"NO_VERIFIED_CURRENT_EXPIRY_CONTRACTS"}
     exchange=contracts[0]["exchange"]
