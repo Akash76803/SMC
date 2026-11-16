@@ -185,30 +185,24 @@ def adapt_reversal_with_htf(*, symbol: str, candles: list[Candle],
     """Safe wiring into V3.2: HTF bias only; POI, premiums and quotes stay WAIT."""
     from .evidence_adapter_v3 import adapt_reversal_candles
 
-    context = analyze_htf(monthly=monthly, weekly=weekly, daily=daily,
-                          as_of=observed_at)
-    # Evaluate the LTF reversal first, without injected HTF evidence, to
-    # determine the proposed direction. This cannot return a verified trade.
+    # Evaluate the current LTF state without injecting any HTF confirmation.
     preliminary = adapt_reversal_candles(
         symbol=symbol, candles=candles, observed_at=observed_at,
         data_healthy=data_healthy, option_data_verified=False)
-    direction = ("BEARISH" if preliminary.selected_sweep_index is not None
-                 and preliminary.assessment.decision.bracket is not None
-                 and preliminary.assessment.decision.bracket.direction == "BEARISH"
-                 else "BULLISH")
-    # V3.2 currently does not expose selected candidate direction in the DTO.
-    # Derive actual side from latest selected sweep's type via original scan;
-    # no claim of a direction when a sweep is absent.
-    if preliminary.selected_sweep_index is not None:
-        from .phase2 import scan
-        scans = scan(candles)
-        selected = [e for e in scans.liquidity_events
-                    if e.kind == "SWEEP"
-                    and e.candle_index == preliminary.selected_sweep_index]
-        if selected:
-            last = selected[-1]
-            direction = ("BEARISH" if last.level.kind in ("BSL", "EQH", "PDH")
-                         else "BULLISH")
+    # Time-of-setup rule: never validate a historical sweep using HTF bars
+    # that closed AFTER the sweep. Incomplete calendar context stays WAIT.
+    context_time = (candles[preliminary.selected_sweep_index].timestamp
+                    if preliminary.selected_sweep_index is not None
+                    else observed_at)
+    context = analyze_htf(
+        monthly=[c for c in monthly if c.timestamp <= context_time],
+        weekly=[c for c in weekly if c.timestamp <= context_time],
+        daily=[c for c in daily if c.timestamp <= context_time],
+        as_of=context_time)
+    direction = preliminary.selected_direction
+    if direction is None:
+        direction = ("BEARISH" if context.alignment is Alignment.ALIGNED_BEARISH
+                     else "BULLISH")
     verified_htf = (bias_stage(context, desired_direction=direction),)
     report = adapt_reversal_candles(
         symbol=symbol, candles=candles, observed_at=observed_at,
