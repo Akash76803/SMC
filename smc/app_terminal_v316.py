@@ -16,6 +16,7 @@ from urllib.parse import urlparse
 
 from .csv_data import read_candles_csv
 from .session_reconciliation_v314 import reconcile_sessions
+from .live_setup_screen_v317 import build_setup_screen
 
 HTML = r"""<!doctype html>
 <html lang="en"><head><meta charset="utf-8">
@@ -34,11 +35,23 @@ td,th{text-align:left;border-bottom:1px solid #25354b;padding:10px;font-size:12p
 #tablewrap{max-height:320px;overflow:auto}.good{color:#44cf8d}.bad{color:#fb7185}
 .grid{display:grid;grid-template-columns:minmax(0,2fr) minmax(290px,1fr);gap:15px}
 pre{white-space:pre-wrap;overflow-wrap:anywhere;font-size:12px;color:#a7bfdf}
+.setup-layout{display:grid;grid-template-columns:minmax(0,2fr) minmax(260px,1fr);gap:14px}
+.setup-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px}
+.setup-metric{padding:11px;background:#182a40;border-radius:9px;min-height:63px}
+.setup-metric b{display:block;font-size:18px;margin-top:5px}
+.status{font-size:19px;color:#fbbf24}
+@media(max-width:850px){.setup-layout{grid-template-columns:1fr}}
 @media(max-width:850px){.grid{grid-template-columns:1fr}}
 </style></head>
 <body><header><h1>SMC / MARKET RESEARCH TERMINAL</h1>
 <small>Local read-only terminal • index candles ≠ option premiums • AUTO-ORDERS DISABLED</small></header>
 <main>
+<section class="panel" style="margin-bottom:15px"><h2>LIVE SMC TRADE SETUP · NIFTY / SENSEX</h2>
+<div class="setup-layout"><div><div id="setupstate" class="status">WAIT · MARKET DATA NOT VERIFIED</div>
+<p id="setupreason" class="muted">Checking source and confirmation stages…</p>
+<div class="setup-grid" id="setupmetrics"></div></div>
+<div><h2>Confirmation checklist</h2><div id="setupevidence" class="muted"></div>
+<p class="warn">INDEX LEVELS ≠ OPTION PREMIUM. NO BROKER ORDERS.</p></div></div></section>
 <div id="cards"></div>
 <div class="bar"><label>Session <select id="day"></select></label>
 <label>Direction <select id="direction"><option>ALL</option><option>BULLISH</option><option>BEARISH</option></select></label>
@@ -73,10 +86,43 @@ function draw(bars){
  ctx.textAlign='left';ctx.fillStyle='#a9bad0';ctx.fillText(view[0].timestamp.slice(11,16),left,h-10);
  ctx.textAlign='right';ctx.fillText(view[view.length-1].timestamp.slice(11,16),right,h-10);
 }
+function renderSetup(live){
+ const m=live.setup||{}, verified=live.status==='RECENT_BAR';
+ const ready=m.status==='RESEARCH_SEQUENCE_OBSERVED'&&verified;
+ document.getElementById('setupstate').textContent=(ready?'RESEARCH CANDIDATE':'WAIT / NO TRADE')+
+   ' · '+(m.market||snapshot?.symbol||'NIFTY')+
+   ' · '+(m.bias||'BIAS UNVERIFIED')+
+   (m.instrument_side?' ('+m.instrument_side+' BIAS)':'');
+ document.getElementById('setupreason').textContent=
+   'Feed: '+(live.status||'NOT_CONNECTED')+' | Setup: '+(m.setup_state||'UNVERIFIED')+
+   ' | '+(m.no_trade_reason||live.reason||'RESEARCH ONLY');
+ const items=[
+  ['Observed index close',m.observed_index_close],
+  ['Candle close time',m.candle_at],
+  ['Liquidity sweep',m.sweep_level],
+  ['IDM reference',m.idm_level],
+  ['Order Block',m.order_block?.join(' – ')],
+  ['FVG',m.fvg?.join(' – ')],
+  ['Entry (verified)',m.entry],
+  ['Structural SL (verified)',m.structural_stop],
+  ['Provisional stop · NOT SL',m.provisional_stop_reference],
+  ['Target T1',m.t1],['Target T2',m.t2],['Target T3',m.t3],
+  ['Index R:R',m.index_rr],['Option strike',m.option_strike],
+  ['Option bid / ask',(m.option_bid!=null&&m.option_ask!=null)?m.option_bid+' / '+m.option_ask:null],
+  ['Option delta / IV',(m.option_delta!=null&&m.option_iv!=null)?m.option_delta+' / '+m.option_iv:null],
+  ['Premium SL',m.option_premium_stop],['Premium target',m.option_premium_target]
+ ];
+ document.getElementById('setupmetrics').innerHTML=items.map(([name,val])=>
+  '<div class="setup-metric"><small>'+esc(name)+'</small><b>'+
+  esc(val??'UNAVAILABLE')+'</b></div>').join('');
+ const missing=m.missing_evidence||['NO_VERIFIED_LIVE_CANDLE'];
+ document.getElementById('setupevidence').innerHTML=missing.map(x=>'<p>○ '+esc(x)+'</p>').join('');
+}
 function render(){
  if(!snapshot)return;let d=sel.value, session=(snapshot.sessions||[]).find(x=>x.date===d);
  if(!session){session=(snapshot.sessions||[]).at(-1); if(session)sel.value=session.date}
  const live=snapshot.live||{}, observations=(session?.observations||[]).filter(o=>direction.value==='ALL'||o.direction===direction.value);
+ renderSetup(live);
  document.getElementById('cards').innerHTML=[
  ['Historical sessions',snapshot.sessions.length],['Observations',snapshot.observation_count],
  ['ICT complete',snapshot.ict_complete],['Paper brackets',snapshot.index_brackets],['Lifecycle retests',snapshot.retest_confirmed],
@@ -181,6 +227,36 @@ def _feed_status(live_path: str | Path | None,
     return _tail_live(Path(live_path) if live_path else None)
 
 
+def _latest_live_event(path: str | Path | None) -> dict | None:
+    if path is None:
+        return None
+    target=Path(path)
+    try:
+        with target.open("rb") as stream:
+            stream.seek(0, 2)
+            length=stream.tell()
+            stream.seek(max(0,length-131072))
+            data=stream.read().decode("utf-8","replace")
+    except OSError:
+        return None
+    for row in reversed(data.splitlines()[-30:]):
+        try:
+            event=json.loads(row)
+        except (ValueError, TypeError):
+            continue
+        if isinstance(event, dict) and event.get("research_only") is True:
+            return event
+    return None
+
+
+def live_screen_payload(live_path: str | Path | None,
+                        status_path: str | Path | None) -> dict:
+    feed=_feed_status(live_path,status_path)
+    event=_latest_live_event(live_path)
+    feed["setup"]=build_setup_screen(event,live_status=feed["status"])
+    return feed
+
+
 def build_snapshot(csv_path: str | Path, report_path: str | Path,
                    live_path: str | Path | None = None) -> dict:
     all_bars = read_candles_csv(csv_path)
@@ -240,11 +316,11 @@ def make_handler(csv_path: str, report_path: str, live_path: str | None,
                 payload, mime, status = HTML.encode(), "text/html; charset=utf-8", 200
             elif path == "/api/snapshot":
                 payload = json.dumps(
-                    {**historical, "live": _feed_status(live_path, status_path)},
+                    {**historical, "live": live_screen_payload(live_path, status_path)},
                     allow_nan=False).encode()
                 status, mime = 200, "application/json"
             elif path == "/api/live":
-                payload = json.dumps(_feed_status(live_path, status_path)).encode()
+                payload = json.dumps(live_screen_payload(live_path, status_path)).encode()
                 status, mime = 200, "application/json"
             else:
                 payload, mime, status = b"Not found", "text/plain", 404
