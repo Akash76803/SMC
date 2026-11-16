@@ -48,8 +48,10 @@ pre{white-space:pre-wrap;overflow-wrap:anywhere;font-size:12px;color:#a7bfdf}
 <section class="panel"><h2>Broker read-only live stream</h2><div id="live"></div>
 <h2>Strategy gating</h2><div id="risk"></div></section></div>
 <section class="panel" style="margin-top:15px"><h2>ICT / SMC evidence (decision-time only)</h2>
-<div id="tablewrap"><table><thead><tr><th>Time</th><th>Direction</th><th>ICT</th><th>Missing evidence</th><th>Index bracket</th></tr></thead><tbody id="rows"></tbody></table></div>
-</section></main>
+<div id="tablewrap"><table><thead><tr><th>Time</th><th>Direction</th><th>ICT</th><th>Missing evidence</th><th>Entry ref</th><th>SL ref</th><th>T1</th><th>Paper exit</th></tr></thead><tbody id="rows"></tbody></table></div>
+</section>
+<section class="panel" style="margin-top:15px"><h2>Independent ICT lifecycle (not order signals)</h2>
+<div id="lifecycles"></div></section></main>
 <script>
 const sel=document.getElementById('day'), direction=document.getElementById('direction');
 let snapshot=null;
@@ -89,7 +91,14 @@ function render(){
  document.getElementById('rows').innerHTML=observations.map(o=>'<tr><td>'+esc(o.confirmed_at?.slice(11,19))+'</td>'+
  '<td>'+esc(o.direction)+'</td><td>'+esc(o.ict_sequence?.status||'UNVERIFIED')+'</td>'+
  '<td>'+esc((o.ict_sequence?.missing_stages||[]).join(', '))+'</td>'+
- '<td>'+esc(o.index_bracket_qualified?'RESEARCH CANDIDATE':'NO')+'</td></tr>').join('');
+ '<td>'+esc(o.paper_outcome?.entry_open??o.index_entry_close_reference)+'</td>'+
+ '<td>'+esc(o.index_stop_reference)+'</td>'+
+ '<td>'+esc(o.index_t1_t2_t3_references?.[0]?.price??'—')+'</td>'+
+ '<td>'+esc(o.paper_outcome?.exit_reason||'NO QUALIFIED BRACKET')+'</td></tr>').join('');
+ document.getElementById('lifecycles').innerHTML=(session?.ict_lifecycles||[])
+ .slice(-18).map(x=>'<p><small>'+esc(x.shift_at?.slice(11,19))+'</small> · '+esc(x.structure_kind)+' '+esc(x.direction)+
+ ' · <b class="'+(x.state==='RETEST_CONFIRMED_RESEARCH'?'good':'warn')+'">'+esc(x.state)+'</b> · OB '+esc(x.ob_zone?.join('–')||'—')+
+ ' · Retest '+esc(x.retest_at?.slice(11,19)||'—')+'</p>').join('')||'<p class="muted">No confirmed structure shifts in selected session.</p>';
  draw(session?.candles||[]);
 }
 async function refresh(){
