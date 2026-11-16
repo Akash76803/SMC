@@ -9,7 +9,7 @@ import json
 import logging
 from datetime import datetime, timezone
 from pathlib import Path
-from threading import Timer
+from threading import Timer, Thread, Event
 
 from .angel_history import load_master, resolve_token, HistoryError
 from .angel_local_auth import load_local_env, resolve_login_fields, current_totp, CredentialError
@@ -18,6 +18,7 @@ from .angel_stream_v312 import parse_tick, StreamDataError
 from .angel_stream_cli_v312 import write_live_status
 from .dual_market_v318 import market_paths, SYMBOLS
 from .live_research_v312 import LiveResearchEngine
+from .angel_option_live_v318 import fetch_option_snapshot, write_option_snapshot
 
 
 def run_dual_stream(*, ws, tokens: dict[str,str], outputs: dict,
@@ -99,6 +100,7 @@ def main() -> int:
     p.add_argument("--sensex-token")
     p.add_argument("--master-file")
     p.add_argument("--env-file")
+    p.add_argument("--option-refresh-seconds", type=int, default=15)
     a=p.parse_args()
     if not 5<=a.seconds<=14400:
         p.error("INVALID_STREAM_DURATION")
@@ -116,6 +118,8 @@ def main() -> int:
         state("ERROR","BROKER_INDEX_TOKEN_UNAVAILABLE")
         print("FAILED: INDEX_TOKEN_MISSING_OR_AMBIGUOUS")
         return 1
+    if not 10 <= a.option_refresh_seconds <= 120:
+        p.error("OPTION_REFRESH_OUT_OF_RANGE")
     logging.disable(logging.CRITICAL)
     try:
         from logzero import logger
@@ -142,6 +146,38 @@ def main() -> int:
             raise CredentialError("MISSING_BROKER_FEED_TOKEN")
         state("AUTHENTICATED","BROKER_LOGIN_OK_NO_TICKS_YET")
         ws=make_secure_websocket(jwt,key,client_id,feed)
+        # Option snapshots use separately observed market-depth quotes.
+        option_stop=Event()
+        try:
+            master=load_master(a.master_file)
+        except (HistoryError,ValueError,OSError):
+            master=[]
+        def poll_options():
+            from .app_terminal_v316 import _latest_live_event
+            while not option_stop.is_set():
+                for market in SYMBOLS:
+                    live=_latest_live_event(paths[market]["live"])
+                    if not isinstance(live,dict):
+                        continue
+                    try:
+                        now=datetime.now(timezone.utc)
+                        closed=datetime.fromisoformat(live["last_candle_close_at"])
+                        age=(now-closed).total_seconds()
+                        valid=(live.get("status")=="RESEARCH_ONLY"
+                               and (live.get("stream_quality") or {}).get("quality_blocked") is False
+                               and 0<=age<=120)
+                        if not valid:
+                            continue
+                        quote=fetch_option_snapshot(
+                            api, master, symbol=market,
+                            spot=float(live["last_candle_close"]),
+                            received_at=datetime.now(timezone.utc))
+                        write_option_snapshot(paths[market]["options"],quote)
+                    except (TypeError,ValueError,OSError):
+                        continue
+                option_stop.wait(a.option_refresh_seconds)
+        poller=Thread(target=poll_options,daemon=True,name="smc-option-poller")
+        poller.start()
         for s in SYMBOLS:
             paths[s]["live"].parent.mkdir(parents=True,exist_ok=True)
         with paths["NIFTY"]["live"].open("w",encoding="utf-8") as n, \
@@ -150,6 +186,8 @@ def main() -> int:
                 ws=ws,tokens=tokens,outputs={"NIFTY":n,"SENSEX":b},
                 statuses={s:str(paths[s]["status"]) for s in SYMBOLS},
                 max_seconds=a.seconds)
+        option_stop.set()
+        poller.join(timeout=3)
         state("STREAM_STOPPED","DUAL_STREAM_SESSION_ENDED")
         print("READ_ONLY_FEED_COUNTS: "+json.dumps(totals))
         return 0 if all(totals[s]["ticks"]>0 and totals[s]["errors"]==0
@@ -167,6 +205,12 @@ def main() -> int:
         print("FAILED: BROKER_NETWORK_OR_SDK_ERROR")
         return 1
     finally:
+        if "option_stop" in locals():
+            option_stop.set()
+            try:
+                poller.join(timeout=3)
+            except (NameError,RuntimeError):
+                pass
         if logged_in and api is not None:
             try:api.terminateSession(client_id)
             except Exception:print("LOGOUT_NOT_CONFIRMED")
