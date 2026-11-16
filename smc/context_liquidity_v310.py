@@ -53,7 +53,7 @@ def contextual_liquidity(*, candles: list[Candle], as_of: datetime,
             # immediately at its open, like PDH/PDL.
             curr_idx = len(seen) - len(sessions[today])
             hi_idx = max(range(len(prev)), key=lambda i: prev[i].high)
-            lo_idx = min(range(len(prev)), key=lambda i: -prev[i].low)
+            lo_idx = min(range(len(prev)), key=lambda i: prev[i].low)
             extra.extend([
                 LiquidityLevel("PDH", high, curr_idx, (hi_idx,), curr_idx),
                 LiquidityLevel("PDL", low, curr_idx, (lo_idx,), curr_idx),
