@@ -315,3 +315,59 @@ Known gaps before real trade planning: verify 15M/1H/D/W/M regime and market
 calendar, protected swings/IDM, independently eligible opposing liquidity
 targets, retest/POI and FVG/displacement, actual option-chain bid/ask/Greeks,
 slippage and paper fills.
+
+
+## Integrated local SMC research terminal (sandbox)
+
+The new local browser application combines audited 1m index candles,
+per-observation ICT/SMC evidence, separately tracked setup lifecycles,
+hypothetical index entry/stop/T1 and historical stop outcomes, and
+**read-only** Angel WebSocket observation status. It requires no JavaScript
+framework, cloud keys, broker-order permissions or public network port.
+It is NOT a live trade execution system or a validated strategy.
+
+On Windows PowerShell, from the checkout:
+
+```powershell
+git switch sandbox
+git pull --ff-only origin sandbox
+.\.venv\Scripts\python.exe -m pip install -e ".[dev,angel]"
+.\.venv\Scripts\python.exe -m pytest -q
+
+# Replays already downloaded actual NIFTY 1m history then opens browser:
+.\run_smc.ps1
+
+# Optional read-only Angel websocket; uses local interactive auth/TOTP:
+.\run_smc.ps1 -Live
+
+# SENSEX needs its own actual, audited CSV at
+# data\sensex_angel_historical_raw.csv:
+.\run_smc.ps1 -Symbol SENSEX -Live
+```
+
+Browser address: `http://127.0.0.1:8765` (bound only to loopback).
+For `-Live`, Angel SmartAPI entitlements and exchange index subscription
+must work on the actual user's PC; a successful CI test cannot verify them.
+Connection failures, empty tick streams, incomplete sessions and old
+index bars MUST remain WAIT/STALE; no candle gaps are synthesized.
+Option chain, timestamped bid/ask and Greek entitlement are **not**
+streamed through the index-only websocket; options premium P&L requires
+independently observed contract quotes. Existing `smc.phase6_cli` can
+evaluate verified historical option quotes separately.
+
+The `run_smc.ps1` launcher only uses existing validated historical
+CSV; no download or trade occurs automatically. Set up local Python
+and broker credentials yourself, never share OTP, MPIN or tokens in chat
+or Git. Press Ctrl+C in the terminal to close the localhost app.
+If PowerShell script execution is restricted, invoke:
+```powershell
+.\.venv\Scripts\python.exe -m smc.historical_replay_v314_cli --symbol NIFTY --input-csv data\nifty_angel_historical_raw.csv --out results\v316_nifty_report.json --candidates-csv results\v316_nifty_brackets.csv --ict-csv results\v316_nifty_ict.csv
+.\.venv\Scripts\python.exe -m smc.app_terminal_v316 --symbol NIFTY --csv data\nifty_angel_historical_raw.csv --report results\v316_nifty_report.json --open-browser
+```
+
+**Release gates still open:** actual broker tick delivery during exchange
+hours; verified complete live candle coverage from session open; exchange
+calendar; live option quotes, expiry/lot-size, delta/spread/IV validation;
+paper fills/fees/slippage and walk-forward out-of-sample profitable
+performance. Code-test success is **not** proof of profitable strategy
+or real-time app operation. Do not enable automatic orders from this branch.
