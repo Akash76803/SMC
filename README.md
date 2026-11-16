@@ -473,3 +473,86 @@ separately from executable trade levels. Historical winning trades,
 future paper fills, an authentic protected-swing SL, and option entry/
 stop/target exit bids are **not yet independently verified**.
 Do not execute trades solely based on this terminal.
+
+
+## R3 — Option momentum, OTM ladder and walk-forward paper learning
+
+Build: `SMC-OPTION-MOMENTUM-2026-11-16-R3`
+
+The NIFTY/SENSEX selector now presents a bounded **option-chain window**
+(current expiry, CE/PE, ATM/one ITM, and up to 8 OTM strikes on each
+side). The broker FULL market-depth adapter requests only real contracts
+from the verified instrument master, not synthesized strikes or premiums.
+It records only timestamp-checked, valid spread/depth rows.
+
+`smc/option_quote_tape_v319.py` retains each actual bid/ask observation
+locally in `results/live_<market>_option_quotes.jsonl`. This data is
+independent of historical option OHLC and index OHLC. After at least three
+same-contract observations with sufficient elapsed time, rising observed
+bid, rising trade volume, and acceptable bid/ask spread,
+`smc/option_momentum_v319.py` can rank OTM options **ahead of ATM** if
+their actual quote momentum is stronger. The ranking never claims the
+future price movement is guaranteed, and an inexpensive far-OTM premium
+alone is not momentum.
+
+`smc/self_learning_cli_v319.py` replays historic verified SMC index
+research events against separately observed broker option quote tapes.
+The algorithm uses observed option **ASK for hypothetical entry**,
+observed **BID for hypothetical exit**, records cost assumptions and
+skips missing quotes. It selects fixed target, stop and holding-time
+parameters using the **earlier training sessions only**, then scores
+them on later unseen holdout sessions. It requires at least **20 train
+days + 10 validation days**, **15 training trades and 8 validation
+trades**. Training/test isolation prevents lookahead but does not
+eliminate selection bias, trading costs, connectivity risk or market
+regime changes. Failing the evidence requirement results in
+`INSUFFICIENT_EVIDENCE` or `REJECTED_HOLDOUT`, not a trading signal.
+
+The one-command Windows launcher computes these reports from prior
+recorded quote histories when the program starts; the dual-feed
+worker also writes updated research reports after its live session
+ends. Premium learning is **not** based on the 9 existing NIFTY index
+sessions alone. No historical broker option quote files implies zero
+validated premium trades.
+
+A paper premium reference entry, stop and target may appear only when:
+- the currently observed SMC retest has a causally checked index
+  research bracket (at least 1:2 and minimum index-point target);
+- there is genuine, sufficiently recent, same-side option bid/ask
+  momentum (including possible OTM contracts);
+- the selected premium policy has passed the held-out research
+  criteria and net premium reference R:R remains at least 1:2.
+
+Even then, the premium figures are **paper-only reference prices**,
+not executable bids at a future entry or verified stop/target fills.
+The dashboard shows the observed ASK, paper SL, paper target and
+train/holdout results separately. The large notification is labeled
+`PAPER RESEARCH ONLY` and is not a broker order instruction.
+Parameters are **never automatically promoted to live execution**,
+and no buy/sell order API is called. Enabling real-money automated
+trading requires a separate explicit human-controlled approval gate
+after market-hours data audits, forward paper execution, actual
+spread/slippage/fee modeling, robust stop handling and sufficient
+out-of-sample performance.
+
+**Existing historical option data** can be collected for both
+NIFTY/NFO and SENSEX/BFO exact contracts using
+`smc.angel_option_history_cli` and replayed with
+`smc.phase6_ohlc_cli`; option OHLC is always labeled
+hypothetical and **not** broker bid/ask fills.
+
+### Start
+
+```powershell
+cd E:\Project\SMC
+git switch sandbox
+git pull --ff-only origin sandbox
+.\.venv\Scripts\python.exe -m pytest -q
+.\run_smc.ps1 -Live
+```
+
+After closing any old process holding port 8765, verify:
+`http://127.0.0.1:8765/api/version` should return
+`SMC-OPTION-MOMENTUM-2026-11-16-R3`. When the market is closed or
+the feed is not subscribed, expect `WAIT`, an empty option-chain
+window, and no premium plan; not fabricated trades.
