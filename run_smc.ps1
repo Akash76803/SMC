@@ -23,7 +23,7 @@ if ($active.Count -gt 0) {
     Write-Host "Stop the OLD SMC PowerShell with Ctrl+C first; then launch this script again."
     exit 3
 }
-Write-Host "Launching updated SMC Dual Market dashboard (build SMC-DUAL-MARKET-2026-11-16-R2)" -ForegroundColor Cyan
+Write-Host "Launching updated SMC Dual Market dashboard (build SMC-OPTION-MOMENTUM-2026-11-16-R3)" -ForegroundColor Cyan
 
 # Recompute each index independently. Unavailable history stays UNAVAILABLE.
 foreach ($symbol in @("NIFTY", "SENSEX")) {
