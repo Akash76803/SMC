@@ -25,11 +25,12 @@ def level(kind="BSL",price=170,created=1,eligible=2):
 
 def target(cs=None,levels=None,events=None,**kwargs):
     cs=flat() if cs is None else cs
-    return review_liquidity_target(
-        candles=cs,levels=[level()] if levels is None else levels,
-        events=[] if events is None else events,
-        direction="BULLISH",entry=100,stop=80,symbol="NIFTY",
-        as_of=cs[-1].timestamp,**kwargs)
+    args=dict(candles=cs,levels=[level()] if levels is None else levels,
+              events=[] if events is None else events,
+              direction="BULLISH",entry=100,stop=80,symbol="NIFTY",
+              as_of=cs[-1].timestamp)
+    args.update(kwargs)
+    return review_liquidity_target(**args)
 
 def test_candidate_selects_nearest_eligible_opposing_pool():
     r=target(levels=[level(price=190),level(price=170)])
@@ -63,6 +64,32 @@ def test_bearish_opposing_liquidity():
         events=[],direction="BEARISH",entry=200,stop=230,
         symbol="NIFTY",as_of=cs[-1].timestamp)
     assert r.status=="CANDIDATE" and r.target.price==120
+
+def test_pdh_first_eligible_bar_consumption():
+    cs=flat()
+    first=cs[3]
+    cs[3]=Candle(first.timestamp,100,180,99,100)
+    pdh=LiquidityLevel("PDH",170,3,(1,),3)
+    assert target(cs=cs,levels=[pdh]).status=="WAIT"
+
+def test_poi_overlap_detects_candidate_without_claiming_verified_entry():
+    cs=candles([
+        (95,100,90,96),
+        (108,110,96,98),
+        (106,115,105,114),
+        (112,118,102,116),
+        (116,120,112,119),
+    ])
+    event=StructuralBreak("BOS","BULLISH","INTERNAL",
+                          Pivot("HIGH",0,100,1),2,None)
+    result=review_ob_fvg_poi(
+        candles=cs,breaks=[event],direction="BULLISH",
+        as_of=cs[-1].timestamp)
+    assert result.status=="CANDIDATE"
+    zone=result.zones[0]
+    assert (zone.lower,zone.upper)==(100,105)
+    assert zone.retest_index==3
+    assert candidate_poi_stage(result).state is CheckState.PENDING
 
 def test_no_entry_if_no_verified_target():
     assert index_bracket_from_target(
