@@ -95,3 +95,11 @@ Each phase: confirm source method, define deterministic rule and counterexamples
 - Optional `--monthly/--weekly/--daily` require independently aggregated, actual CLOSE-timestamp completed candles. Broker ONE_HOUR timestamps are known to be START-stamped; do not confuse START with CLOSE or treat 1h as Monthly/Weekly/Daily. Missing HTF remains UNVERIFIED.
 - V3.7 does not estimate option bid-ask, delta, theta, volatility, transaction expenses or net premium P&L; no confidence/profitability claim is possible. Full M/W/D session-calendar validation, observed-options replay, and walk-forward evaluation are still pending.
 - `tests/test_replay_v3.py` adds 15 synthetic tests. GitHub connector cannot execute the repository test suite; previous user-confirmed baseline = **249 passed**. Run `python -m pytest -q tests/test_replay_v3.py` then `python -m pytest -q`; expected 264 if tests collect and pass.
+
+## V3.7 Data quality fix — 2026-11-16
+- User verified **264/264 full tests passed** locally. Running `replay_v3_cli` with Angel One 1-minute CSV then correctly failed with `LTF_DATA_QUALITY_FAILED: TERMINAL_1530_UNCLASSIFIED`.
+- CLI now has opt-in `--drop-terminal-1530`, calling existing `data_quality.drop_terminal_1530` BEFORE the strict `audit_1m`. It drops only an isolated same-day 15:30 record directly after a 15:15 close; it does not impute missing 15:16–15:29 data.
+- Every other remaining issue (including `INTRADAY_GAP`, `SESSION_START_UNVERIFIED`) still blocks replay. The default without flag remains unchanged and fail-closed. The CLI reports number of excluded terminal records and does not overwrite input CSV.
+- Added `tests/test_replay_v3_cli.py` with 5 regression tests for safe opt-in exclusion and preservation of real-gap failure. Run `python -m pytest -q tests/test_replay_v3_cli.py` then full `python -m pytest -q`; new suite count expected 269 if tests pass.
+- Example: `python -m smc.replay_v3_cli --ltf "data/nifty_1m.csv" --symbol NIFTY --drop-terminal-1530 --out "results/v37_nifty.json"`.
+- This fix does not guarantee that any given historical CSV is safe: multi-day feeds with real gaps remain rejected. For long datasets, replay can be computationally expensive because it recalculates a prefix for each closed bar.
