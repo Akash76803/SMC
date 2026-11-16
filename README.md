@@ -428,3 +428,48 @@ git pull --ff-only origin sandbox
 Broker authentication happens in a separate Windows console. The localhost
 browser opens automatically. On a closed-market date expect
 NOT_CONNECTED/SUBSCRIBING/STALE, not a live setup.
+
+
+## Single-screen NIFTY and SENSEX selector + prominent SMC alerts
+
+`run_smc.ps1` now opens one read-only dashboard for **both indices**.
+Use the MARKET dropdown to switch NIFTY/SENSEX without restarting the app.
+The worker uses one authenticated Angel SmartWebSocketV2 session subscribing to
+two different index tokens, and maintains separate candle streams and status
+files. If only NIFTY history exists, SENSEX history is explicitly
+`AUDITED_HISTORY_NOT_AVAILABLE`; no cross-symbol data substitution.
+
+```powershell
+cd E:\Project\SMC
+git switch sandbox
+git pull --ff-only origin sandbox
+.\.venv\Scripts\python.exe -m pip install -e ".[dev,angel]"
+.\run_smc.ps1 -Live
+```
+
+The app polls both markets while the browser tab is open. A just-observed
+SMC retest on either market opens a **large in-page notification**; optional
+Windows/browser desktop notifications require clicking `Enable desktop
+alerts` and granting permission. The alert is explicitly labeled
+`SMC RETEST OBSERVED — RESEARCH ONLY`, is deduplicated by market/setup,
+and is **not a BUY CE/PE instruction**. Neither browser delivery nor
+an external notification service is guaranteed while the browser is closed.
+
+A read-only option-data poller uses the existing Angel login and current
+instrument master to request current-expiry ATM / one-step ITM option FULL
+depth for both indices, only after current valid closed index candles.
+It shows timestamp-checked bid/ask and, where returned by the NSE-specific
+Greek endpoint, delta and IV. It does not derive option prices from
+underlying index movements. SENSEX/BFO Greeks are marked unavailable unless
+an independent verified source exists. Displaying options does not imply
+a recommended strike or a validated premium entry/SL/T1/T2/T3.
+No broker order methods are implemented.
+
+The live index bracket research calculates a *last close price reference*,
+a provisional sweep/OB structural stop proxy and nearest unconsumed
+confirmed-liquidity T1–T3; any bracket below 1:2 risk:reward, NIFTY 50
+points or SENSEX 100 points is rejected. These references are displayed
+separately from executable trade levels. Historical winning trades,
+future paper fills, an authentic protected-swing SL, and option entry/
+stop/target exit bids are **not yet independently verified**.
+Do not execute trades solely based on this terminal.
