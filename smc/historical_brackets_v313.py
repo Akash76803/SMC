@@ -12,6 +12,7 @@ from math import isfinite
 
 from .models import Candle
 from .sl_postmortem_v314 import review_stopped_setup
+from .ict_sequence_v315 import analyze_ict_sequence
 
 
 def paper_outcome(*, session: list[Candle], confirm_index: int,
@@ -89,6 +90,9 @@ def analyze_trade_references(*, symbol: str, session: list[Candle],
             and first["feasible"] and targets["status"] == "CANDIDATE"
             and first["index_points"] >= minimum
             and first["index_rr"] is not None and first["index_rr"] >= 2.0)
+        ict = (analyze_ict_sequence(session[:index+1],
+                                    direction=item["direction"])
+               if index is not None else None)
         # Protected structure, HTF POI and monthly/weekly/daily remain
         # unverified; even a passing index bracket is a RESEARCH candidate.
         row = {
@@ -105,6 +109,8 @@ def analyze_trade_references(*, symbol: str, session: list[Candle],
             "validation_status": item["status"],
             "validation_reason": item["reason"],
             "index_bracket_qualified": available,
+            "ict_sequence": ict,
+            "ict_sequence_observed": bool(ict and ict["ict_sequence_observed"]),
             "paper_outcome": None,
             "sl_postmortem": None,
             "broker_order_eligible": False,
