@@ -67,7 +67,10 @@ def test_quote_tape_requires_verified_broker_rows(tmp_path):
     snapshot={"symbol":"NIFTY","research_only":True,"orders_enabled":False,
               "contracts":[item]}
     assert append_snapshot(path,snapshot)==1
-    assert read_recent(path,symbol="NIFTY",now=T)==[item]
+    observed=read_recent(path,symbol="NIFTY",now=T)
+    assert len(observed)==1
+    assert all(observed[0][key]==value for key,value in item.items())
+    assert observed[0]["moneyness"] is None
     assert read_recent(path,symbol="SENSEX",now=T)==[]
     assert live_momentum(path,symbol="NIFTY",spot=25000,now=T)["candidates"]==[]
     import pytest
