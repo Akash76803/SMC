@@ -607,12 +607,12 @@ def main() -> int:
     p.add_argument("--sensex-token", help="Verified index token, never a credential")
     p.add_argument("--start-live", action="store_true",
                    help="Start separate read-only Angel stream process with local login")
-    p.add_argument("--live-seconds", type=int, default=14400)
+    p.add_argument("--live-seconds", type=int, default=28800)
     p.add_argument("--token", help="Optional verified Angel INDEX token, never a credential")
     args = p.parse_args()
     if not 1024 <= args.port <= 65535:
         p.error("PORT_OUT_OF_RANGE")
-    if not 5 <= args.live_seconds <= 14400:
+    if not 5 <= args.live_seconds <= 28800:
         p.error("INVALID_STREAM_DURATION")
     # Block before spawning broker auth: never connect to an old dashboard.
     try:
@@ -653,7 +653,7 @@ def main() -> int:
                               "ENTER_TOTP_IN_SEPARATE_BROKER_CONSOLE")
             command = [sys.executable, "-m", "smc.angel_stream_cli_v312",
                        "--symbol", args.symbol,
-                       "--seconds", str(args.live_seconds),
+                       "--seconds", str(min(args.live_seconds,14400)),
                        "--out", args.live_jsonl,
                        "--status-file", args.status_file]
             if args.token:
