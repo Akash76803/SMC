@@ -408,3 +408,43 @@ never re-label the original stopped trade as a winner, move the stop
 hindsight-based, or claim that a stop was definitely too tight.
 No executable orders, tested option premium prices, net brokerage,
 slippage, live quote integrity, or verified HTF POI.
+
+## V3.15 — causal candle-by-candle ICT research sequence
+
+The previous V3.14 continuation setups remain unmodified; V3.15 adds an
+**independent** conservative ICT evidence audit for each observation at its
+original confirmation candle. It does NOT make existing research candidates
+executable. Modules:
+- `smc/ict_sequence_v315.py` — IDM pre-break opposing local pivot proxy,
+  already confirmed swing liquidity **wick sweep with close back inside**,
+  internal close-based BOS/CHoCH after sweep, directional displacement body
+  compared with *prior* ATR, opposite-body order-block origin, causal FVG,
+  and later post-confirmation mitigation-rejection retest.
+- `historical_brackets_v313.py` — attaches full sequence stage evidence at
+  the historical decision timestamp, not future candles.
+- `historical_replay_v314_cli.py --ict-csv` — outputs a compact stage matrix.
+
+```powershell
+cd E:\Project\SMC
+git switch sandbox
+git pull --ff-only origin sandbox
+.\.venv\Scripts\python.exe -m pytest -q
+.\.venv\Scripts\python.exe -m smc.historical_replay_v314_cli `
+  --symbol NIFTY `
+  --input-csv "data\nifty_angel_historical_raw.csv" `
+  --out "results\v315_nifty_report.json" `
+  --candidates-csv "results\v315_nifty_brackets.csv" `
+  --ict-csv "results\v315_nifty_ict_sequences.csv"
+```
+
+Interpretation: `WAIT` plus missing stages means the specific complete
+sequence was **not demonstrated** by historical bars at that moment. `IDM`
+is only an engineering proxy, and `idm_swept_proxy` is deliberately
+conservative; the module cannot prove intentional inducement, institutional
+mitigation blocks, true protected swings, actual resting orders, or future
+returns. The strict order (sweep before shift, FVG available before retest)
+can produce very few complete observations on existing continuation signals.
+For reproducibility, the existing historical paper outcome counts do not
+change merely because a new context lens has been added.
+No actual broker option quotes, paper fills, order placement, fees, or
+out-of-sample strategy validation. Do not use research tags as a BUY signal.
