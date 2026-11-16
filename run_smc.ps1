@@ -44,6 +44,12 @@ foreach ($symbol in @("NIFTY", "SENSEX")) {
         Write-Host "$symbol historical CSV missing: $raw. Screen will display UNAVAILABLE."
         if (Test-Path $report) { Remove-Item $report -Force }
     }
+    # Historical bid/ask learning is separate and NEVER auto-promoted.
+    $events = "results\live_${lower}.jsonl"
+    $tape = "results\live_${lower}_option_quotes.jsonl"
+    $learn = "results\strategy_learning_${lower}.json"
+    & $python -m smc.self_learning_cli_v319 --market $symbol --events $events --option-tape $tape --out $learn
+    if ($LASTEXITCODE -ne 0) { Write-Warning "$symbol quote-based learning report unavailable" }
 }
 
 Write-Host "SMC dual-market terminal: http://127.0.0.1:$Port"
