@@ -14,6 +14,9 @@ from math import isfinite
 from pathlib import Path
 
 from .angel_history import INDICES, HistoryError, load_master, resolve_token
+from .angel_local_auth import (CredentialError, load_local_env,
+                               resolve_login_fields, current_totp,
+                               manage_totp_secret)
 
 
 class LiveQuoteError(RuntimeError):
@@ -90,9 +93,26 @@ def main() -> int:
     p.add_argument("--symbol", choices=("NIFTY", "SENSEX"), required=True)
     p.add_argument("--token", help="Verified index symbol token")
     p.add_argument("--master-file", help="Optional official instrument-master JSON")
-    p.add_argument("--out", required=True)
+    p.add_argument("--out", help="Output JSON (required for a quote request)")
+    p.add_argument("--env-file", help="Local .env path; defaults to repo-root .env")
+    exclusive = p.add_mutually_exclusive_group()
+    exclusive.add_argument("--enroll-totp-secret", action="store_true",
+                           help="One-time hidden setup in Windows Credential Manager")
+    exclusive.add_argument("--delete-totp-secret", action="store_true",
+                           help="Delete stored TOTP seed from Windows Credential Manager")
     args = p.parse_args()
 
+    if args.enroll_totp_secret or args.delete_totp_secret:
+        try:
+            manage_totp_secret(enroll=args.enroll_totp_secret,
+                               delete=args.delete_totp_secret)
+            print("LOCAL_CREDENTIAL_STORE_UPDATED")
+            return 0
+        except CredentialError as exc:
+            print(f"FAILED: {exc}")
+            return 1
+    if not args.out:
+        p.error("--out is required for a live quote request")
     try:
         token = args.token or resolve_token(load_master(args.master_file), args.symbol)
     except (HistoryError, ValueError):
@@ -110,10 +130,10 @@ def main() -> int:
     client_id = ""
     logged_in = False
     try:
-        api = SmartConnect(api_key=getpass("SmartAPI Key (hidden): ").strip())
-        client_id = input("Angel Client ID (local only): ").strip()
-        pin = getpass("Angel MPIN (hidden): ").strip()
-        otp = getpass("Current TOTP (hidden): ").strip()
+        key, client_id, pin = resolve_login_fields(
+            load_local_env(args.env_file))
+        otp = current_totp()
+        api = SmartConnect(api_key=key)
         try:
             session = api.generateSession(
                 clientCode=client_id, password=pin, totp=otp)
@@ -130,7 +150,7 @@ def main() -> int:
         print("FEED_FRESHNESS_UNVERIFIED | NOT A CLOSED CANDLE | NO ORDERS")
         print(f"Saved: {path}")
         return 0
-    except LiveQuoteError as exc:
+    except (LiveQuoteError, CredentialError) as exc:
         print(f"FAILED: {exc}")
         return 1
     except Exception:
