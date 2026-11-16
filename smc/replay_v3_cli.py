@@ -14,6 +14,7 @@ from pathlib import Path
 from .csv_data import read_candles_csv
 from .data_quality import audit_1m, drop_terminal_1530
 from .replay_v3 import replay_unified_reversal
+from .htf_aggregation_v3 import aggregate_regular_1m
 
 
 def prepare_ltf_for_replay(candles, *, drop_isolated_terminal_1530: bool = False):
@@ -39,6 +40,8 @@ def main() -> None:
                    help="Omit only isolated 15:30 bars after same-day 15:15; all other gaps still fail")
     p.add_argument("--max-holding-bars",type=int,default=24)
     p.add_argument("--warmup-bars",type=int,default=16)
+    p.add_argument("--aggregate-regular-htf",action="store_true",
+                   help="Derive only full-session 5m/15m/1h/daily; never infer weekly/monthly completion")
     a=p.parse_args()
     ltf=list(read_candles_csv(a.ltf))
     if not ltf:
@@ -52,13 +55,25 @@ def main() -> None:
         k:list(read_candles_csv(v)) if v else []
         for k,v in (("monthly",a.monthly),("weekly",a.weekly),("daily",a.daily))
     }
+    aggregation = None
+    if a.aggregate_regular_htf:
+        try:
+            aggregation = aggregate_regular_1m(ltf)
+        except ValueError as error:
+            p.error("HTF_AGGREGATION_FAILED: "+str(error))
+        if a.daily is not None:
+            p.error("CANNOT_COMBINE_DAILY_CSV_WITH_AUTO_DAILY")
+        htf["daily"] = list(aggregation.daily)
     result=replay_unified_reversal(
         symbol=a.symbol,ltf=ltf,data_healthy=True,
         max_holding_bars=a.max_holding_bars,min_warmup_bars=a.warmup_bars,
         **htf)
     dest=Path(a.out)
     dest.parent.mkdir(parents=True,exist_ok=True)
-    dest.write_text(json.dumps(result.as_dict(),indent=2)+"\n",encoding="utf-8")
+    payload = result.as_dict()
+    if aggregation is not None:
+        payload["htf_aggregation"] = aggregation.as_dict()
+    dest.write_text(json.dumps(payload,indent=2)+"\\n",encoding="utf-8")
     print(f"Quality gate passed; excluded {removed_terminal} isolated 15:30 record(s)")
     print(f"RESEARCH_ONLY: {result.evaluated_prefixes} closed-bar prefixes; "
           f"{len(result.observations)} distinct terminal observations; "
