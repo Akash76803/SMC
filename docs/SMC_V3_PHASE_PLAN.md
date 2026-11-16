@@ -125,3 +125,19 @@ Each phase: confirm source method, define deterministic rule and counterexamples
 - Added explicit `terminal_cause` to each terminal observation and separate `terminal_cause_counts` to summary. The existing `reason` and `reason_counts` remain unchanged as **decision-stage reasons per evaluated candle**, preserving downstream compatibility. Diagnostics also distinguish `decision_stage_reason` from `terminal_cause`. Counts of terminal causes are per distinct terminal observation, not 345 evaluations.
 - Two tests added; prior locally verified baseline 283; expect 285 if new tests pass. Run `python -m pytest -q tests/test_replay_v3.py` and `python -m pytest -q`.
 - Real multiweek/month HTF history and protected-structure MSS/displacement remain unverified; do not loosen gates just to manufacture index brackets.
+
+## V3.9B — Three backend gates (2026-11-16)
+
+The following **research-only** components were added on `sandbox`:
+
+1. **HTF alignment gate:** `smc/continuation_validation_v3.py` evaluates the existing Monthly/Weekly/Daily `HTFContext` at the actual confirmation close. Missing, conflicting or later-closing HTF candles cannot authorize trade readiness.
+2. **Entry and protective-stop reference:** the candle-close at BOS/pullback reclaim is the hypothetical **entry reference**, and the pullback high/low is the **unverified stop reference**. Invalid direction or stop geometry rejects the case; do not confuse it with a verified protected swing or executable bracket.
+3. **Liquidity target and index R:R gate:** reuses `review_liquidity_target` with only as-of-close eligible index levels and completed 1m prefix. Uses NIFTY >= 50 points / SENSEX >= 100 points and minimum index R:R 2. Too-small targets become NO_TRADE; missing target stays WAIT. Even with index room and aligned HTF, `PROTECTED_STRUCTURE`, `HTF_POI`, and `OPTION_QUOTES_GREEKS` remain pending; no executable index bracket or premium P&L is generated.
+
+**Session-isolated CLI**:
+```powershell
+python -m smc.continuation_validation_cli --ltf "results/v38_sessions/nifty_2026-11-02.csv" --symbol NIFTY --out "results/v39b_2026-11-02.json"
+```
+Use optional `--monthly`, `--weekly`, and `--daily` only with independently verified **CLOSE-stamped** HTF files. Do not pass the broker 1H START-stamped CSV as an HTF close file. No option fills or order execution.
+
+Tests added: `tests/test_continuation_validation_v3.py`; run `python -m pytest -q` in the repository venv. These gates **do not** change the old V3.8 reversal replay metrics or the V3.9A desktop marker counts. Next: verified POI/protected structure, then real option quote matching and UI decision inspector integration.
