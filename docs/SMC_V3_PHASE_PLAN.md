@@ -11,9 +11,9 @@ Research/paper-only user-friendly NIFTY/SENSEX terminal. Explain M/W/D bias, liq
 - [x] P0B Introduce V3 decision DTO, fail-closed reasoning and isolated unit tests (9 passed locally)
 - [x] P0C User confirmed 187/187 regression tests passed locally (V3.2 baseline, before V3.3 changes)
 - [~] P1 Initial opt-in `smc/structure_v3.py` hierarchy + wick/close structure events + candidate IDM and `tests/test_structure_v3.py` committed; inside-bar/full IDM source fixtures and local pytest verification still pending
-- [ ] P2 External/internal liquidity and targets, eligibility and sweeps
+- [~] P2 Existing liquidity detection + new V3.4 unconsumed opposing target selection and index RR gates committed; target freshness/session completeness replay QA pending
 - [~] P3 Initial opt-in Monthly/Weekly/Daily confirmed external-break bias, dealing range EQ/premium/discount, strict conflict/neutral handling and sweep-time causal HTF adapter committed; calendar/close timestamp adapters and historical validation pending
-- [ ] P4 Standard and advanced blocks, FVG overlaps and POI selection
+- [~] P4 Initial V3.4 OB/FVG overlap candidate scanner and invalidation/retest diagnostics committed; full HTF POI validation, advanced OB and real-data research pending
 - [ ] P5 Versioned per-strategy setup state machines and expiry/invalidation
 - [ ] P6 Conservative ATM/ITM option/quote gates, slippage/fees and paper engine
 - [ ] P7 Desktop chart UI, setup inspector, scan, logs and journal
@@ -57,3 +57,11 @@ Each phase: confirm source method, define deterministic rule and counterexamples
 - `adapt_reversal_with_htf` links this HTF stage into the V3.2 reversal adapter. For any selected liquidity sweep, it filters all M/W/D input candles to those closing **no later than the sweep candle**, preventing future HTF confirmation being assigned retroactively. Selected candidate direction is provided explicitly by V3.2.
 - Assumption: all input HTF timestamps are the actual **candle CLOSE**, not broker start timestamps; all candles must be complete and ordered. Unsupported market calendar, stale datasets, timeframe aggregation, market-session validation and complete Lecture 9 time/price rules remain unfinished. Do not drive live execution.
 - `tests/test_htf_context_v3.py` adds 14 tests for alignment, bearish/bullish, conflict, range, neutral, invalid input, future data, and integration. Run `python -m pytest -q tests/test_htf_context_v3.py tests/test_evidence_adapter_v3.py`, then full `python -m pytest -q`; GitHub connector cannot execute full suite. Previous local verified baseline = 187 tests before this milestone.
+
+## V3.4 Liquidity Target & POI Candidate Research — 2026-11-16
+- `smc/poi_liquidity_v3.py` introduces `review_liquidity_target`, `review_ob_fvg_poi`, `index_bracket_from_target` and `candidate_poi_stage` with serializable, traceable research output.
+- Nearest eligible opposing liquidity (BSL/EQH/PDH for bullish, SSL/EQL/PDL for bearish) only when unconsumed by any observed sweep/run or prior wick through the level. PDH/PDL may become active on the session's first candle; first-bar touches consume it. Missing target => WAIT, insufficient index target room or RR => NO_TRADE. Required historical completeness and session calendar must be validated upstream.
+- Index gates are still NIFTY >=50 points, SENSEX >=100 points, underlying index RR >=2. These gates are **separate** from option target >=15 *premium points* and net premium RR >=3. No underlying-points-to-option-premium inference.
+- `review_ob_fvg_poi` identifies an overlap of existing preliminary standard OB and directional 3-candle FVG, with close invalidation and later retest proxy. Candidate overlaps **never** set `HTF_POI=PASS` on their own; the stage remains PENDING until HTF origin and mitigation/quality rules are separately validated. Institutional activity is not observable from OHLC.
+- No live orders, no guaranteed draw-on-liquidity and no automatic order execution. This opt-in module is not yet wired into complete V3.3->V3.2 detection chain.
+- `tests/test_poi_liquidity_v3.py` includes tests for prior level consumption, first-bar PDH, target room/RR, bear/bull levels, future/incomplete candles, positive POI overlap and fail-closed stage. **GitHub connector cannot execute local tests**; user should run `python -m pytest -q tests/test_poi_liquidity_v3.py` and then `python -m pytest -q`. Previous user-verified baseline: 201 passed.
