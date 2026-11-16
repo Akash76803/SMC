@@ -164,6 +164,14 @@ def _feed_status(live_path: str | Path | None,
             if age < 0 or age > 14500:
                 return {"status": "DISCONNECTED", "reason": "FEED_STATE_TOO_OLD"}
             state_name = state.get("status")
+            if state_name == "SUBSCRIBING":
+                live = _tail_live(Path(live_path) if live_path else None)
+                try:
+                    recorded = datetime.fromisoformat(live["last_candle_close_at"])
+                    if recorded > updated and live["status"] in ("RECENT_BAR", "WAIT"):
+                        return live
+                except (KeyError, ValueError, TypeError):
+                    pass
             if state_name in ("AUTHENTICATION_REQUIRED", "AUTHENTICATED",
                               "SUBSCRIBING", "STREAM_STOPPED", "DISCONNECTED",
                               "CANCELLED", "ERROR"):
@@ -292,7 +300,8 @@ def main() -> int:
         child = subprocess.Popen(command, creationflags=flags)
     server = ThreadingHTTPServer(
         ("127.0.0.1", args.port),
-        make_handler(args.csv, args.report, args.live_jsonl, args.status_file))
+        make_handler(args.csv, args.report, args.live_jsonl,
+                     args.status_file if args.start_live else None))
     print(f"LOCAL_SMC_TERMINAL: http://127.0.0.1:{args.port}")
     print("LOCALHOST_ONLY | RESEARCH_ONLY | NO_ORDERS")
     if args.open_browser:
