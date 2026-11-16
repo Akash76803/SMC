@@ -25,7 +25,7 @@ from .option_quote_tape_v319 import append_snapshot
 def run_dual_stream(*, ws, tokens: dict[str,str], outputs: dict,
                     statuses: dict[str,str], max_seconds: int) -> dict:
     """Injectable websocket for CI. Individual symbol continuity never mixes."""
-    if set(tokens)!=set(SYMBOLS) or not 5<=max_seconds<=14400:
+    if set(tokens)!=set(SYMBOLS) or not 5<=max_seconds<=28800:
         raise ValueError("INVALID_DUAL_FEED_CONFIG")
     engines={s:LiveResearchEngine(s) for s in SYMBOLS}
     counts={s:{"ticks":0,"candles":0,"errors":0} for s in SYMBOLS}
@@ -96,14 +96,14 @@ def run_dual_stream(*, ws, tokens: dict[str,str], outputs: dict,
 def main() -> int:
     p=argparse.ArgumentParser(description="Angel read-only DUAL index live stream")
     p.add_argument("--root",default=".")
-    p.add_argument("--seconds",type=int,default=14400)
+    p.add_argument("--seconds",type=int,default=28800)
     p.add_argument("--nifty-token")
     p.add_argument("--sensex-token")
     p.add_argument("--master-file")
     p.add_argument("--env-file")
     p.add_argument("--option-refresh-seconds", type=int, default=15)
     a=p.parse_args()
-    if not 5<=a.seconds<=14400:
+    if not 5<=a.seconds<=28800:
         p.error("INVALID_STREAM_DURATION")
     paths={s:market_paths(a.root,s) for s in SYMBOLS}
     def state(status,reason):
@@ -191,6 +191,23 @@ def main() -> int:
         option_stop.set()
         poller.join(timeout=3)
         state("STREAM_STOPPED","DUAL_STREAM_SESSION_ENDED")
+        # Re-evaluate research only after the observed quote tape is closed
+        # or the stream session has finished. Uses the previous day records;
+        # no live strategy changes, broker orders or account mutations.
+        try:
+            from .self_learning_cli_v319 import run_learning
+            for market in SYMBOLS:
+                report=run_learning(
+                    market=market,
+                    event_file=paths[market]["live"],
+                    quote_file=paths[market]["option_tape"])
+                dest=paths[market]["learning"]
+                dest.parent.mkdir(parents=True,exist_ok=True)
+                dest.write_text(json.dumps(report,indent=2,allow_nan=False)+"\n",
+                                encoding="utf-8")
+                print(f"{market}_LEARNING: {report['status']} | RESEARCH_ONLY")
+        except (OSError,ValueError,TypeError):
+            print("LEARNING_REPORT_UNAVAILABLE_NO_PRODUCTION_CHANGE")
         print("READ_ONLY_FEED_COUNTS: "+json.dumps(totals))
         return 0 if all(totals[s]["ticks"]>0 and totals[s]["errors"]==0
                         for s in SYMBOLS) else 1
