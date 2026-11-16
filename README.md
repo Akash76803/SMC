@@ -264,3 +264,25 @@ There are no bid/ask fills, brokerage, spreads, slippage or option orderbook
 available here. `max_favorable_envelope` / `max_adverse_envelope` include
 the OHLC exit bar and do NOT prove intrabar ordering. Results cannot establish
 whether a genuine ₹20–₹25 premium scalp was executable.
+
+## Offline desktop application — research viewer (sandbox)
+
+A real Windows desktop window now exists (standard-library Tkinter). It reads
+**your local files**, not live broker quotes. Run from repository root:
+
+```powershell
+git switch sandbox
+git pull --ff-only origin sandbox
+python -m pytest -q
+python -m smc.desktop_v3 --ltf "data/nifty_multi_regular_1m.csv" --results-dir "results/v38_sessions"
+```
+
+Features:
+- Choose any locally audited session, see actual 1-minute candlesticks, daily OHLC and terminal-event markings.
+- Browse date-matched replay decisions and open evidence details: entry state, terminal cause, HTF alignment, target rejection, pending stages.
+- Rejects mismatched-session/replay-length files and any replay that does not explicitly prohibit live orders.
+- Session-isolated presentation; no calendar gaps are filled.
+- If replay JSON is missing, candlestick chart still opens and displays zero observations rather than inventing trades.
+
+**Not yet built:** broker-streaming UI, chart pan/zoom, historical continuation/rally detector, verified weekly/monthly trend, full options chain with premium bid/ask/Greeks, option P&L, paper fill engine, and packaged Windows installer.
+This viewer is **not** a BUY/SELL recommendation service; yellow marks are terminal diagnostic events.
