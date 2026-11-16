@@ -144,6 +144,10 @@ def _tail_live(path: Path | None) -> dict:
         if not 0 <= age <= 120:
             return {"status": "STALE", "reason": "LAST_CLOSED_BAR_NOT_FRESH",
                     "last_candle_close_at": at}
+        if data.get("status") != "RESEARCH_ONLY":
+            return {"status": "WAIT",
+                    "reason": data.get("reason", "ANALYSIS_NOT_READY"),
+                    "last_candle_close_at": at}
         return {"status": "RECENT_BAR", "reason": "RECENT_DATA_NOT_PROOF_WEBSOCKET_CONNECTED",
                 "last_candle_close_at": at,
                 "last_candle_close": data.get("last_candle_close")}
