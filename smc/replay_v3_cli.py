@@ -28,6 +28,11 @@ def prepare_ltf_for_replay(candles, *, drop_isolated_terminal_1530: bool = False
     return retained, len(candles) - len(retained)
 
 
+def write_replay_json(path: Path, payload: dict) -> None:
+    """Write standards-compliant JSON followed by exactly one real newline."""
+    path.write_text(json.dumps(payload, indent=2) + chr(10), encoding="utf-8")
+
+
 def main() -> None:
     p=argparse.ArgumentParser(description="Research-only V3.7 closed-bar diagnostic replay")
     p.add_argument("--ltf",required=True,help="Historical CLOSED-timestamp one-minute CSV")
@@ -73,7 +78,7 @@ def main() -> None:
     payload = result.as_dict()
     if aggregation is not None:
         payload["htf_aggregation"] = aggregation.as_dict()
-    dest.write_text(json.dumps(payload,indent=2)+"\\n",encoding="utf-8")
+    write_replay_json(dest, payload)
     print(f"Quality gate passed; excluded {removed_terminal} isolated 15:30 record(s)")
     print(f"RESEARCH_ONLY: {result.evaluated_prefixes} closed-bar prefixes; "
           f"{len(result.observations)} distinct terminal observations; "
