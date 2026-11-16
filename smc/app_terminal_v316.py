@@ -20,6 +20,7 @@ from .session_reconciliation_v314 import reconcile_sessions
 from .live_setup_screen_v317 import build_setup_screen
 from .angel_option_live_v318 import read_option_snapshot
 from .option_quote_tape_v319 import live_momentum
+from .premium_paper_plan_v319 import create_paper_plan
 
 APP_BUILD = "SMC-DUAL-MARKET-2026-11-16-R2"
 
@@ -67,6 +68,12 @@ pre{white-space:pre-wrap;overflow-wrap:anywhere;font-size:12px;color:#a7bfdf}
 <div><h2>Confirmation checklist</h2><div id="setupevidence" class="muted"></div>
 <p class="warn">INDEX LEVELS ≠ OPTION PREMIUM. NO BROKER ORDERS.</p></div></div></section>
 <section class="panel" style="margin-bottom:15px"><h2>LIVE INDEX CANDLES <small>tick-sampled, not certified exchange OHLC</small></h2><canvas id="liveChart"></canvas><small id="liveChartNote">No verified live candles yet.</small></section><section class="panel" style="margin-bottom:15px"><h2>ATM / ITM CE–PE OPTION QUOTES <small>Actual broker bid/ask only</small></h2><p id="optionStatus" class="warn">OPTION QUOTES UNAVAILABLE</p><h2>OPTION MOMENTUM RANKING · OTM INCLUDED</h2><p id="momentumStatus" class="muted">Broker quote history required.</p><div id="momentumRows" style="overflow-x:auto"></div><div id="optionRows" style="overflow-x:auto"></div><small>No inferred option exit prices or premium SL/TP. Greeks may be unavailable, especially SENSEX.</small></section><section class="panel" style="margin-bottom:15px">
+<h2>PREMIUM ENTRY / STOP LOSS / TARGET · PAPER ONLY</h2>
+<p id="premiumPlanStatus" class="warn">WAIT · No verified premium plan</p>
+<div id="premiumPlanMetrics" class="setup-grid"></div>
+<small>Paper prices use observed ASK reference and a training-only premium bracket. They are NOT observed fill/exit prices or instructions to buy options.</small>
+</section>
+<section class="panel" style="margin-bottom:15px">
 <h2>SELF-LEARNING / WALK-FORWARD PAPER RESEARCH</h2>
 <p id="learningStatus" class="warn">INSUFFICIENT EVIDENCE — no automated strategy promotion</p>
 <div id="learningMetrics" class="setup-grid"></div>
@@ -97,15 +104,19 @@ document.getElementById('allowAlerts').onclick=async()=>{
 };
 function notifyIfNew(live){
  const a=live.alert;
- if(!a||a.type!=='SMC_RETEST_RESEARCH'||!a.id||live.status!=='RECENT_BAR')return;
+ if(!a||!['SMC_RETEST_RESEARCH','PREMIUM_PAPER_PLAN'].includes(a.type)||!a.id||live.status!=='RECENT_BAR')return;
  const symbol=a.symbol||'UNKNOWN';
  const key=symbol+'|'+a.id;
  if(observedAlerts.has(key))return;
  observedAlerts.add(key);
- document.getElementById('bigAlertTitle').textContent='SMC RETEST OBSERVED · RESEARCH ONLY';
+ document.getElementById('bigAlertTitle').textContent=
+  a.type==='PREMIUM_PAPER_PLAN'?'PREMIUM PLAN · PAPER RESEARCH ONLY':
+  'SMC RETEST OBSERVED · RESEARCH ONLY';
  document.getElementById('bigAlertBody').textContent=
   symbol+' '+(a.direction||'')+
-  ' at '+(a.at||'')+'. No verified Entry / SL / Option strike. NO TRADE AUTHORIZATION.';
+  ' at '+(a.at||'')+'. '+(a.type==='PREMIUM_PAPER_PLAN'?
+  'Observed momentum and hypothetical premium entry/SL/target are on the dashboard. PAPER ONLY.':
+  'No verified Entry / SL / Option strike. NO TRADE AUTHORIZATION.');
  document.getElementById('bigAlert').style.display='block';
  if('Notification' in window && Notification.permission==='granted'){
    new Notification('SMC retest observed — research only',{
@@ -152,6 +163,18 @@ function renderSetup(live){
  ];
  document.getElementById('learningMetrics').innerHTML=learnItems.map(([k,v])=>
  '<div class="setup-metric"><small>'+esc(k)+'</small><b>'+esc(v??'UNAVAILABLE')+'</b></div>').join('');
+ const paper=live.paper_plan||{status:'WAIT',reason:'PREMIUM_PLAN_UNVERIFIED'};
+ document.getElementById('premiumPlanStatus').textContent=
+   'PAPER PREMIUM PLAN: '+paper.status+' | '+(paper.reason||'NO VERIFIED PLAN');
+ document.getElementById('premiumPlanMetrics').innerHTML=[
+  ['Option contract',paper.contract],['Side / Moneyness',paper.side?(paper.side+' '+(paper.moneyness||'')):null],
+  ['Entry ASK · PAPER',paper.entry_ask_reference],
+  ['Stop · PAPER',paper.premium_stop_reference],
+  ['Target · PAPER',paper.premium_target_reference],
+  ['Net R:R · PAPER',paper.net_rr_reference],
+  ['Momentum observed',paper.bid_change_pct!=null?paper.bid_change_pct+'%':null],
+  ['Source quote at',paper.quote_at]
+ ].map(([k,v])=>'<div class="setup-metric"><small>'+esc(k)+'</small><b>'+esc(v??'UNAVAILABLE')+'</b></div>').join('');
  const q=live.options||{status:'UNAVAILABLE',contracts:[]};
  const mom=live.momentum||{status:'NO_VERIFIED_OPTION_TAPE',candidates:[]};
  document.getElementById('momentumStatus').textContent=
@@ -422,6 +445,17 @@ def live_screen_payload(live_path: str | Path | None,
                 feed["learning"]=learning
         except (ValueError,OSError,TypeError,KeyError):
             pass
+    feed["paper_plan"]=create_paper_plan(
+        feed["setup"],feed["momentum"],feed["learning"])
+    if feed["paper_plan"]["status"]=="READY_FOR_PAPER_OBSERVATION":
+        paper=feed["paper_plan"]
+        feed["alert"]={
+            "type":"PREMIUM_PAPER_PLAN",
+            "id":paper["contract"]+"@"+paper["quote_at"],
+            "symbol":selected,"direction":feed["setup"].get("bias"),
+            "at":paper["quote_at"],"order_eligible":False,
+            "message":"SMC PREMIUM PAPER PLAN OBSERVED — NOT A TRADE INSTRUCTION",
+        }
     feed["sampled_live_candles"] = (
         event.get("sampled_live_candles", []) if event is not None
         and feed["status"] == "RECENT_BAR" else [])
