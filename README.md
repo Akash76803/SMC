@@ -371,3 +371,21 @@ calendar; live option quotes, expiry/lot-size, delta/spread/IV validation;
 paper fills/fees/slippage and walk-forward out-of-sample profitable
 performance. Code-test success is **not** proof of profitable strategy
 or real-time app operation. Do not enable automatic orders from this branch.
+
+### Angel TOTP / quiet dashboard fix
+
+With `./run_smc.ps1 -Live` on Windows the browser dashboard uses the original
+PowerShell, and the broker authentication prompt runs in a **separate console**.
+Enter the current 6-digit code in the broker console. The input is hidden;
+this is expected. Cancelling that prompt exits the broker child cleanly,
+without a Python traceback or interrupting the historical dashboard.
+The UI reads only secret-free status JSON and displays
+`AUTHENTICATION_REQUIRED`, `AUTHENTICATED`, `SUBSCRIBING`,
+`CANCELLED`, `ERROR`, `WAIT`, or `RECENT_BAR` depending on verified
+evidence. A successful login alone does **not** prove live tick delivery.
+The 5-second polling now fetches only `/api/live`; historical sessions are
+loaded once at server startup, and normal GET access logging is suppressed.
+Offline launch ignores any old prior-run live-feed file.
+
+Exit the dashboard with Ctrl+C in its main PowerShell window; do not paste
+OTP, PIN, secret, API key, or access tokens into issue reports.
