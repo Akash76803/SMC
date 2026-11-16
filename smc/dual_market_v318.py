@@ -26,6 +26,7 @@ def market_paths(root: str | Path, symbol: str) -> dict[str, Path]:
         "live": root / "results" / f"live_{low}.jsonl",
         "status": root / "results" / f"live_{low}_status.json",
         "options": root / "results" / f"live_{low}_options.json",
+        "option_tape": root / "results" / f"live_{low}_option_quotes.jsonl",
     }
 
 
