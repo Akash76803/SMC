@@ -6,6 +6,7 @@ future-data target selection or invented liquidity. Credentials remain local.
 from __future__ import annotations
 
 import argparse
+import csv
 import json
 import logging
 from collections import Counter
@@ -87,9 +88,43 @@ def analyze_downloaded(*, symbol: str, candles: list, source_requests: int = 0) 
     }
 
 
+def export_brackets_csv(payload: dict, path: str | Path) -> None:
+    """Compact user-facing research CSV; no credentials or order information."""
+    names = ("date", "confirmed_at", "direction", "index_entry_close_reference",
+             "index_stop_reference", "t1", "t2", "t3", "index_bracket_qualified",
+             "validation_status", "validation_reason", "paper_entry_open",
+             "paper_exit", "paper_exit_reason", "paper_index_points_gross")
+    target = Path(path)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    with target.open("w", encoding="utf-8", newline="") as output:
+        writer = csv.DictWriter(output, fieldnames=names)
+        writer.writeheader()
+        for day in payload["days"]:
+            for obs in day["brackets"]["observations"]:
+                tiers = obs["index_t1_t2_t3_references"]
+                outcome = obs["paper_outcome"] or {}
+                vals = [tier["price"] for tier in tiers[:3]]
+                vals += [None] * (3 - len(vals))
+                writer.writerow({
+                    "date": day["date"], "confirmed_at": obs["confirmed_at"],
+                    "direction": obs["direction"],
+                    "index_entry_close_reference": obs["index_entry_close_reference"],
+                    "index_stop_reference": obs["index_stop_reference"],
+                    "t1": vals[0], "t2": vals[1], "t3": vals[2],
+                    "index_bracket_qualified": obs["index_bracket_qualified"],
+                    "validation_status": obs["validation_status"],
+                    "validation_reason": obs["validation_reason"],
+                    "paper_entry_open": outcome.get("entry_open"),
+                    "paper_exit": outcome.get("exit_reference"),
+                    "paper_exit_reason": outcome.get("exit_reason"),
+                    "paper_index_points_gross": outcome.get("index_points_gross"),
+                })
+
+
 def fetch_and_analyze(*, client, symbol: str, token: str,
                       start: datetime, end: datetime, raw_csv: str | Path,
-                      report_json: str | Path) -> dict:
+                      report_json: str | Path,
+                      candidates_csv: str | Path | None = None) -> dict:
     if start > end:
         raise ValueError("INVALID_DATE_RANGE")
     # One-minute timestamp from the broker is candle START;
@@ -102,6 +137,8 @@ def fetch_and_analyze(*, client, symbol: str, token: str,
         symbol=symbol, candles=list(history.candles),
         source_requests=history.requests)
     export_csv(history, raw_csv)
+    if candidates_csv is not None:
+        export_brackets_csv(payload, candidates_csv)
     path = Path(report_json)
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(payload, indent=2, allow_nan=False)+"\n",
@@ -119,6 +156,7 @@ def main() -> int:
     p.add_argument("--master-file", help="Official Angel instrument master JSON")
     p.add_argument("--env-file", help="Local ignored .env")
     p.add_argument("--raw-csv", required=True)
+    p.add_argument("--candidates-csv", help="Compact entries/SL/T1-T3 research table")
     p.add_argument("--out", required=True)
     args = p.parse_args()
     if args.to_date < args.from_date:
@@ -151,7 +189,8 @@ def main() -> int:
         payload = fetch_and_analyze(
             client=api, symbol=args.symbol, token=token,
             start=args.from_date, end=args.to_date,
-            raw_csv=args.raw_csv, report_json=args.out)
+            raw_csv=args.raw_csv, report_json=args.out,
+            candidates_csv=args.candidates_csv)
         print("HISTORICAL_RESEARCH_COMPLETE: "
               f"downloaded={payload['downloaded_candles']} "
               f"usable_sessions={payload['usable_sessions']} "
