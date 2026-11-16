@@ -118,3 +118,10 @@ Each phase: confirm source method, define deterministic rule and counterexamples
 - User reported 282 passing full tests and a successful NIFTY research replay, but `ConvertFrom-Json` raised `Invalid JSON primitive: n`.
 - Confirmed code wrote literal backslash-n after the completed JSON object. Replaced with a dedicated `write_replay_json` that appends a genuine newline, and added a strict JSON regression test.
 - Prior full-suite user-confirmed count: 282; one new test should raise it to 283 after user validation. No replay metrics changed by this fix.
+
+## V3.8 Replay Reason Separation — 2026-11-16
+- User verified **283/283 regression tests passed** and JSON is parseable. On the 2026-11-11 NIFTY regular session, aggregation yielded 72x5m, 24x15m, 6x1h, 1 daily, 0 weekly/monthly; 345 research-only prefixes, 12 terminal observations, 0 qualified hypothetical brackets.
+- The replay showed `reason=MSS_CONFIRMED` but underlying entry state `EXPIRED`, `entry_reason=CHOCH_TIMEOUT`. This is a distinction, not evidence MSS passed: `MSS_CONFIRMED` names the FAILED stage; `CHOCH_TIMEOUT` names the concrete terminal trigger.
+- Added explicit `terminal_cause` to each terminal observation and separate `terminal_cause_counts` to summary. The existing `reason` and `reason_counts` remain unchanged as **decision-stage reasons per evaluated candle**, preserving downstream compatibility. Diagnostics also distinguish `decision_stage_reason` from `terminal_cause`. Counts of terminal causes are per distinct terminal observation, not 345 evaluations.
+- Two tests added; prior locally verified baseline 283; expect 285 if new tests pass. Run `python -m pytest -q tests/test_replay_v3.py` and `python -m pytest -q`.
+- Real multiweek/month HTF history and protected-structure MSS/displacement remain unverified; do not loosen gates just to manufacture index brackets.
