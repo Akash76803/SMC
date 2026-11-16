@@ -123,7 +123,7 @@ def test_live_structure_warmup_must_remain_wait(tmp_path):
         "last_candle_close_at": datetime.now(IST).isoformat(),
         "stream_quality": {"quality_blocked": False},
         "last_candle_close": 25000,
-    })+"\\n")
+    })+"\n")
     status = _tail_live(stream)
     assert status["status"] == "WAIT"
     assert status["reason"] == "STRUCTURE_WARMUP"
