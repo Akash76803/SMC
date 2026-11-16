@@ -160,3 +160,13 @@ def test_fetch_and_analyze_uses_historical_method_only(tmp_path):
     assert report["executed_trades"] == 0
     assert (tmp_path/"raw.csv").exists()
     assert (tmp_path/"research.json").exists()
+
+def test_compact_candidates_csv_has_index_references_not_option_pnl(tmp_path):
+    from smc.angel_historical_research_cli_v313 import export_brackets_csv
+    payload = analyze_downloaded(symbol="NIFTY", candles=bars())
+    path = tmp_path / "candidates.csv"
+    export_brackets_csv(payload, path)
+    text = path.read_text(encoding="utf-8")
+    assert "index_stop_reference" in text
+    assert "paper_exit_reason" in text
+    assert "option_pnl" not in text
