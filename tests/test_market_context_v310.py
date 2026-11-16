@@ -63,7 +63,7 @@ def test_gap_refused_instead_of_fabricating_bar():
 
 def test_prior_observed_day_not_automatically_verified_calendar_day():
     c = session(2) + session(3, base=120)
-    r = contextual_liquidity(c, as_of=c[-1].timestamp)
+    r = contextual_liquidity(candles=c, as_of=c[-1].timestamp)
     assert r["prior_observed_day"]["date"] == "2026-11-02"
     assert r["prior_observed_day"]["is_verified_immediate_predecessor"] is False
     assert not any(x["kind"] in ("PDH", "PDL") for x in r["levels"])
