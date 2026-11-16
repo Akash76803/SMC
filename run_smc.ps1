@@ -14,6 +14,17 @@ if (-not (Test-Path $python)) {
     exit 1
 }
 
+# Fail before replay/login if an older terminal is still listening.
+$active = @(Get-NetTCPConnection -LocalPort $Port -State Listen -ErrorAction SilentlyContinue)
+if ($active.Count -gt 0) {
+    $owners = ($active | Select-Object -ExpandProperty OwningProcess -Unique) -join ", "
+    Write-Host "OLD_SERVER_DETECTED: Port $Port is already in use. PID: $owners" -ForegroundColor Yellow
+    Write-Host "In a separate PowerShell, inspect: Get-CimInstance Win32_Process -Filter 'ProcessId=$($active[0].OwningProcess)' | Select ProcessId,CommandLine"
+    Write-Host "Stop the OLD SMC PowerShell with Ctrl+C first; then launch this script again."
+    exit 3
+}
+Write-Host "Launching updated SMC Dual Market dashboard (build SMC-DUAL-MARKET-2026-11-16-R2)" -ForegroundColor Cyan
+
 # Recompute each index independently. Unavailable history stays UNAVAILABLE.
 foreach ($symbol in @("NIFTY", "SENSEX")) {
     $lower = $symbol.ToLowerInvariant()
@@ -36,6 +47,7 @@ foreach ($symbol in @("NIFTY", "SENSEX")) {
 }
 
 Write-Host "SMC dual-market terminal: http://127.0.0.1:$Port"
+Write-Host "Verify build: http://127.0.0.1:$Port/api/version"
 Write-Host "Select NIFTY or SENSEX on screen. Ctrl+C to stop."
 Write-Host "NO BROKER ORDERS | RESEARCH AND SIGNAL AUDIT ONLY"
 
