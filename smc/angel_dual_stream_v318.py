@@ -79,7 +79,7 @@ def run_dual_stream(*, ws, tokens: dict[str,str], outputs: dict,
         for s in SYMBOLS:
             engines[s].on_disconnect()
             write_live_status(statuses[s],"DISCONNECTED","BROKER_WEBSOCKET_CLOSED")
-    ws.on_open,on_data_dummy=on_open,None
+    ws.on_open=on_open
     ws.on_data=on_data
     ws.on_error=on_error
     ws.on_close=on_close
