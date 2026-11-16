@@ -131,3 +131,25 @@ def test_one_session_subscribes_both_indices_no_orders(tmp_path):
     assert all(v["candles"]==0 for v in totals.values())
     assert all(json.loads(open(path,encoding="utf-8").read())["orders_enabled"] is False
                for path in statuses.values())
+
+def test_build_endpoint_identifies_new_dual_dashboard(tmp_path):
+    from smc.app_terminal_v316 import APP_BUILD
+    server=ThreadingHTTPServer(
+        ("127.0.0.1",0),
+        make_handler("unused","unused",None,multi_root=tmp_path))
+    worker=Thread(target=server.serve_forever,daemon=True)
+    worker.start()
+    try:
+        with urlopen(f"http://127.0.0.1:{server.server_port}/api/version") as response:
+            payload=json.load(response)
+        assert payload["build"]==APP_BUILD
+        assert payload["dual_market"] is True
+        assert payload["orders_enabled"] is False
+        with urlopen(f"http://127.0.0.1:{server.server_port}/") as response:
+            page=response.read().decode()
+        assert APP_BUILD in page
+        assert "id=\"market\"" in page
+    finally:
+        server.shutdown()
+        server.server_close()
+        worker.join(timeout=4)
