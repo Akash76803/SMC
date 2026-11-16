@@ -441,6 +441,8 @@ def main() -> int:
     p.add_argument("--open-browser", action="store_true")
     p.add_argument("--multi", action="store_true", help="Both NIFTY and SENSEX on one screen")
     p.add_argument("--root", default=".", help="Local research data root")
+    p.add_argument("--nifty-token", help="Verified index token, never a credential")
+    p.add_argument("--sensex-token", help="Verified index token, never a credential")
     p.add_argument("--start-live", action="store_true",
                    help="Start separate read-only Angel stream process with local login")
     p.add_argument("--live-seconds", type=int, default=14400)
@@ -463,6 +465,10 @@ def main() -> int:
                                   "ENTER_TOTP_IN_SEPARATE_BROKER_CONSOLE")
             command = [sys.executable, "-m", "smc.angel_dual_stream_v318",
                        "--root", args.root, "--seconds", str(args.live_seconds)]
+            if args.nifty_token:
+                command += ["--nifty-token",args.nifty_token]
+            if args.sensex_token:
+                command += ["--sensex-token",args.sensex_token]
             flags = getattr(subprocess, "CREATE_NEW_CONSOLE", 0)
             children.append(subprocess.Popen(command, creationflags=flags))
         handler = make_handler(args.csv, args.report, None,
