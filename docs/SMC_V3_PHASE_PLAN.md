@@ -153,3 +153,59 @@ Tests added: `tests/test_continuation_validation_v3.py`; run `python -m pytest -
 .\.venv\Scripts\python.exe -m smc.continuation_validation_cli --ltf "results\v38_sessions\nifty_2026-11-02.csv" --symbol NIFTY --out "results\v39c_nifty_02nov.json"
 ```
 - The review fields are diagnostic. Genuine protected-swing confirmation, market-calendar-verified M/W/D bias, HTF POI and option chain/Greeks are still absent.
+
+## V3.10 — Complete batch: MTF Trend + Historical Liquidity + Alignment
+
+This is an **opt-in research context report**, not a change to executable signals.
+
+1. `smc/market_context_v310.py` creates **only fully closed** 5-minute,
+   15-minute and 1-hour bars from audited 1-minute candles. Every source
+   session starts at 09:16 IST and is continuous; a partial current session
+   does not create a daily candle. 1h/15m/5m trend snapshots expose confirmed
+   external BOS/CHoCH, directional bias and descriptive HH-HL / LH-LL / MIXED.
+   If a timeframe has insufficient evidence, the alignment is UNVERIFIED.
+2. `smc/context_liquidity_v310.py` reports observed previous complete
+   session high/low, causal confirmed swing/equal-high/equal-low liquidity
+   candidates and optional explicitly **calendar-marked** completed week
+   high/low. Unverified previous observation is *not* labeled exchange
+   previous trading day. No PWH/PWL is fed to executable target validation:
+   independently verified complete week history is not yet available.
+   `verified_predecessors` is an explicit caller-certified input, never
+   auto-enabled. Historical unconsumed-liquidity eligibility remains the
+   earlier `review_liquidity_target` gate.
+3. `smc/continuation_validation_cli.py` accepts optional
+   `--context-ltf` containing complete audited 1m historical sessions,
+   requires the current session's source to match identically, and evaluates
+   each setup at its own confirmation close. Each observation now includes
+   `intraday_mtf`, `intraday_mtf_gate`, `context_liquidity` and
+   the existing V3.9C `evidence_review`. No substitute for verified
+   Monthly/Weekly/Daily alignment; old `qualified_trades=0` policy remains.
+
+### Try on the user's validated historical CSV
+
+```powershell
+cd E:\Project\SMC
+git switch sandbox
+git pull --ff-only origin sandbox
+.\.venv\Scripts\python.exe -m pytest -q
+.\.venv\Scripts\python.exe -m smc.continuation_validation_cli `
+  --ltf "results\v38_sessions\nifty_2026-11-02.csv" `
+  --context-ltf "data\nifty_multi_regular_1m.csv" `
+  --symbol NIFTY `
+  --out "results\v310_nifty_02nov.json"
+$r = Get-Content "results\v310_nifty_02nov.json" -Raw | ConvertFrom-Json
+$r.status_counts
+$r.observations | Select-Object -First 2 |
+  ForEach-Object { $_.intraday_mtf; $_.context_liquidity }
+```
+
+### Guardrails and future work
+
+- 1H START-timestamp broker CSV cannot be used as close-stamped M/W/D input.
+- More history is required to verify a genuine month-long rally and real
+  calendar-complete weekly/monthly levels.
+- The MTF view is a descriptive closed-candle structural proxy, not proof of
+  future movement; absent liquidity remains absent.
+- Existing entry rules and safety thresholds remain untouched.
+- New tests `tests/test_market_context_v310.py` cover close-time buckets,
+  no-lookahead, data gaps, calendar markers, and session matching.
