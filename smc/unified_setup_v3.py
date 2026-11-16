@@ -130,7 +130,8 @@ def evaluate_unified_reversal(*, symbol: str, ltf: list[Candle],
             direction=direction, as_of=partial[-1].timestamp)
         poi_stage = candidate_poi_stage(poi_review)
         if (selected.entry is not None and selected.stop is not None
-                and selected.state in (State.REJECTED, State.CANDIDATE)):
+                and selected.state in (State.REJECTED, State.CANDIDATE)
+                and selected.transition_index == len(partial) - 1):
             target_review = review_liquidity_target(
                 candles=partial, levels=list(history.levels),
                 events=list(history.liquidity_events), direction=direction,
