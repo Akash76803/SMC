@@ -86,3 +86,18 @@ def test_report_serialization_contains_index_and_premium_separately():
     assert out["schema_version"]=="3.5"
     assert "target_review" in out and "poi_review" in out
     assert "premium_feasibility" in out["setup"]
+
+def test_v36_premium_scenarios_are_explicitly_hypothetical():
+    a=run(premium_plan=PremiumPlan(15,3,1))
+    ladder=a.as_dict()["premium_ladder"]
+    assert ladder["status"]=="SCENARIOS_ONLY_NOT_VERIFIED"
+    assert ladder["expected_net_rr"]==3.5
+    assert ladder["maximum_supplied_net_rr"]==3.5
+
+def test_v36_no_premium_plan_never_invents_premium_maximum():
+    a=run()
+    assert a.as_dict()["premium_ladder"] is None
+
+def test_v36_multitarget_report_is_optional_without_entry():
+    a=run(ltf=bars([100]*12))
+    assert a.as_dict()["multi_targets"] is None
