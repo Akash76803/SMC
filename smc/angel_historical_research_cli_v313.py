@@ -23,6 +23,7 @@ from .data_quality import drop_terminal_1530, audit_1m
 from .historical_brackets_v313 import analyze_trade_references
 from .market_context_v310 import _check
 from .session_reconciliation_v314 import reconcile_sessions
+from .ict_lifecycle_v316 import scan_ict_lifecycles
 
 def _ist():
     return ZoneInfo("Asia/Kolkata")
@@ -56,7 +57,8 @@ def analyze_downloaded(*, symbol: str, candles: list, source_requests: int = 0) 
         research = build_report(symbol=symbol, candles=session,
                                 context_candles=history)
         bracket = analyze_trade_references(symbol=symbol, session=session, report=research)
-        report_days.append({"date": day, "research": research, "brackets": bracket})
+        report_days.append({"date": day, "research": research, "brackets": bracket,
+                            "ict_lifecycles": scan_ict_lifecycles(session)})
         counts.update(bracket["outcome_counts"])
     return {
         "schema_version": "angel-historical-research-1",
