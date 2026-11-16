@@ -40,6 +40,7 @@ class ReplayObservation:
     index_bracket: dict | None
     level_outcomes: tuple[LevelOutcome, ...]
     research_only: bool = True
+    diagnostics: dict | None = None
 
     def as_dict(self) -> dict:
         return {
@@ -50,6 +51,7 @@ class ReplayObservation:
             "direction": self.direction,
             "index_bracket": self.index_bracket,
             "level_outcomes": [o.as_dict() for o in self.level_outcomes],
+            "diagnostics": self.diagnostics,
             "research_only": True,
         }
 
@@ -195,13 +197,36 @@ def replay_unified_reversal(*, symbol: str, ltf: list[Candle],
                 expected_bar_seconds=expected_bar_seconds)
         else:
             outcomes = ()
+        target = report.target_review
+        nearest = target.target if target else None
+        diagnostics = {
+            "selected_sweep_index": report.evidence.selected_sweep_index,
+            "entry_state": report.evidence.entry_state,
+            "entry_reason": report.evidence.entry_reason,
+            "pending_stages": [
+                stage["code"] for stage in report.evidence.assessment.stage_progress
+                if stage["state"] != "PASS"],
+            "htf_alignment": report.context.alignment.value,
+            "htf_alignment_reason": report.context.reason,
+            "nearest_target_status": target.status if target else "UNAVAILABLE",
+            "nearest_target_reason": target.reason if target else "NO_CANDIDATE_ENTRY",
+            "nearest_target_level": nearest.price if nearest else None,
+            "nearest_target_kind": nearest.level_kind if nearest else None,
+            "nearest_target_points": nearest.index_points if nearest else None,
+            "nearest_target_index_rr": nearest.index_rr if nearest else None,
+            "minimum_index_target_points": 50 if symbol == "NIFTY" else 100,
+            "minimum_index_rr": 2.0,
+            "target_evidence_id": nearest.evidence_id if nearest else None,
+            "index_entry": bracket.entry if bracket else None,
+            "index_stop": bracket.stop if bracket else None,
+        }
         observations.append(ReplayObservation(
             transition, prefix[-1].timestamp.isoformat(), report.status.value,
             report.primary_reason, report.direction,
             None if bracket is None else {
                 "entry": bracket.entry, "stop": bracket.stop,
                 "target": bracket.target, "index_rr": bracket.rr},
-            outcomes))
+            outcomes, diagnostics=diagnostics))
     return ReplaySummary(
         symbol, len(ltf), dict(status_counts), dict(reasons),
         tuple(observations), max(0,len(ltf)-min_warmup_bars+1),
