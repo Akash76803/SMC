@@ -10,6 +10,7 @@ from collections import Counter
 from pathlib import Path
 
 from .continuation_v3 import detect_continuation_observations
+from .continuation_evidence_v3 import enrich_continuation
 from .continuation_validation_v3 import validate_continuation
 from .csv_data import read_candles_csv
 from .data_quality import audit_1m
@@ -40,11 +41,13 @@ def build_report(*, symbol, candles, monthly=(), weekly=(), daily=()):
             context=context, levels=list(evidence.levels),
             events=list(evidence.liquidity_events))
         item = decision.as_dict()
+        item["evidence_review"] = enrich_continuation(
+            symbol=symbol, candles=prefix, observation=event)
         item["bos_time"] = candles[event.bos_index].timestamp.isoformat()
         item["pullback_time"] = candles[event.pullback_index].timestamp.isoformat()
         results.append(item)
     return {
-        "schema_version": "3.9b",
+        "schema_version": "3.9c",
         "symbol": symbol,
         "session": candles[0].timestamp.date().isoformat(),
         "observed_bars": len(candles),
