@@ -329,3 +329,49 @@ Tests mock the SDK boundary. CI cannot authenticate to the user's broker.
 continuity. Sequence gaps, network packet loss and fully sampled exchange
 OHLC are not independently verified. No order execution, broker-side
 stop orders, option Greeks, fills, P&L or live tradable signals.
+
+## V3.13 — Angel historical API and causal index bracket research
+
+Runs locally with your `.env` key, client ID, MPIN and keyring/manual TOTP.
+Cannot be run by ChatGPT against your private broker account. The CLI
+authenticates once, fetches historical one-minute NIFTY/SENSEX OHLC from
+`getCandleData` using the verified index token, and logs out. It never calls
+orders, position endpoints, or live automated trading.
+
+```powershell
+cd E:\Project\SMC
+git switch sandbox
+git pull --ff-only origin sandbox
+.\.venv\Scripts\python.exe -m pytest -q
+
+.\.venv\Scripts\python.exe -m smc.angel_historical_research_cli_v313 `
+  --symbol NIFTY `
+  --from-date 2026-11-02 `
+  --to-date 2026-11-13 `
+  --raw-csv "data\nifty_angel_historical_raw.csv" `
+  --candidates-csv "results\v313_nifty_brackets.csv" `
+  --out "results\v313_nifty_report.json"
+```
+
+A current master index token is resolved from Angel's official instrument
+master, or use `--master-file` for an already downloaded official master.
+Never commit local CSV results, account data or `.env`.
+
+- The pipeline drops only an isolated special 15:30 index record and
+  rejects sessions without 360 contiguous 09:16–15:15 *close-time* bars.
+  Calendar adjacency and institutional liquidity remain unverified.
+- Full research report includes each continuation's causal LTF observation,
+  1h/15m/5m alignment, provisional protected pivot, OB/FVG status,
+  opposing eligible liquidity T1/T2/T3, index entry-close/stop references,
+  and historical outcome where all index-bracket gates passed.
+- NIFTY minimum T1 50 index points; SENSEX 100; index R:R >=2.
+  If not enough eligible evidence: **NO_VERIFIED_INDEX_BRACKET** rather than
+  inventing targets. Existing HTF and POI safety gates remain pending.
+- For a research index bracket, hypothetical entry is at the *next candle
+  OPEN*, and minimum room and RR are checked again. A later bar hitting
+  both SL and target is conservatively treated as SL first. No candle
+  outside that historical regular session is used as an exit. End-of-day
+  close is used when no SL/target was reached.
+- No verified fill or broker spread; these are **index points only**, not
+  option premium/greeks or net rupee profit. Not actionable trade signals.
+  Paper outcomes are hypothetical, not placed trades.
