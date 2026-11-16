@@ -209,3 +209,37 @@ $r.observations | Select-Object -First 2 |
 - Existing entry rules and safety thresholds remain untouched.
 - New tests `tests/test_market_context_v310.py` cover close-time buckets,
   no-lookahead, data gaps, calendar markers, and session matching.
+
+## Angel One real market-data smoke test — read-only
+
+Added `smc/angel_live_smoke_cli.py` for authenticated **live REST LTP**.
+This is different from mocked CI tests and from end-to-end streaming.
+SmartAPI credentials and TOTP remain in the operator's Windows console.
+Never share API key, MPIN, login session or current TOTP in chats, GitHub,
+test reports, environment dumps or screenshots.
+
+```powershell
+cd E:\Project\SMC
+git switch sandbox
+git pull --ff-only origin sandbox
+.\.venv\Scripts\python.exe -m pip install -e ".[angel,dev]"
+.\.venv\Scripts\python.exe -m pytest -q
+.\.venv\Scripts\python.exe -m smc.angel_live_smoke_cli `
+  --symbol NIFTY `
+  --out "results\angel_live_nifty_smoke.json"
+```
+
+Index token is resolved from official instrument master by default,
+or pass `--master-file` if the master is available offline. The code
+makes one `getMarketData("LTP", ...)` request, validates response status,
+matching exchange/token and finite positive LTP, then logs out. The output
+contains no account or credential data. A successful HTTP response
+does **not** prove a fresh exchange tick: `feed_freshness_verified=false`.
+Historical candle data, option bid/ask, Greeks, entry, risk calculations,
+paper-trade execution, WebSocket streaming and trade authorization remain
+outside this smoke test.
+
+CI tests in `tests/test_angel_live_smoke_cli.py` mock the SDK boundary:
+no real market network or user account is used. An actual Angel One
+authenticated response requires a human to run the command locally
+with their own credentials; never claim otherwise.
