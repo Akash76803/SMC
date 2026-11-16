@@ -375,3 +375,36 @@ Never commit local CSV results, account data or `.env`.
 - No verified fill or broker spread; these are **index points only**, not
   option premium/greeks or net rupee profit. Not actionable trade signals.
   Paper outcomes are hypothetical, not placed trades.
+
+## V3.14 — historical session repair + stop-loss postmortem
+
+An isolated, source-verified *index* observation at 15:29 or 15:30 is
+quarantined **only when the regular 09:16..15:15 1m close series contains
+exactly 360 contiguous candles**. All unknown extras, missing candles
+and nonstandard Sunday partial sessions remain excluded; quarantined
+record timestamps are recorded in `session_reconciliation`.
+The intended user's Angel historical sample has 3 candidates for
+recovery (5/9/13 Nov); the output, not the user's shell check alone,
+establishes the final recovered count.
+
+No API re-login is needed for the already downloaded CSV:
+
+```powershell
+cd E:\Project\SMC
+git switch sandbox
+git pull --ff-only origin sandbox
+.\.venv\Scripts\python.exe -m pytest -q
+.\.venv\Scripts\python.exe -m smc.historical_replay_v314_cli `
+  --symbol NIFTY `
+  --input-csv "data\nifty_angel_historical_raw.csv" `
+  --out "results\v314_nifty_replay.json" `
+  --candidates-csv "results\v314_nifty_brackets.csv"
+```
+
+For hypothetical stops, the per-observation `sl_postmortem` separately
+records whether a target was touched *after* the stop and the favorable
+index excursion. This is explicitly **future-data diagnostics only**:
+never re-label the original stopped trade as a winner, move the stop
+hindsight-based, or claim that a stop was definitely too tight.
+No executable orders, tested option premium prices, net brokerage,
+slippage, live quote integrity, or verified HTF POI.
