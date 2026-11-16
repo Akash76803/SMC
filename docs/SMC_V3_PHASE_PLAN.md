@@ -113,3 +113,8 @@ Each phase: confirm source method, define deterministic rule and counterexamples
 - Test: `python -m pytest -q tests/test_htf_aggregation_v3.py tests/test_replay_v3.py tests/test_replay_v3_cli.py` then `python -m pytest -q`.
 - Replay: `python -m smc.replay_v3_cli --ltf "data/nifty_1m.csv" --symbol NIFTY --drop-terminal-1530 --aggregate-regular-htf --out "results/v38_nifty.json"`. No live execution or option P&L.
 - Remaining V3.8 tasks: broker-session calendar validation/verified market closures, independently sourced complete multiweek/month history, full M/W/D bias integration, raw rejected entry/SL diagnostics and actual NIFTY/SENSEX multi-session replay.
+
+## V3.8 JSON Serialization Hotfix — 2026-11-16
+- User reported 282 passing full tests and a successful NIFTY research replay, but `ConvertFrom-Json` raised `Invalid JSON primitive: n`.
+- Confirmed code wrote literal backslash-n after the completed JSON object. Replaced with a dedicated `write_replay_json` that appends a genuine newline, and added a strict JSON regression test.
+- Prior full-suite user-confirmed count: 282; one new test should raise it to 283 after user validation. No replay metrics changed by this fix.
