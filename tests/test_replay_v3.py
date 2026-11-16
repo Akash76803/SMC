@@ -134,3 +134,26 @@ def test_v38_no_observations_still_has_safe_serialization():
     result=replay_unified_reversal(
         symbol="NIFTY",ltf=c,monthly=[],weekly=[],daily=[],data_healthy=False)
     assert result.as_dict()["observations"]==[]
+
+def test_terminal_cause_and_decision_stage_reason_are_separate():
+    from smc.replay_v3 import ReplayObservation
+    o=ReplayObservation(
+        33,"2026-11-11T09:49:00+05:30","NO_TRADE",
+        "MSS_CONFIRMED","BEARISH",None,(),
+        diagnostics={"decision_stage_reason":"MSS_CONFIRMED",
+                     "entry_reason":"CHOCH_TIMEOUT"},
+        terminal_cause="CHOCH_TIMEOUT")
+    data=o.as_dict()
+    assert data["reason"]=="MSS_CONFIRMED"
+    assert data["terminal_cause"]=="CHOCH_TIMEOUT"
+    assert data["diagnostics"]["decision_stage_reason"]=="MSS_CONFIRMED"
+
+def test_replay_summary_terminal_cause_counts_are_distinct_from_bar_counts():
+    from smc.replay_v3 import ReplaySummary
+    report=ReplaySummary("NIFTY",360,{"NO_TRADE":162},
+        {"MSS_CONFIRMED":158},(),345,0,
+        terminal_cause_counts={"CHOCH_TIMEOUT":3})
+    data=report.as_dict()
+    assert data["reason_counts"]["MSS_CONFIRMED"]==158
+    assert data["terminal_cause_counts"]["CHOCH_TIMEOUT"]==3
+    assert data["diagnostic_brackets"]==0
