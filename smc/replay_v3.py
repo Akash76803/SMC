@@ -41,6 +41,7 @@ class ReplayObservation:
     level_outcomes: tuple[LevelOutcome, ...]
     research_only: bool = True
     diagnostics: dict | None = None
+    terminal_cause: str | None = None
 
     def as_dict(self) -> dict:
         return {
@@ -52,6 +53,7 @@ class ReplayObservation:
             "index_bracket": self.index_bracket,
             "level_outcomes": [o.as_dict() for o in self.level_outcomes],
             "diagnostics": self.diagnostics,
+            "terminal_cause": self.terminal_cause,
             "research_only": True,
         }
 
@@ -65,6 +67,7 @@ class ReplaySummary:
     observations: tuple[ReplayObservation, ...]
     evaluated_prefixes: int
     diagnostic_brackets: int
+    terminal_cause_counts: dict[str, int] | None = None
     research_only: bool = True
 
     def as_dict(self) -> dict:
@@ -76,6 +79,7 @@ class ReplaySummary:
             "status_counts": self.status_counts,
             "reason_counts": self.reason_counts,
             "diagnostic_brackets": self.diagnostic_brackets,
+            "terminal_cause_counts": self.terminal_cause_counts or {},
             "observations": [x.as_dict() for x in self.observations],
             "research_only": True,
             "option_pnl": None,
@@ -166,6 +170,7 @@ def replay_unified_reversal(*, symbol: str, ltf: list[Candle],
     status_counts, reasons = Counter(), Counter()
     observations = []
     seen_transitions = set()
+    terminal_causes = Counter()
     for i in range(min_warmup_bars-1, len(ltf)):
         prefix = ltf[:i+1]
         report = evaluate_unified_reversal(
@@ -185,6 +190,9 @@ def replay_unified_reversal(*, symbol: str, ltf: list[Candle],
                 transition in seen_transitions or not terminal):
             continue
         seen_transitions.add(transition)
+        terminal_cause = report.evidence.entry_reason
+        if terminal_cause:
+            terminal_causes[terminal_cause] += 1
         bracket = report.index_bracket
         targets = report.multi_targets
         levels = tuple((x.name,x.candidate.price) for x in targets.levels) if targets else ()
@@ -203,6 +211,8 @@ def replay_unified_reversal(*, symbol: str, ltf: list[Candle],
             "selected_sweep_index": report.evidence.selected_sweep_index,
             "entry_state": report.evidence.entry_state,
             "entry_reason": report.evidence.entry_reason,
+            "terminal_cause": terminal_cause,
+            "decision_stage_reason": report.primary_reason,
             "pending_stages": [
                 stage["code"] for stage in report.evidence.assessment.stage_progress
                 if stage["state"] != "PASS"],
@@ -226,8 +236,10 @@ def replay_unified_reversal(*, symbol: str, ltf: list[Candle],
             None if bracket is None else {
                 "entry": bracket.entry, "stop": bracket.stop,
                 "target": bracket.target, "index_rr": bracket.rr},
-            outcomes, diagnostics=diagnostics))
+            outcomes, diagnostics=diagnostics,
+            terminal_cause=terminal_cause))
     return ReplaySummary(
         symbol, len(ltf), dict(status_counts), dict(reasons),
         tuple(observations), max(0,len(ltf)-min_warmup_bars+1),
-        sum(o.index_bracket is not None for o in observations))
+        sum(o.index_bracket is not None for o in observations),
+        dict(terminal_causes))
