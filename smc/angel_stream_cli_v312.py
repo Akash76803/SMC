@@ -16,6 +16,7 @@ from .angel_history import INDICES, HistoryError, load_master, resolve_token
 from .angel_local_auth import CredentialError, load_local_env, resolve_login_fields, current_totp
 from .angel_stream_v312 import parse_tick, StreamDataError
 from .live_research_v312 import LiveResearchEngine
+from .angel_secure_ws_v312 import make_secure_websocket
 
 
 def run_live(*, symbol: str, token: str, ws, output, max_seconds: int) -> dict:
@@ -115,7 +116,6 @@ def main() -> int:
         from logzero import logger
         logger.disabled = True
         from SmartApi import SmartConnect
-        from SmartApi.smartWebSocketV2 import SmartWebSocketV2
     except ImportError:
         p.error('SDK_MISSING: python -m pip install -e ".[angel]"')
     logged_in = False
@@ -139,8 +139,7 @@ def main() -> int:
             raise CredentialError("BROKER_FEED_TOKEN_FAILED") from None
         if not isinstance(auth_token, str) or not auth_token or not isinstance(feed_token, str) or not feed_token:
             raise CredentialError("BROKER_STREAM_TOKEN_MISSING")
-        ws = SmartWebSocketV2(auth_token, api_key, client_id, feed_token,
-                              max_retry_attempt=1)
+        ws = make_secure_websocket(auth_token, api_key, client_id, feed_token)
         out = Path(a.out)
         out.parent.mkdir(parents=True, exist_ok=True)
         with out.open("w", encoding="utf-8") as stream:
