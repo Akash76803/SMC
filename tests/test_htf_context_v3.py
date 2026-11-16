@@ -81,13 +81,31 @@ def test_invalid_args():
 
 def test_all_three_alignment_from_actual_break_event():
     c=context()
-    assert c.alignment in (Alignment.ALIGNED_BULLISH,Alignment.UNVERIFIED)
-    if c.alignment is Alignment.ALIGNED_BULLISH:
-        stage=bias_stage(c,desired_direction="BULLISH")
-        assert stage.state is CheckState.PASS
-        assert stage.source_id.startswith("htf:confirmed:")
-    else:
-        assert bias_stage(c,desired_direction="BULLISH").state is CheckState.PENDING
+    assert c.alignment is Alignment.ALIGNED_BULLISH
+    stage=bias_stage(c,desired_direction="BULLISH")
+    assert stage.state is CheckState.PASS
+    assert stage.source_id.startswith("htf:confirmed:")
+
+def test_bearish_external_break_alignment():
+    c=context(m=bear(),w=bear(),d=bear())
+    assert c.alignment is Alignment.ALIGNED_BEARISH
+    assert bias_stage(c,desired_direction="BEARISH").state is CheckState.PASS
+    assert bias_stage(c,desired_direction="BULLISH").state is CheckState.PENDING
+
+def test_mixed_timeframe_breaks_produce_conflict_not_trade():
+    c=context(m=bull(),w=bull(),d=bear())
+    assert c.alignment is Alignment.CONFLICT
+    assert bias_stage(c,desired_direction="BULLISH").state is CheckState.PENDING
+
+def test_wrapper_only_uses_htf_closed_at_or_before_sweep():
+    c=bull()
+    ctx,report=adapt_reversal_with_htf(
+        symbol="NIFTY",candles=c,monthly=c,weekly=c,daily=c,
+        observed_at=NOW,data_healthy=True)
+    sweep=report.selected_sweep_index
+    if sweep is not None:
+        assert ctx.as_of==c[sweep].timestamp
+        assert all(f.available_at is None or f.available_at<=ctx.as_of for f in ctx.frames)
 
 def test_latest_external_event_too_old_becomes_neutral():
     c=context(max_event_age_bars=0)
