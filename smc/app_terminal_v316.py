@@ -52,7 +52,7 @@ pre{white-space:pre-wrap;overflow-wrap:anywhere;font-size:12px;color:#a7bfdf}
 <div class="setup-grid" id="setupmetrics"></div></div>
 <div><h2>Confirmation checklist</h2><div id="setupevidence" class="muted"></div>
 <p class="warn">INDEX LEVELS ≠ OPTION PREMIUM. NO BROKER ORDERS.</p></div></div></section>
-<div id="cards"></div>
+<section class="panel" style="margin-bottom:15px"><h2>LIVE INDEX CANDLES <small>tick-sampled, not certified exchange OHLC</small></h2><canvas id="liveChart"></canvas><small id="liveChartNote">No verified live candles yet.</small></section><div id="cards"></div>
 <div class="bar"><label>Session <select id="day"></select></label>
 <label>Direction <select id="direction"><option>ALL</option><option>BULLISH</option><option>BEARISH</option></select></label>
 <span class="warn" id="quality"></span></div>
@@ -69,11 +69,11 @@ pre{white-space:pre-wrap;overflow-wrap:anywhere;font-size:12px;color:#a7bfdf}
 const sel=document.getElementById('day'), direction=document.getElementById('direction');
 let snapshot=null;
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-function draw(bars){
- const cv=document.getElementById('chart'), r=cv.getBoundingClientRect(), dpr=window.devicePixelRatio||1;
+function draw(bars,canvasId='chart'){
+ const cv=document.getElementById(canvasId), r=cv.getBoundingClientRect(), dpr=window.devicePixelRatio||1;
  cv.width=Math.max(100,Math.round(r.width*dpr));cv.height=Math.round(360*dpr);
  const ctx=cv.getContext('2d');ctx.scale(dpr,dpr);const w=r.width,h=360;
- ctx.fillStyle='#101c2e';ctx.fillRect(0,0,w,h); if(!bars.length)return;
+ ctx.fillStyle='#101c2e';ctx.fillRect(0,0,w,h); if(!bars.length){ctx.fillStyle='#9eafc6';ctx.font='14px system-ui';ctx.fillText('NO OBSERVED LIVE CANDLES',20,45);return;}
  const view=bars.slice(-110), hi=Math.max(...view.map(x=>x.high)),lo=Math.min(...view.map(x=>x.low));
  const range=Math.max(hi-lo,.01), top=15,bottom=h-30,left=55,right=w-16;
  const y=p=>top+(hi-p)/range*(bottom-top),dx=(right-left)/view.length;
@@ -88,6 +88,10 @@ function draw(bars){
 }
 function renderSetup(live){
  const m=live.setup||{}, verified=live.status==='RECENT_BAR';
+ draw(live.sampled_live_candles||[],'liveChart');
+ document.getElementById('liveChartNote').textContent=verified?
+ 'Tick-sampled candles. Full exchange market coverage NOT VERIFIED.':
+ 'Live feed: '+(live.status||'NOT_CONNECTED')+' — live chart unavailable';
  const ready=m.status==='RESEARCH_SEQUENCE_OBSERVED'&&verified;
  document.getElementById('setupstate').textContent=(ready?'RESEARCH CANDIDATE':'WAIT / NO TRADE')+
    ' · '+(m.market||snapshot?.symbol||'NIFTY')+
@@ -254,6 +258,9 @@ def live_screen_payload(live_path: str | Path | None,
     feed=_feed_status(live_path,status_path)
     event=_latest_live_event(live_path)
     feed["setup"]=build_setup_screen(event,live_status=feed["status"])
+    feed["sampled_live_candles"] = (
+        event.get("sampled_live_candles", []) if event is not None
+        and feed["status"] == "RECENT_BAR" else [])
     return feed
 
 
