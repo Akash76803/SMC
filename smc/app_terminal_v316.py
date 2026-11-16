@@ -110,7 +110,7 @@ async function refresh(){
  }catch(e){document.getElementById('quality').textContent='DATA NOT AVAILABLE: '+e.message}
 }
 sel.onchange=render;direction.onchange=render;window.onresize=render;
-refresh();setInterval(refresh,5000);
+refresh();setInterval(async()=>{try{let r=await fetch('/api/live',{cache:'no-store'});if(r.ok&&snapshot){snapshot.live=await r.json();render()}}catch(e){}},5000);
 </script></body></html>"""
 
 
@@ -152,6 +152,25 @@ def _tail_live(path: Path | None) -> dict:
                 "last_candle_close_at": at,
                 "last_candle_close": data.get("last_candle_close")}
     return {"status": "WAIT", "reason": "NO_VERIFIED_COMPLETE_CANDLE"}
+
+
+def _feed_status(live_path: str | Path | None,
+                 status_path: str | Path | None) -> dict:
+    if status_path is not None:
+        try:
+            state = json.loads(Path(status_path).read_text(encoding="utf-8"))
+            updated = datetime.fromisoformat(state["updated_at"])
+            age = (datetime.now().astimezone() - updated).total_seconds()
+            if age < 0 or age > 14500:
+                return {"status": "DISCONNECTED", "reason": "FEED_STATE_TOO_OLD"}
+            state_name = state.get("status")
+            if state_name in ("AUTHENTICATION_REQUIRED", "AUTHENTICATED",
+                              "SUBSCRIBING", "STREAM_STOPPED", "DISCONNECTED",
+                              "CANCELLED", "ERROR"):
+                return {"status": state_name, "reason": state.get("reason", "")}
+        except (OSError, ValueError, TypeError, KeyError):
+            pass
+    return _tail_live(Path(live_path) if live_path else None)
 
 
 def build_snapshot(csv_path: str | Path, report_path: str | Path,
@@ -199,21 +218,26 @@ def build_snapshot(csv_path: str | Path, report_path: str | Path,
     }
 
 
-def make_handler(csv_path: str, report_path: str, live_path: str | None):
+def make_handler(csv_path: str, report_path: str, live_path: str | None,
+                 status_path: str | None = None):
+    historical = build_snapshot(csv_path, report_path)
     class Handler(BaseHTTPRequestHandler):
+        def log_message(self, format, *args):
+            # Routine browser polls should not flood PowerShell.
+            return
+
         def do_GET(self):
             path = urlparse(self.path).path
             if path == "/":
                 payload, mime, status = HTML.encode(), "text/html; charset=utf-8", 200
             elif path == "/api/snapshot":
-                try:
-                    payload = json.dumps(build_snapshot(csv_path, report_path, live_path),
-                                         allow_nan=False).encode()
-                    status = 200
-                except (ValueError, OSError, KeyError, TypeError):
-                    payload = b'{"error":"DATA_MISMATCH_OR_UNAVAILABLE"}'
-                    status = 503
-                mime = "application/json"
+                payload = json.dumps(
+                    {**historical, "live": _feed_status(live_path, status_path)},
+                    allow_nan=False).encode()
+                status, mime = 200, "application/json"
+            elif path == "/api/live":
+                payload = json.dumps(_feed_status(live_path, status_path)).encode()
+                status, mime = 200, "application/json"
             else:
                 payload, mime, status = b"Not found", "text/plain", 404
             self.send_response(status)
@@ -236,6 +260,7 @@ def main() -> int:
     p.add_argument("--csv", default="data/nifty_angel_historical_raw.csv")
     p.add_argument("--report", default="results/v315_nifty_report.json")
     p.add_argument("--live-jsonl", default="results/live_nifty.jsonl")
+    p.add_argument("--status-file", default="results/live_feed_status.json")
     p.add_argument("--port", type=int, default=8765)
     p.add_argument("--open-browser", action="store_true")
     p.add_argument("--start-live", action="store_true",
@@ -253,16 +278,21 @@ def main() -> int:
         p.error("REPLAY_REPORT_OR_CSV_MISSING_OR_MISMATCHED")
     child = None
     if args.start_live:
+        from .angel_stream_cli_v312 import write_live_status
+        write_live_status(args.status_file, "AUTHENTICATION_REQUIRED",
+                          "ENTER_TOTP_IN_SEPARATE_BROKER_CONSOLE")
         command = [sys.executable, "-m", "smc.angel_stream_cli_v312",
                    "--symbol", args.symbol, "--seconds", str(args.live_seconds),
-                   "--out", args.live_jsonl]
+                   "--out", args.live_jsonl,
+                   "--status-file", args.status_file]
         if args.token:
             command += ["--token", args.token]
         # Never supply login credentials or OTP on command line or in files.
-        child = subprocess.Popen(command)
+        flags = getattr(subprocess, "CREATE_NEW_CONSOLE", 0)
+        child = subprocess.Popen(command, creationflags=flags)
     server = ThreadingHTTPServer(
         ("127.0.0.1", args.port),
-        make_handler(args.csv, args.report, args.live_jsonl))
+        make_handler(args.csv, args.report, args.live_jsonl, args.status_file))
     print(f"LOCAL_SMC_TERMINAL: http://127.0.0.1:{args.port}")
     print("LOCALHOST_ONLY | RESEARCH_ONLY | NO_ORDERS")
     if args.open_browser:
