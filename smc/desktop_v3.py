@@ -12,6 +12,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+from .continuation_v3 import detect_continuation_observations
 from .csv_data import read_candles_csv
 from .models import Candle
 
@@ -21,6 +22,7 @@ class SessionView:
     date: str
     candles: tuple[Candle, ...]
     observations: tuple[dict[str, Any], ...]
+    continuations: tuple[dict[str, Any], ...] = ()
 
 
 def load_research_sessions(csv_path: str | Path, results_dir: str | Path) -> tuple[SessionView, ...]:
@@ -51,7 +53,9 @@ def load_research_sessions(csv_path: str | Path, results_dir: str | Path) -> tup
                 if not isinstance(item, dict) or not item.get("timestamp", "").startswith(day):
                     raise ValueError("CROSS_SESSION_REPLAY_OBSERVATION")
             observations = tuple(found)
-        output.append(SessionView(day, tuple(session), observations))
+        continuations = tuple(x.as_dict(session) for x in
+                              detect_continuation_observations(session))
+        output.append(SessionView(day, tuple(session), observations, continuations))
     return tuple(output)
 
 
@@ -70,6 +74,7 @@ def summary_for_session(view: SessionView) -> dict[str, Any]:
         "low": min(c.low for c in view.candles),
         "close": view.candles[-1].close,
         "observations": len(view.observations),
+        "continuation_research": len(view.continuations),
         "terminal_causes": terminal_causes,
         "research_only": True,
     }
@@ -112,7 +117,7 @@ def launch(csv_path: str | Path, results_dir: str | Path) -> None:
     main.add(top, height=440, minsize=180)
     bottom = tk.Frame(main, bg="#111c2e")
     main.add(bottom, minsize=150)
-    tk.Label(bottom, text="TERMINAL OBSERVATIONS  /  NOT EXECUTABLE SIGNALS",
+    tk.Label(bottom, text="REVERSAL + CONTINUATION RESEARCH / NO TRADE SIGNALS",
              bg="#111c2e", fg="#fbbf24", anchor="w",
              font=("Segoe UI", 10, "bold")).pack(fill="x", padx=10, pady=6)
     columns = ("time", "direction", "status", "stage", "cause")
@@ -171,17 +176,18 @@ def launch(csv_path: str | Path, results_dir: str | Path) -> None:
         # Only plot events belonging to the visible 100-bar window.
         first = bars[0].timestamp
         event_by_time = {c.timestamp.isoformat(): i for i, c in enumerate(bars)}
-        for obs in view.observations:
+        for obs in (*view.observations, *view.continuations):
             index = event_by_time.get(obs.get("timestamp"))
             if index is None:
                 continue
             x = left + (index + 0.5) * dx
-            chart.create_line(x, top_y, x, top_y + ph, fill="#eab308", dash=(3, 4))
+            color = "#38bdf8" if obs.get("source") == "CONTINUATION_RESEARCH" else "#eab308"
+            chart.create_line(x, top_y, x, top_y + ph, fill=color, dash=(3, 4))
         chart.create_text(left, 13, anchor="w", fill="#f8fafc",
                           font=("Segoe UI", 11, "bold"),
                           text=f"NIFTY  |  {view.date}  |  Last {len(bars)} × 1m CLOSED candles")
         chart.create_text(w - 10, 13, anchor="e", fill="#fbbf24",
-                          text="Yellow = terminal observation (not a buy/sell)")
+                          text="Yellow = reversal | Blue = continuation research (no orders)")
         chart.create_text(left, h - 14, anchor="w", fill="#94a3b8",
                           text=first.strftime("%H:%M"))
         chart.create_text(w - right, h - 14, anchor="e", fill="#94a3b8",
@@ -193,14 +199,19 @@ def launch(csv_path: str | Path, results_dir: str | Path) -> None:
         state["current"] = view
         state["focus"] = None
         tree.delete(*tree.get_children())
+        state["visible_events"] = ()
         if view is None:
             draw()
             return
         s = summary_for_session(view)
         summary_text.set(
             f"O {s['open']:.1f}  H {s['high']:.1f}  L {s['low']:.1f}  "
-            f"C {s['close']:.1f}  |  {s['observations']} events")
-        for idx, obs in enumerate(view.observations):
+            f"C {s['close']:.1f}  |  {s['observations']} reversal / "
+            f"{s['continuation_research']} continuation")
+        state["visible_events"] = tuple(sorted(
+            (*view.observations, *view.continuations),
+            key=lambda o: o.get("timestamp", "")))
+        for idx, obs in enumerate(state["visible_events"]):
             tree.insert("", "end", iid=str(idx),
                         values=(obs.get("timestamp", "")[11:19],
                                 obs.get("direction") or "—",
@@ -215,7 +226,7 @@ def launch(csv_path: str | Path, results_dir: str | Path) -> None:
         selection = tree.selection()
         if view is None or not selection:
             return
-        obs = view.observations[int(selection[0])]
+        obs = state["visible_events"][int(selection[0])
         at = obs.get("timestamp")
         state["focus"] = next((i for i, c in enumerate(view.candles)
                                if c.timestamp.isoformat() == at), None)
