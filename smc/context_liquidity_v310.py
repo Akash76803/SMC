@@ -33,6 +33,10 @@ def contextual_liquidity(*, candles: list[Candle], as_of: datetime,
         day = c.timestamp.astimezone(IST).date().isoformat()
         sessions.setdefault(day, []).append(c)
     days = list(sessions)
+    if any(d not in sessions for d in verified_week_ends):
+        raise ValueError("UNOBSERVED_WEEK_END_MARKER")
+    if any(d not in sessions for d in verified_predecessors):
+        raise ValueError("UNOBSERVED_PREDECESSOR_MARKER")
     today = days[-1]
     prior = days[-2] if len(days) >= 2 else None
     prior_day = None
@@ -52,8 +56,9 @@ def contextual_liquidity(*, candles: list[Candle], as_of: datetime,
             # belonging to today. Certified prior session levels are eligible
             # immediately at its open, like PDH/PDL.
             curr_idx = len(seen) - len(sessions[today])
-            hi_idx = max(range(len(prev)), key=lambda i: prev[i].high)
-            lo_idx = min(range(len(prev)), key=lambda i: prev[i].low)
+            prior_offset = sum(len(sessions[d]) for d in days if d < prior)
+            hi_idx = prior_offset + max(range(len(prev)), key=lambda i: prev[i].high)
+            lo_idx = prior_offset + min(range(len(prev)), key=lambda i: prev[i].low)
             extra.extend([
                 LiquidityLevel("PDH", high, curr_idx, (hi_idx,), curr_idx),
                 LiquidityLevel("PDL", low, curr_idx, (lo_idx,), curr_idx),
