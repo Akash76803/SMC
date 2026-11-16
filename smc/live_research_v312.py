@@ -11,6 +11,7 @@ from .phase2 import scan
 from .continuation_v3 import detect_continuation_observations
 from .market_context_v310 import analyze_mtf
 from .ict_lifecycle_v316 import scan_ict_lifecycles
+from .live_bracket_v318 import research_bracket
 
 
 class LiveResearchEngine:
@@ -47,6 +48,13 @@ class LiveResearchEngine:
             if x["state"] in ("WAITING_FOR_RETEST", "RETEST_CONFIRMED_RESEARCH")
         ][-10:]
         report["ict_last_lifecycle"] = lifecycles[-1] if lifecycles else None
+        retested=[x for x in lifecycles
+                  if x["state"]=="RETEST_CONFIRMED_RESEARCH"
+                  and x.get("retest_at")==closed.timestamp.isoformat()]
+        report["index_bracket_research"]=(
+            research_bracket(symbol=self.builder.symbol,candles=candles,
+                             lifecycle=retested[-1])
+            if retested else None)
         report["ict_order_eligible"] = False
         self.last_report = report
         return report
