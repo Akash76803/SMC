@@ -10,6 +10,7 @@ from .live_candles_v312 import LiveCandleBuilder
 from .phase2 import scan
 from .continuation_v3 import detect_continuation_observations
 from .market_context_v310 import analyze_mtf
+from .ict_lifecycle_v316 import scan_ict_lifecycles
 
 
 class LiveResearchEngine:
@@ -40,6 +41,13 @@ class LiveResearchEngine:
         ]
         report["latest_continuation_observations"] = latest
         report["intraday_mtf"] = mtf
+        lifecycles = scan_ict_lifecycles(candles)
+        report["ict_active_lifecycles"] = [
+            x for x in lifecycles
+            if x["state"] in ("WAITING_FOR_RETEST", "RETEST_CONFIRMED_RESEARCH")
+        ][-10:]
+        report["ict_last_lifecycle"] = lifecycles[-1] if lifecycles else None
+        report["ict_order_eligible"] = False
         self.last_report = report
         return report
 
