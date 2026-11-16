@@ -243,3 +243,44 @@ CI tests in `tests/test_angel_live_smoke_cli.py` mock the SDK boundary:
 no real market network or user account is used. An actual Angel One
 authenticated response requires a human to run the command locally
 with their own credentials; never claim otherwise.
+
+## Local Angel auth configuration — opt-in secure login
+
+- Credentials from **local repository-root `.env`** or process environment.
+  `ANGEL_API_KEY`, `ANGEL_CLIENT_ID`, `ANGEL_MPIN`. Process environment
+  wins. All values missing from either are prompted interactively.
+- `.env` and `.env.*` are Git-ignored; the only tracked sample is
+  `.env.example`. **Never paste actual credentials or TOTP setup seed into
+  terminal output, GitHub issues, logs or chat.** The MPIN in `.env` is
+  plaintext on the local disk, so restrict local filesystem access and do not
+  sync that file to cloud folders.
+- Optional TOTP **setup secret** uses the operating system keyring through
+  the Python `keyring` package (Windows Credential Manager backend).
+  A current 6-digit TOTP is generated at login with `pyotp`. If the seed
+  is absent, the code asks for a fresh 6-digit TOTP as before. Enrollment
+  is a one-time hidden prompt and requires the authenticator **setup seed**,
+  not a temporary 6-digit code. If you did not retain the seed, keep using
+  the authenticator manually rather than resetting 2FA casually.
+- Every smoke-test invocation performs a **new** broker login and logout;
+  no access or refresh tokens are persisted.
+- Only read-only LTP is requested. Feed freshness is still UNVERIFIED and
+  orders are always disabled.
+
+```powershell
+cd E:\Project\SMC
+git switch sandbox
+git pull --ff-only origin sandbox
+.\.venv\Scripts\python.exe -m pip install -e ".[angel,dev]"
+Copy-Item .env.example .env
+notepad .env   # fill API key, client ID, MPIN locally; do NOT put TOTP seed here
+
+# Optional: only when you securely know the original authenticator seed.
+.\.venv\Scripts\python.exe -m smc.angel_live_smoke_cli --symbol NIFTY --enroll-totp-secret
+# To revoke the locally stored seed:
+# .\.venv\Scripts\python.exe -m smc.angel_live_smoke_cli --symbol NIFTY --delete-totp-secret
+
+.\.venv\Scripts\python.exe -m smc.angel_live_smoke_cli --symbol NIFTY --out "results\angel_live_nifty_smoke.json"
+```
+
+This CLI must run on the user's own machine with their broker access; CI
+tests only mock credentials and quotes.
