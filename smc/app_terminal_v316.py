@@ -6,6 +6,7 @@ Existing Angel read-only stream can be started as an optional child process.
 from __future__ import annotations
 import argparse
 import json
+import socket
 import subprocess
 import sys
 from collections import Counter
@@ -19,10 +20,12 @@ from .session_reconciliation_v314 import reconcile_sessions
 from .live_setup_screen_v317 import build_setup_screen
 from .angel_option_live_v318 import read_option_snapshot
 
+APP_BUILD = "SMC-DUAL-MARKET-2026-11-16-R2"
+
 HTML = r"""<!doctype html>
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>SMC Terminal | Research</title>
+<title>SMC Dual Market | Research</title>
 <style>
 :root{color-scheme:dark;font:14px system-ui,Segoe UI,sans-serif;color:#d7e3f2;background:#0a1220}
 *{box-sizing:border-box}body{margin:0}header{padding:20px 26px;background:#111c30;border-bottom:1px solid #28374e}
@@ -45,7 +48,7 @@ pre{white-space:pre-wrap;overflow-wrap:anywhere;font-size:12px;color:#a7bfdf}
 @media(max-width:850px){.grid{grid-template-columns:1fr}}
 </style></head>
 <body><header><h1>SMC / MARKET RESEARCH TERMINAL</h1>
-<small>Local read-only terminal • index candles ≠ option premiums • AUTO-ORDERS DISABLED</small></header>
+<small>Build SMC-DUAL-MARKET-2026-11-16-R2 • Local read-only terminal • AUTO-ORDERS DISABLED</small></header>
 <main>
 <div class="bar" style="align-items:center;padding:12px 15px;background:#17283e;border-radius:12px">
 <strong>MARKET</strong> <select id="market" aria-label="Choose NIFTY or SENSEX">
@@ -440,6 +443,10 @@ def make_handler(csv_path: str, report_path: str, live_path: str | None,
                 live_file, status_file = live_path, status_path
             if path == "/":
                 payload, mime, status = HTML.encode(), "text/html; charset=utf-8", 200
+            elif path == "/api/version":
+                payload = json.dumps({"build": APP_BUILD, "dual_market": multi_root is not None,
+                                      "orders_enabled": False}).encode()
+                status, mime = 200, "application/json"
             elif path == "/api/snapshot":
                 chosen = historical_by_symbol.get(selected)
                 if chosen is None:
@@ -501,6 +508,12 @@ def main() -> int:
         p.error("PORT_OUT_OF_RANGE")
     if not 5 <= args.live_seconds <= 14400:
         p.error("INVALID_STREAM_DURATION")
+    # Block before spawning broker auth: never connect to an old dashboard.
+    try:
+        with socket.create_connection(("127.0.0.1", args.port), timeout=0.4):
+            p.error("PORT_ALREADY_IN_USE_STOP_OLD_SMC_SERVER")
+    except (ConnectionRefusedError, TimeoutError, OSError):
+        pass
     children = []
     if args.multi:
         # The second market may not have historical data yet; never fill
