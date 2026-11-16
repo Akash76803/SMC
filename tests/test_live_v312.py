@@ -158,3 +158,37 @@ def test_websocket_cli_boundary_is_read_only():
     assert result["orders_enabled"] is False
     assert result["ticks"] == 1
     assert output.getvalue() == ""
+
+def test_secure_websocket_requires_tls_certificates():
+    import ssl
+    from smc.angel_secure_ws_v312 import make_secure_websocket
+
+    connections = []
+    class FakeApp:
+        def __init__(self, uri, **kwargs):
+            connections.append((uri, kwargs))
+        def run_forever(self, **kwargs):
+            connections.append(kwargs)
+    class FakeSDK:
+        ROOT_URI = "wss://test.invalid"
+        HEART_BEAT_INTERVAL = 10
+        def __init__(self, auth_token, api_key, client_code, feed_token, **kwargs):
+            self.auth_token = auth_token
+            self.api_key = api_key
+            self.client_code = client_code
+            self.feed_token = feed_token
+            self.on_open = self.on_error = self.on_close = None
+            self.on_data = self.on_ping = self.on_pong = None
+        def _on_open(self, *args): pass
+        def _on_error(self, *args): pass
+        def _on_close(self, *args): pass
+        def _on_data(self, *args): pass
+        def _on_ping(self, *args): pass
+        def _on_pong(self, *args): pass
+    socket = make_secure_websocket("test-jwt", "test-key", "test-client", "test-feed",
+                                   ws_class=FakeSDK,
+                                   websocket_module=type("W", (), {"WebSocketApp": FakeApp}))
+    socket.connect()
+    options = connections[1]["sslopt"]
+    assert options["cert_reqs"] == ssl.CERT_REQUIRED
+    assert options["check_hostname"] is True
