@@ -14,7 +14,7 @@ Research/paper-only user-friendly NIFTY/SENSEX terminal. Explain M/W/D bias, liq
 - [~] P2 Existing liquidity detection + new V3.4 unconsumed opposing target selection and index RR gates committed; target freshness/session completeness replay QA pending
 - [~] P3 Initial opt-in Monthly/Weekly/Daily confirmed external-break bias, dealing range EQ/premium/discount, strict conflict/neutral handling and sweep-time causal HTF adapter committed; calendar/close timestamp adapters and historical validation pending
 - [~] P4 Initial V3.4 OB/FVG overlap candidate scanner and invalidation/retest diagnostics committed; full HTF POI validation, advanced OB and real-data research pending
-- [ ] P5 Versioned per-strategy setup state machines and expiry/invalidation
+- [~] P5 V3.5 opt-in explainable reversal-only unified orchestrator committed; true MSS/HTF-POI and full continuation strategy gates remain pending
 - [ ] P6 Conservative ATM/ITM option/quote gates, slippage/fees and paper engine
 - [ ] P7 Desktop chart UI, setup inspector, scan, logs and journal
 - [ ] P8 Walk-forward research, no-lookahead golden fixtures and out-of-sample evaluation
@@ -65,3 +65,13 @@ Each phase: confirm source method, define deterministic rule and counterexamples
 - `review_ob_fvg_poi` identifies an overlap of existing preliminary standard OB and directional 3-candle FVG, with close invalidation and later retest proxy. Candidate overlaps **never** set `HTF_POI=PASS` on their own; the stage remains PENDING until HTF origin and mitigation/quality rules are separately validated. Institutional activity is not observable from OHLC.
 - No live orders, no guaranteed draw-on-liquidity and no automatic order execution. This opt-in module is not yet wired into complete V3.3->V3.2 detection chain.
 - `tests/test_poi_liquidity_v3.py` includes tests for prior level consumption, first-bar PDH, target room/RR, bear/bull levels, future/incomplete candles, positive POI overlap and fail-closed stage. **GitHub connector cannot execute local tests**; user should run `python -m pytest -q tests/test_poi_liquidity_v3.py` and then `python -m pytest -q`. Previous user-verified baseline: 201 passed.
+
+## V3.5 Unified Reversal Setup Assessment — 2026-11-16
+- `smc/unified_setup_v3.py` introduces `evaluate_unified_reversal` combining V3.2 LTF candidate, V3.3 M/W/D structure bias, V3.4 unconsumed liquidity target and preliminary OB/FVG POI with V3.1 setup stages.
+- HTF bars are filtered to close no later than the selected LTF **sweep**; POI/target are computed on a prefix ending at the selected entry/transition candle. This prevents retroactively using a future pivot/HTF bias/liquidity level to justify a historical setup.
+- Index brackets are constructed only when a closed-candle retest supplies entry and stop and the opposing-liquidity review approves >=50 NIFTY / >=100 SENSEX index target and >=2 index R:R. Insufficient index target/RR is surfaced as `NO_TRADE` and a precise reason, never silently skipped.
+- `HTF_POI` remains `PENDING` when an OB/FVG overlap is merely a research candidate. CHoCH and displacement proxies likewise remain pending. The pipeline intentionally cannot produce `RESEARCH_READY` with current unverified upstream evidence. Per-contract premium target >=15 pts, net premium R:R >=3 and quote quality remain separate gates, not inferred from index price moves.
+- `UnifiedSetupReport.as_dict()` contains HTF context, stage reasons, selected entry transition, opposing liquidity details, OB/FVG diagnostics, and independent index / premium research metrics. No live order pathway, no execution permission.
+- `tests/test_unified_setup_v3.py` adds **13 unverified-at-commit test cases** focused on fail-closed behavior, unverified HTF/POI, unsupported instruments, future candles, serialization and option gates. Github actions here cannot run tests. Prior user-verified complete suite: **216 passed**.
+- Next: real verified historical feed end-to-end, strict session/calendar data quality, full POI/MSS/IDM rules, option quote/volatility/delta feasibility, golden replay fixtures; desktop inspector later.
+- Local: `python -m pytest -q tests/test_unified_setup_v3.py`, then `python -m pytest -q`.
