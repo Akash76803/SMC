@@ -107,3 +107,22 @@ def test_aligned_context_does_not_override_missing_protected_poi():
     assert x["status"] == "WAIT"
     assert x["reason"] == "PROTECTED_POI_OPTION_EVIDENCE_PENDING"
     assert "PROTECTED_STRUCTURE" in x["pending_stages"]
+
+def test_cli_report_empty_session_stays_research_only():
+    from smc.continuation_validation_cli import build_report
+    session = [
+        Candle(T + timedelta(minutes=i), 100, 101, 99, 100)
+        for i in range(360)
+    ]
+    report = build_report(symbol="NIFTY", candles=session)
+    assert report["observed_bars"] == 360
+    assert report["continuation_observations"] == 0
+    assert report["qualified_trades"] == 0
+    assert report["option_pnl"] is None
+    assert report["live_orders_enabled"] is False
+
+
+def test_cli_report_rejects_partial_session():
+    from smc.continuation_validation_cli import build_report
+    with pytest.raises(ValueError, match="AUDITED_COMPLETE_REGULAR_SESSION"):
+        build_report(symbol="NIFTY", candles=data())
