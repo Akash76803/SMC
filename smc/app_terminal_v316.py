@@ -22,7 +22,7 @@ from .angel_option_live_v318 import read_option_snapshot
 from .option_quote_tape_v319 import live_momentum
 from .premium_paper_plan_v319 import create_paper_plan
 
-APP_BUILD = "SMC-DUAL-MARKET-2026-11-16-R2"
+APP_BUILD = "SMC-OPTION-MOMENTUM-2026-11-16-R3"
 
 HTML = r"""<!doctype html>
 <html lang="en"><head><meta charset="utf-8">
@@ -50,7 +50,7 @@ pre{white-space:pre-wrap;overflow-wrap:anywhere;font-size:12px;color:#a7bfdf}
 @media(max-width:850px){.grid{grid-template-columns:1fr}}
 </style></head>
 <body><header><h1>SMC / MARKET RESEARCH TERMINAL</h1>
-<small>Build SMC-DUAL-MARKET-2026-11-16-R2 • Local read-only terminal • AUTO-ORDERS DISABLED</small></header>
+<small>Build SMC-OPTION-MOMENTUM-2026-11-16-R3 • Local read-only terminal • AUTO-ORDERS DISABLED</small></header>
 <main>
 <div class="bar" style="align-items:center;padding:12px 15px;background:#17283e;border-radius:12px">
 <strong>MARKET</strong> <select id="market" aria-label="Choose NIFTY or SENSEX">
