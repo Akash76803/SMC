@@ -8,7 +8,7 @@ from smc.premium_paper_plan_v319 import create_paper_plan
 from smc.self_learning_cli_v319 import read_index_signals,read_observed_quotes,run_learning
 from smc.app_terminal_v316 import HTML
 
-IST=ZoneInfo("Asia/Kolk")
+IST=ZoneInfo("Asia/Kolkata")
 T=datetime(2026,11,16,10,5,tzinfo=ZoneInfo("Asia/Kolkata"))
 
 
