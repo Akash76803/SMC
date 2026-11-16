@@ -297,6 +297,23 @@ def live_screen_payload(live_path: str | Path | None,
     feed=_feed_status(live_path,status_path)
     event=_latest_live_event(live_path)
     feed["setup"]=build_setup_screen(event,live_status=feed["status"])
+    feed["alert"] = None
+    if feed["status"] == "RECENT_BAR" and isinstance(event,dict):
+        active = event.get("ict_active_lifecycles") or []
+        current = event.get("last_candle_close_at")
+        for setup in reversed(active):
+            if (setup.get("state") == "RETEST_CONFIRMED_RESEARCH"
+                and setup.get("retest_at") == current and current):
+                feed["alert"] = {
+                    "type":"SMC_RETEST_RESEARCH",
+                    "id":setup.get("setup_id") or current,
+                    "direction":setup.get("direction"),
+                    "at":current,
+                    "symbol":event.get("symbol"),
+                    "order_eligible":False,
+                    "message":"RETEST OBSERVED — NOT A TRADE SIGNAL"
+                }
+                break
     feed["sampled_live_candles"] = (
         event.get("sampled_live_candles", []) if event is not None
         and feed["status"] == "RECENT_BAR" else [])
@@ -422,6 +439,8 @@ def main() -> int:
     p.add_argument("--status-file", default="results/live_feed_status.json")
     p.add_argument("--port", type=int, default=8765)
     p.add_argument("--open-browser", action="store_true")
+    p.add_argument("--multi", action="store_true", help="Both NIFTY and SENSEX on one screen")
+    p.add_argument("--root", default=".", help="Local research data root")
     p.add_argument("--start-live", action="store_true",
                    help="Start separate read-only Angel stream process with local login")
     p.add_argument("--live-seconds", type=int, default=14400)
@@ -431,29 +450,47 @@ def main() -> int:
         p.error("PORT_OUT_OF_RANGE")
     if not 5 <= args.live_seconds <= 14400:
         p.error("INVALID_STREAM_DURATION")
-    try:
-        build_snapshot(args.csv, args.report, None)
-    except (ValueError, OSError, KeyError, TypeError):
-        p.error("REPLAY_REPORT_OR_CSV_MISSING_OR_MISMATCHED")
-    child = None
-    if args.start_live:
-        from .angel_stream_cli_v312 import write_live_status
-        write_live_status(args.status_file, "AUTHENTICATION_REQUIRED",
-                          "ENTER_TOTP_IN_SEPARATE_BROKER_CONSOLE")
-        command = [sys.executable, "-m", "smc.angel_stream_cli_v312",
-                   "--symbol", args.symbol, "--seconds", str(args.live_seconds),
-                   "--out", args.live_jsonl,
-                   "--status-file", args.status_file]
-        if args.token:
-            command += ["--token", args.token]
-        # Never supply login credentials or OTP on command line or in files.
-        flags = getattr(subprocess, "CREATE_NEW_CONSOLE", 0)
-        child = subprocess.Popen(command, creationflags=flags)
-    server = ThreadingHTTPServer(
-        ("127.0.0.1", args.port),
-        make_handler(args.csv, args.report,
-                     args.live_jsonl if args.start_live else None,
-                     args.status_file if args.start_live else None))
+    children = []
+    if args.multi:
+        # The second market may not have historical data yet; never fill
+        # SENSEX with NIFTY candles or misrepresent unavailable history.
+        from .dual_market_v318 import market_paths, SYMBOLS
+        if args.start_live:
+            from .angel_stream_cli_v312 import write_live_status
+            for symbol in SYMBOLS:
+                path = market_paths(args.root, symbol)
+                write_live_status(str(path["status"]), "AUTHENTICATION_REQUIRED",
+                                  "ENTER_TOTP_IN_SEPARATE_BROKER_CONSOLE")
+            command = [sys.executable, "-m", "smc.angel_dual_stream_v318",
+                       "--root", args.root, "--seconds", str(args.live_seconds)]
+            flags = getattr(subprocess, "CREATE_NEW_CONSOLE", 0)
+            children.append(subprocess.Popen(command, creationflags=flags))
+        handler = make_handler(args.csv, args.report, None,
+                               multi_root=args.root,
+                               live_symbols=SYMBOLS if args.start_live else ())
+    else:
+        try:
+            build_snapshot(args.csv, args.report, None)
+        except (ValueError, OSError, KeyError, TypeError):
+            p.error("REPLAY_REPORT_OR_CSV_MISSING_OR_MISMATCHED")
+        if args.start_live:
+            from .angel_stream_cli_v312 import write_live_status
+            write_live_status(args.status_file, "AUTHENTICATION_REQUIRED",
+                              "ENTER_TOTP_IN_SEPARATE_BROKER_CONSOLE")
+            command = [sys.executable, "-m", "smc.angel_stream_cli_v312",
+                       "--symbol", args.symbol,
+                       "--seconds", str(args.live_seconds),
+                       "--out", args.live_jsonl,
+                       "--status-file", args.status_file]
+            if args.token:
+                command += ["--token", args.token]
+            flags = getattr(subprocess, "CREATE_NEW_CONSOLE", 0)
+            children.append(subprocess.Popen(command, creationflags=flags))
+        handler = make_handler(
+            args.csv, args.report,
+            args.live_jsonl if args.start_live else None,
+            args.status_file if args.start_live else None)
+    server = ThreadingHTTPServer(("127.0.0.1",args.port), handler)
     print(f"LOCAL_SMC_TERMINAL: http://127.0.0.1:{args.port}")
     print("LOCALHOST_ONLY | RESEARCH_ONLY | NO_ORDERS")
     if args.open_browser:
@@ -465,12 +502,13 @@ def main() -> int:
         pass
     finally:
         server.server_close()
-        if child and child.poll() is None:
-            child.terminate()
-            try:
-                child.wait(timeout=5)
-            except subprocess.TimeoutExpired:
-                child.kill()
+        for child in children:
+            if child.poll() is None:
+                child.terminate()
+                try:
+                    child.wait(timeout=5)
+                except subprocess.TimeoutExpired:
+                    child.kill()
     return 0
 
 
