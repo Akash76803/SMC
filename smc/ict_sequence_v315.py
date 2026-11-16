@@ -92,10 +92,13 @@ def analyze_ict_sequence(candles: list[Candle], *,
     idm = next((x for x in reversed(idms)
                 if selected_break is not None
                 and x.structure_index == selected_break.candle_index), None)
-    idm_i = idm.confirmed_at if idm is not None else None
-    idm_swept = bool(idm and sweep and (
-        (sweep.level.price <= idm.price if bullish else sweep.level.price >= idm.price)
-    ))
+    idm_pivot = next((p for p in pivots if idm is not None
+                      and p.index == idm.source_index), None)
+    idm_i = idm_pivot.confirmed_at if idm_pivot is not None else None
+    idm_swept = bool(idm and idm_pivot and sweep
+                     and idm_pivot.confirmed_at < sweep.candle_index
+                     and (sweep.level.price <= idm.price if bullish
+                          else sweep.level.price >= idm.price))
     # Displacement must be on the close-based break candle, with historical ATR
     # measured before the break, so a later volatility spike cannot help.
     displacement = False
