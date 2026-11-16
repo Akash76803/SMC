@@ -11,6 +11,7 @@ from collections import Counter
 from math import isfinite
 
 from .models import Candle
+from .sl_postmortem_v314 import review_stopped_setup
 
 
 def paper_outcome(*, session: list[Candle], confirm_index: int,
@@ -105,6 +106,7 @@ def analyze_trade_references(*, symbol: str, session: list[Candle],
             "validation_reason": item["reason"],
             "index_bracket_qualified": available,
             "paper_outcome": None,
+            "sl_postmortem": None,
             "broker_order_eligible": False,
             "option_premium_pnl": None,
         }
@@ -114,6 +116,11 @@ def analyze_trade_references(*, symbol: str, session: list[Candle],
                 direction=item["direction"], stop=stop,
                 target=first["price"], min_points=minimum)
             row["paper_outcome"] = outcome
+            if outcome.get("exit_reason") == "SL_FIRST_OR_SAME_BAR_AMBIGUOUS":
+                row["sl_postmortem"] = review_stopped_setup(
+                    session=session, direction=item["direction"],
+                    entry=outcome["entry_open"], stop=stop,
+                    target=first["price"], exit_at=outcome["exit_at"])
             outcomes[outcome["status"]] += 1
         else:
             outcomes["NO_VERIFIED_INDEX_BRACKET"] += 1
