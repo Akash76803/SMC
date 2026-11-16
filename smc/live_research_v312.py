@@ -62,6 +62,14 @@ class LiveResearchEngine:
             "entry": None, "stop": None, "target": None,
             "orders_enabled": False, "research_only": True,
         }
+        # Exchange-time ticks sampled by SmartAPI; OHLC is *not*
+        # authenticated full-exchange historical candle coverage.
+        report["sampled_live_candles"] = [
+            {"timestamp": c.timestamp.isoformat(), "open": c.open,
+             "high": c.high, "low": c.low, "close": c.close}
+            for c in self.builder.completed[-100:]
+        ]
+        report["live_candle_source"] = "TICK_SAMPLED_UNVERIFIED_FULL_COVERAGE"
         self.last_report = report
         return report
 
