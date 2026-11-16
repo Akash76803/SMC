@@ -77,11 +77,11 @@ function render(){
  const live=snapshot.live||{}, observations=(session?.observations||[]).filter(o=>direction.value==='ALL'||o.direction===direction.value);
  document.getElementById('cards').innerHTML=[
  ['Historical sessions',snapshot.sessions.length],['Observations',snapshot.observation_count],
- ['ICT complete',snapshot.ict_complete],['Paper brackets',snapshot.index_brackets],
+ ['ICT complete',snapshot.ict_complete],['Paper brackets',snapshot.index_brackets],['Lifecycle retests',snapshot.retest_confirmed],
  ['Live state',live.status||'NOT_CONNECTED']
  ].map(x=>'<div class="card">'+esc(x[0])+'<strong>'+esc(x[1])+'</strong></div>').join('');
  document.getElementById('quality').textContent='Source audit: '+snapshot.excluded_count+' excluded • '+snapshot.quarantined_count+' quarantined extra bars';
- document.getElementById('live').innerHTML='<p>Status: <b class="'+(live.status==='STREAMING'?'good':'warn')+'">'+esc(live.status)+'</b></p>'+
+ document.getElementById('live').innerHTML='<p>Status: <b class="'+(live.status==='RECENT_BAR'?'good':'warn')+'">'+esc(live.status)+'</b></p>'+
  '<p>Last closed candle: '+esc(live.last_candle_close_at||'Unavailable')+'</p>'+
  '<p>Index close: '+esc(live.last_candle_close??'—')+'</p>'+
  '<p>Reason: '+esc(live.reason||'No verified stream yet')+'</p>';
@@ -135,7 +135,7 @@ def _tail_live(path: Path | None) -> dict:
         if not 0 <= age <= 120:
             return {"status": "STALE", "reason": "LAST_CLOSED_BAR_NOT_FRESH",
                     "last_candle_close_at": at}
-        return {"status": "STREAMING", "reason": data.get("reason", "RESEARCH_ONLY"),
+        return {"status": "RECENT_BAR", "reason": "RECENT_DATA_NOT_PROOF_WEBSOCKET_CONNECTED",
                 "last_candle_close_at": at,
                 "last_candle_close": data.get("last_candle_close")}
     return {"status": "WAIT", "reason": "NO_VERIFIED_COMPLETE_CANDLE"}
@@ -155,14 +155,20 @@ def build_snapshot(csv_path: str | Path, report_path: str | Path,
     observed = 0
     brackets = 0
     complete = 0
+    retest_confirmed = 0
+    lifecycle_states = Counter()
     sessions = []
     for day in report["days"]:
         rows = day["brackets"]["observations"]
         observed += len(rows)
         brackets += sum(bool(o["index_bracket_qualified"]) for o in rows)
         complete += sum(bool(o.get("ict_sequence_observed")) for o in rows)
+        lifecycles = day.get("ict_lifecycles", [])
+        lifecycle_states.update(x["state"] for x in lifecycles)
+        retest_confirmed += sum(x["state"] == "RETEST_CONFIRMED_RESEARCH" for x in lifecycles)
         sessions.append({
             "date": day["date"],
+            "ict_lifecycles": lifecycles,
             "candles": [{"timestamp": c.timestamp.isoformat(), "open": c.open,
                          "high": c.high, "low": c.low, "close": c.close}
                         for c in by_day[day["date"]]],
@@ -172,6 +178,8 @@ def build_snapshot(csv_path: str | Path, report_path: str | Path,
         "research_only": True, "orders_enabled": False,
         "symbol": report["symbol"], "observation_count": observed,
         "index_brackets": brackets, "ict_complete": complete,
+        "retest_confirmed": retest_confirmed,
+        "lifecycle_states": dict(lifecycle_states),
         "excluded_count": sum(x["status"] == "EXCLUDED" for x in audit),
         "quarantined_count": sum(len(x["quarantined_timestamps"]) for x in audit),
         "sessions": sessions, "live": _tail_live(Path(live_path) if live_path else None),
