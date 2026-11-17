@@ -16,7 +16,7 @@ def scan_ict_lifecycles(candles: list[Candle], *,
                         as_of: int | None = None,
                         max_sweep_lag: int = 35,
                         max_retest_bars: int = 20,
-                        min_displacement_atr: float = 0.8) -> list[dict]:
+                        min_displacement_atr: float = 0.5) -> list[dict]:
     if not candles:
         raise ValueError("EMPTY_LIFECYCLE_INPUT")
     if as_of is None:
@@ -34,8 +34,13 @@ def scan_ict_lifecycles(candles: list[Candle], *,
         raise ValueError("MULTI_SESSION_LIFECYCLE_INPUT")
 
     pivots=confirmed_pivots(bars,k=2)
-    breaks=[b for b in detect_structure(bars,internal_k=2,external_k=5)
-            if b.tier=="INTERNAL"]
+    all_b=detect_structure(bars,internal_k=2,external_k=5)
+    seen={}
+    for b in all_b:
+        key=(b.candle_index,b.direction)
+        if key not in seen or b.tier=="EXTERNAL":
+            seen[key]=b
+    breaks=sorted(seen.values(),key=lambda b:b.candle_index)
     _,liquidity=liquidity_map(bars,pivots)
     obs=find_order_blocks(bars,breaks)
     fvgs=fair_value_gaps(bars)
@@ -71,10 +76,9 @@ def scan_ict_lifecycles(candles: list[Candle], *,
         if sweep is not None:
             state="WAITING_FOR_IDM" if idm is None else "WAITING_FOR_DISPLACEMENT"
             if idm is not None and displacement:
-                state="WAITING_FOR_OB" if block is None else "WAITING_FOR_FVG"
-                if block is not None and fvg is not None:
-                    state="WAITING_FOR_RETEST"
-                    begin=max(si,fvg.created_at)+1
+                state="WAITING_FOR_OB" if block is None else "WAITING_FOR_RETEST"
+                if block is not None:
+                    begin=max(si,fvg.created_at if fvg else si)+1
                     deadline=min(as_of+1,begin+max_retest_bars)
                     for i in range(begin,deadline):
                         c=bars[i]
@@ -90,8 +94,6 @@ def scan_ict_lifecycles(candles: list[Candle], *,
                             break
                     if state=="WAITING_FOR_RETEST" and as_of>=begin+max_retest_bars-1:
                         state="EXPIRED"
-                elif block is not None and as_of>si+3:
-                    state="EXPIRED_NO_FVG"
         rows.append({
             "setup_id": f"{bars[si].timestamp.isoformat()}:{shift.direction}",
             "shift_at":bars[si].timestamp.isoformat(),

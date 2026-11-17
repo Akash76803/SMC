@@ -111,7 +111,8 @@ def review_liquidity_target(*, candles: list[Candle],
                             symbol: str = "NIFTY",
                             at_index: int | None = None,
                             as_of: datetime,
-                            min_index_rr: float = 2.0) -> TargetReview:
+                            min_index_rr: float = 2.0,
+                            min_target_points: float | None = None) -> TargetReview:
     """Nearest *unconsumed*, causally eligible opposing liquidity level.
 
     A level is consumed on its first SWEEP or RUN at/before the decision bar.
@@ -175,7 +176,7 @@ def review_liquidity_target(*, candles: list[Candle],
         eligible, key=lambda x: (x.price, -x.eligible_from))
     points = abs(lev.price-entry)
     rr = points / abs(entry-stop) if stop is not None else None
-    minimum = 50 if symbol == "NIFTY" else 100
+    minimum = float(min_target_points) if min_target_points is not None else (50.0 if symbol == "NIFTY" else 100.0)
     candidate = TargetCandidate(
         lev.price, lev.kind, lev.source_indices,
         candles[lev.created_at].timestamp, points, rr,

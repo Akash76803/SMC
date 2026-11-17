@@ -116,7 +116,8 @@ def rank_liquidity_targets(*, candles: list[Candle],
                            symbol: str, as_of: datetime,
                            at_index: int | None = None,
                            max_visible_targets: int = 3,
-                           min_index_rr: float = 2.0) -> MultiTargetReview:
+                           min_index_rr: float = 2.0,
+                           min_target_points: float | None = None) -> MultiTargetReview:
     """Rank T1..T3 and report farthest eligible *observed* index level.
 
     The closest target determines the conservative setup gate, even if T2/T3
@@ -129,7 +130,8 @@ def rank_liquidity_targets(*, candles: list[Candle],
     base = review_liquidity_target(
         candles=candles, levels=[], events=events, direction=direction,
         entry=entry, stop=stop, symbol=symbol,
-        at_index=at_index, as_of=as_of, min_index_rr=min_index_rr)
+        at_index=at_index, as_of=as_of, min_index_rr=min_index_rr,
+        min_target_points=min_target_points)
     if base.reason == "NO_DECISION_CANDLE":
         return MultiTargetReview(
             "WAIT", base.reason, (), None, None, min_index_rr, 0, None)
@@ -148,7 +150,8 @@ def rank_liquidity_targets(*, candles: list[Candle],
         result = review_liquidity_target(
             candles=candles, levels=[lev], events=events,
             direction=direction, entry=entry, stop=stop, symbol=symbol,
-            at_index=at_index, as_of=as_of, min_index_rr=min_index_rr)
+            at_index=at_index, as_of=as_of, min_index_rr=min_index_rr,
+            min_target_points=min_target_points)
         if result.target is not None:
             ranked.append(result)
     ranked.sort(key=lambda r: (r.target.index_points,

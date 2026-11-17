@@ -21,6 +21,7 @@ from .live_setup_screen_v317 import build_setup_screen
 from .angel_option_live_v318 import read_option_snapshot
 from .option_quote_tape_v319 import live_momentum
 from .premium_paper_plan_v319 import create_paper_plan
+from .multi_strategy_terminal import multi_strategy_payload
 
 APP_BUILD = "SMC-OPTION-MOMENTUM-2026-11-16-R3"
 
@@ -29,34 +30,47 @@ HTML = r"""<!doctype html>
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>SMC Dual Market | Research</title>
 <style>
-:root{color-scheme:dark;font:14px system-ui,Segoe UI,sans-serif;color:#d7e3f2;background:#0a1220}
-*{box-sizing:border-box}body{margin:0}header{padding:20px 26px;background:#111c30;border-bottom:1px solid #28374e}
-h1{font-size:23px;margin:0 0 7px}small,.muted{color:#93a4bb}.warn{color:#fbbf24}
-main{max-width:1450px;margin:0 auto;padding:20px}#cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:15px}
-.card,.panel{padding:16px;border:1px solid #2a3a51;border-radius:12px;background:#101c2e}
-.card strong{font-size:25px;display:block;margin:7px 0}.bar{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:14px;align-items:center}
-select{background:#17263a;color:#f4f7ff;border:1px solid #415069;padding:8px;border-radius:7px}
-canvas{width:100%;height:360px;display:block}h2{font-size:17px}table{border-collapse:collapse;width:100%}
-td,th{text-align:left;border-bottom:1px solid #25354b;padding:10px;font-size:12px}th{color:#9aacc3}
-#tablewrap{max-height:320px;overflow:auto}.good{color:#44cf8d}.bad{color:#fb7185}
-.grid{display:grid;grid-template-columns:minmax(0,2fr) minmax(290px,1fr);gap:15px}
-pre{white-space:pre-wrap;overflow-wrap:anywhere;font-size:12px;color:#a7bfdf}
-.setup-layout{display:grid;grid-template-columns:minmax(0,2fr) minmax(260px,1fr);gap:14px}
-.setup-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px}
-.setup-metric{padding:11px;background:#182a40;border-radius:9px;min-height:63px}
-.setup-metric b{display:block;font-size:18px;margin-top:5px}
-.status{font-size:19px;color:#fbbf24}
-@media(max-width:850px){.setup-layout{grid-template-columns:1fr}}
-@media(max-width:850px){.grid{grid-template-columns:1fr}}
+:root{color-scheme:dark;font:14px Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#e2e8f0;background:#0b0f19;--line:#334155;--green:#10b981;--red:#ef4444;--amber:#f59e0b}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at 0 0,#16223966,transparent 50%),#0b0f19;line-height:1.5}
+header{position:sticky;top:0;z-index:50;background:rgba(17,24,39,.9);backdrop-filter:blur(18px);border-bottom:1px solid var(--line);box-shadow:0 4px 20px rgba(0,0,0,.3)}
+.header-inner{max-width:1800px;margin:auto;padding:17px 24px;display:flex;align-items:center;justify-content:space-between;gap:18px;flex-wrap:wrap}
+.eyebrow{font-size:10px;letter-spacing:.2em;font-weight:700;color:#94a3b8;margin-bottom:4px}h1{font-size:19px;letter-spacing:-.035em;margin:0 0 4px;font-weight:700}
+small,.muted{color:#94a3b8}.warn{color:var(--amber)}.good{color:var(--green)}.bad{color:var(--red)}
+main{max-width:1800px;margin:0 auto;padding:24px}.panel,.card{min-width:0;padding:22px;border:1px solid #334155a6;border-radius:10px;background:#111827;box-shadow:0 4px 20px rgba(0,0,0,.3)}
+h2{font-size:14px;letter-spacing:.04em;margin:0 0 14px;font-weight:700}h2 small{display:inline;font-size:11px;letter-spacing:0;font-weight:400}h3{margin:0 0 12px}
+.bar{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:14px;align-items:center}.toolbar{display:flex;align-items:center;gap:14px;flex-wrap:wrap}.toolbar .bar{margin:0}
+button,select{font:inherit;border:1px solid var(--line);background:#1e293b;color:#e2e8f0;border-radius:7px;padding:9px 12px;cursor:pointer;transition:background .15s,border-color .15s,transform .15s}
+button:hover{background:#293b55;border-color:#64748b}button:active{transform:translateY(1px)}button:focus-visible,select:focus-visible,summary:focus-visible{outline:2px solid #60a5fa;outline-offset:3px}
+.market-tabs{display:flex;gap:4px;padding:4px;background:#0b0f19;border:1px solid var(--line);border-radius:9px}.market-tabs button{border:0;background:transparent;color:#94a3b8;font-size:12px;font-weight:700;padding:8px 18px}.market-tabs button[aria-pressed="true"]{background:#334155;color:#fff;box-shadow:0 2px 6px #0004}
+.market-select{position:absolute;width:1px;height:1px;padding:0;overflow:hidden;clip-path:inset(50%)}.market-select:focus{position:static;width:auto;height:auto;clip-path:none}
+#marketWarning{font-size:11px;max-width:220px}#allowAlerts{font-size:12px}#cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:18px}#cards .card{padding:15px;color:#94a3b8;font-size:12px}#cards strong{display:block;font-size:22px;color:#f1f5f9;margin-top:7px}
+canvas{width:100%;height:360px;display:block;border-radius:8px}table{border-collapse:collapse;width:100%}td,th{text-align:left;border-bottom:1px solid #33415580;padding:11px;font-size:12px;white-space:nowrap}th{color:#94a3b8;font-weight:500;background:#111827}tbody tr:hover{background:#1e293b80}#tablewrap{max-height:320px;overflow:auto}
+.grid{display:grid;grid-template-columns:minmax(0,2fr) minmax(290px,1fr);gap:16px}pre{white-space:pre-wrap;overflow-wrap:anywhere;font-size:11px;color:#94a3b8}
+.setup-layout{display:grid;grid-template-columns:minmax(0,3fr) minmax(260px,1fr);gap:24px}.setup-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px}.setup-metric{padding:12px;background:#1e293b66;border:1px solid #33415566;border-radius:8px;min-width:0}.setup-metric small{font-size:11px}.setup-metric b{display:block;font-size:15px;font-variant-numeric:tabular-nums;margin-top:4px;overflow-wrap:anywhere;font-weight:600}
+.status{font-size:16px;color:var(--amber);font-weight:600}#setupreason{font-size:12px;overflow-wrap:anywhere}#setupmetrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));align-items:start;gap:16px}.metric-group{min-width:0}.metric-group h3{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#94a3b8;border-bottom:1px solid var(--line);padding-bottom:10px}.metric-row{display:flex;align-items:baseline;justify-content:space-between;gap:10px;padding:8px 0;border-bottom:1px solid #33415540;font-size:11px}.metric-row span{color:#94a3b8}.metric-row b{font-size:12px;font-weight:500;text-align:right;font-variant-numeric:tabular-nums;overflow-wrap:anywhere;min-width:0}.metric-row.is-waiting b,.is-waiting b{color:#64748b;font-weight:400}
+.check-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px solid #33415540;font-size:12px}.check-state{font-size:10px;white-space:nowrap;border-radius:5px;padding:3px 6px}.check-state.waiting{color:#94a3b8;background:#33415555}.check-state.passed{color:#34d399;background:#10b98116}.check-state.not-met{color:#f87171;background:#ef444416}
+#multiStrategyCards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin-top:20px}.strategy-card{padding:18px;background:linear-gradient(155deg,#1e293b88,#111827);border:1px solid var(--line);border-radius:10px;min-width:0}.strategy-heading{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:14px}.strategy-heading h3{font-size:16px;margin:0;letter-spacing:-.02em}.strategy-market{font-size:10px;color:#94a3b8;letter-spacing:.1em}.direction-pill{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:20px;font-size:11px;font-weight:700;letter-spacing:.03em}.direction-pill.bullish{background:#10b98119;color:#34d399;border:1px solid #10b98144}.direction-pill.bearish{background:#ef444419;color:#f87171;border:1px solid #ef444444}.direction-pill.neutral{background:#33415555;color:#94a3b8;border:1px solid #47556980}
+.strategy-status{font-size:10px;color:#94a3b8;margin:12px 0 5px;overflow-wrap:anywhere}.strategy-context{font-size:11px;color:#94a3b8;margin:8px 0}.strike-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:16px}.strike-box{position:relative;border:1px solid var(--line);border-radius:8px;padding:12px 10px;background:#0b0f1980;min-width:0}.strike-box.recommended{border-color:#f59e0b88;background:linear-gradient(180deg,#f59e0b0b,#0b0f1980)}.strike-kind{font-size:10px;letter-spacing:.12em;color:#94a3b8;font-weight:700}.recommendation{display:block;font-size:9px;color:#fbbf24;margin:5px 0;min-height:28px;line-height:1.4}.strike-price{display:block;font-size:clamp(15px,1.2vw,21px);font-weight:700;letter-spacing:-.035em;white-space:nowrap;margin:5px 0;color:#f1f5f9;font-variant-numeric:tabular-nums}.strike-expiry{font-size:9px;color:#94a3b8;display:block;margin-bottom:10px}
+.price-grid{display:grid;gap:7px;margin:12px 0}.price-row{display:flex;align-items:baseline;justify-content:space-between;gap:4px;font-size:10px}.price-row span{color:#94a3b8}.price-row b{font-size:12px;font-weight:600;font-variant-numeric:tabular-nums}.price-row.stop b{color:var(--red)}.price-row.target b{color:var(--green)}.price-row b.missing{color:#64748b}
+.timing-badge{padding:9px 10px;margin:12px 0 5px;border:1px solid #334155;border-radius:6px;background:#1e293b80;color:#cbd5e1;font-size:10px;font-weight:500;line-height:1.6}.time-stop-note{display:block;margin:6px 0;color:#d9a855;font-size:10px;line-height:1.6}.strike-box .timing-badge{padding:7px 5px;font-size:9px}.strike-box .time-stop-note{font-size:9px}.copy-button{width:100%;margin-top:12px;border:1px solid #475569;border-radius:6px;padding:8px 5px;background:#1e293b;color:#e2e8f0;font-size:10px;font-weight:600;min-height:36px}.copy-button.copied{background:#10b98122;border-color:var(--green);color:#34d399}.copy-fallback{width:100%;min-height:110px;margin-top:8px;background:#0b0f19;color:#cbd5e1;border:1px solid #475569;padding:8px;border-radius:6px;font:11px monospace}.empty-strikes{border:1px dashed #334155;border-radius:8px;color:#64748b;text-align:center;padding:28px 12px;font-size:12px;margin-top:16px}
+@media(max-width:1250px){#multiStrategyCards{grid-template-columns:1fr}.strike-box{padding:16px}.price-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.price-row{flex-direction:column}.price-row b{font-size:17px}.strike-price{font-size:24px}.recommendation{min-height:15px}.strike-box .timing-badge{font-size:11px}.strike-box .time-stop-note{font-size:10px}.copy-button{font-size:12px}.setup-layout{grid-template-columns:1fr}}
+@media(max-width:850px){.grid{grid-template-columns:1fr}.header-inner{padding:13px 16px;gap:10px}h1{font-size:16px}main{padding:14px}.panel{padding:16px}#setupmetrics{grid-template-columns:1fr}.metric-group h3{margin-top:12px}.toolbar{gap:8px}.header-inner small{font-size:10px}}
+@media(max-width:520px){.strike-grid{grid-template-columns:1fr}.strike-box{padding:16px}.recommendation{min-height:0}.strike-price{font-size:26px}.price-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.toolbar{width:100%;justify-content:space-between}.market-tabs button{padding:8px 13px}#allowAlerts{font-size:10px;padding:8px}#marketWarning{max-width:none;width:100%}.strategy-card{padding:14px}.header-inner .eyebrow{display:none}.grid canvas{height:320px}}
+@media(prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}}
 </style></head>
-<body><header><h1>SMC / MARKET RESEARCH TERMINAL</h1>
-<small>Build SMC-OPTION-MOMENTUM-2026-11-16-R3 • Local read-only terminal • AUTO-ORDERS DISABLED</small></header>
+<body><header><div class="header-inner"><div><div class="eyebrow">INTRADAY RESEARCH / DECISION SUPPORT</div><h1>SMC / MARKET RESEARCH TERMINAL</h1>
+<small>Build SMC-OPTION-MOMENTUM-2026-11-16-R3 • Local read-only terminal • AUTO-ORDERS DISABLED</small></div>
+<div class="toolbar"><div class="market-tabs" role="group" aria-label="Select market">
+<button type="button" data-market="NIFTY" aria-pressed="true">NIFTY 50</button><button type="button" data-market="SENSEX" aria-pressed="false">SENSEX</button></div>
+<select id="market" class="market-select" aria-label="Choose NIFTY or SENSEX"><option value="NIFTY">NIFTY 50</option><option value="SENSEX">SENSEX</option></select>
+<button id="allowAlerts" type="button">Enable desktop alerts</button><strong class="warn" id="marketWarning"></strong></div></div></header>
 <main>
-<div class="bar" style="align-items:center;padding:12px 15px;background:#17283e;border-radius:12px">
-<strong>MARKET</strong> <select id="market" aria-label="Choose NIFTY or SENSEX">
-<option value="NIFTY">NIFTY 50</option><option value="SENSEX">SENSEX</option></select>
-<button id="allowAlerts" style="background:#295d96;color:white;border:0;border-radius:8px;padding:10px;cursor:pointer">Enable desktop alerts</button>
-<strong class="warn" id="marketWarning"></strong></div>
+<section class="panel" style="margin-bottom:15px" aria-label="Multi-strategy research">
+<h2>MULTI-STRATEGY SIGNALS · S&R + VWAP / ORB / OI TRAP</h2>
+<p class="muted">Research observations · Fixed-delta premium estimates · Manual mobile execution only</p>
+<small class="muted">Timing windows are configured research heuristics, not measured statistics or guaranteed safe holding limits. Minutes are measured from manual entry.</small>
+<div id="multiStrategyCards" class="setup-grid" aria-live="polite">Checking recorded data…</div>
+</section>
 <div id="bigAlert" role="alert" aria-live="assertive" style="display:none;position:fixed;left:3%;right:3%;top:9%;z-index:1000;background:#193750;border:3px solid #f5be51;border-radius:16px;box-shadow:0 10px 60px #000; padding:25px">
 <h1 id="bigAlertTitle">SMC RESEARCH CANDIDATE</h1>
 <p id="bigAlertBody" style="font-size:21px"></p>
@@ -94,6 +108,12 @@ pre{white-space:pre-wrap;overflow-wrap:anywhere;font-size:12px;color:#a7bfdf}
 <script>
 const sel=document.getElementById('day'), direction=document.getElementById('direction'),
       market=document.getElementById('market');
+function syncMarketTabs(){document.querySelectorAll('[data-market]').forEach(button=>button.setAttribute('aria-pressed',String(button.dataset.market===market.value)))}
+document.querySelectorAll('[data-market]').forEach(button=>button.addEventListener('click',()=>{
+ if(market.value===button.dataset.market)return;
+ market.value=button.dataset.market;market.dispatchEvent(new Event('change'));
+}));
+market.addEventListener('change',syncMarketTabs);
 let lastAlertId=null; const observedAlerts=new Set();
 document.getElementById('dismissAlert').onclick=()=>{document.getElementById('bigAlert').style.display='none'};
 document.getElementById('allowAlerts').onclick=async()=>{
@@ -127,18 +147,27 @@ function notifyIfNew(live){
 }
 let snapshot=null;
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const isMissing=value=>value==null||value===''||['UNAVAILABLE','UNVERIFIED','NONE','NULL'].includes(String(value).toUpperCase());
+const formatIST=value=>{if(isMissing(value))return '—';const date=new Date(value);return Number.isNaN(date.getTime())?'—':new Intl.DateTimeFormat('en-GB',{timeZone:'Asia/Kolkata',hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false}).format(date)+' IST'};
+function displayValue(value){
+ if(isMissing(value))return '—';
+ if(typeof value==='number')return Number.isFinite(value)?value.toLocaleString('en-IN',{maximumFractionDigits:2}):'—';
+ if(/^\d{4}-\d{2}-\d{2}T/.test(String(value)))return formatIST(value);
+ return String(value);
+}
+const metricTile=(name,value)=>'<div class="setup-metric'+(isMissing(value)?' is-waiting':'')+'"><small>'+esc(name)+'</small><b>'+esc(displayValue(value))+'</b></div>';
 function draw(bars,canvasId='chart'){
  const cv=document.getElementById(canvasId), r=cv.getBoundingClientRect(), dpr=window.devicePixelRatio||1;
  cv.width=Math.max(100,Math.round(r.width*dpr));cv.height=Math.round(360*dpr);
  const ctx=cv.getContext('2d');ctx.scale(dpr,dpr);const w=r.width,h=360;
- ctx.fillStyle='#101c2e';ctx.fillRect(0,0,w,h); if(!bars.length){ctx.fillStyle='#9eafc6';ctx.font='14px system-ui';ctx.fillText('NO OBSERVED LIVE CANDLES',20,45);return;}
+ ctx.fillStyle='#111827';ctx.fillRect(0,0,w,h); if(!bars.length){ctx.fillStyle='#64748b';ctx.font='13px system-ui';ctx.fillText('Waiting for observed candles',20,45);return;}
  const view=bars.slice(-110), hi=Math.max(...view.map(x=>x.high)),lo=Math.min(...view.map(x=>x.low));
  const range=Math.max(hi-lo,.01), top=15,bottom=h-30,left=55,right=w-16;
  const y=p=>top+(hi-p)/range*(bottom-top),dx=(right-left)/view.length;
  ctx.font='11px system-ui';ctx.textAlign='right';ctx.strokeStyle='#2a3a51';ctx.fillStyle='#99abc1';
  for(let n=0;n<=4;n++){let p=lo+range*n/4,yp=y(p);ctx.beginPath();ctx.moveTo(left,yp);ctx.lineTo(right,yp);ctx.stroke();ctx.fillText(p.toFixed(1),left-7,yp+4)}
  view.forEach((c,i)=>{let x=left+(i+.5)*dx,bull=c.close>=c.open;
- ctx.strokeStyle=ctx.fillStyle=bull?'#33cb88':'#f7798d';
+ ctx.strokeStyle=ctx.fillStyle=bull?'#10b981':'#ef4444';
  ctx.beginPath();ctx.moveTo(x,y(c.high));ctx.lineTo(x,y(c.low));ctx.stroke();
  let a=y(c.open),b=y(c.close);ctx.fillRect(x-Math.max(1,dx*.32),Math.min(a,b),Math.max(2,dx*.64),Math.max(1,Math.abs(a-b)));});
  ctx.textAlign='left';ctx.fillStyle='#a9bad0';ctx.fillText(view[0].timestamp.slice(11,16),left,h-10);
@@ -161,8 +190,7 @@ function renderSetup(live){
   ['Max hold (minutes)',learning.selected?.holding_minutes],
   ['Auto order permission',learning.promotion_allowed===true?'REJECTED':'DISABLED']
  ];
- document.getElementById('learningMetrics').innerHTML=learnItems.map(([k,v])=>
- '<div class="setup-metric"><small>'+esc(k)+'</small><b>'+esc(v??'UNAVAILABLE')+'</b></div>').join('');
+ document.getElementById('learningMetrics').innerHTML=learnItems.map(([k,v])=>metricTile(k,v)).join('');
  const paper=live.paper_plan||{status:'WAIT',reason:'PREMIUM_PLAN_UNVERIFIED'};
  document.getElementById('premiumPlanStatus').textContent=
    'PAPER PREMIUM PLAN: '+paper.status+' | '+(paper.reason||'NO VERIFIED PLAN');
@@ -174,7 +202,7 @@ function renderSetup(live){
   ['Net R:R · PAPER',paper.net_rr_reference],
   ['Momentum observed',paper.bid_change_pct!=null?paper.bid_change_pct+'%':null],
   ['Source quote at',paper.quote_at]
- ].map(([k,v])=>'<div class="setup-metric"><small>'+esc(k)+'</small><b>'+esc(v??'UNAVAILABLE')+'</b></div>').join('');
+ ].map(([k,v])=>metricTile(k,v)).join('');
  const q=live.options||{status:'UNAVAILABLE',contracts:[]};
  const mom=live.momentum||{status:'NO_VERIFIED_OPTION_TAPE',candidates:[]};
  document.getElementById('momentumStatus').textContent=
@@ -193,8 +221,8 @@ function renderSetup(live){
  '<table><thead><tr><th>Contract</th><th>Expiry</th><th>ATM/ITM</th><th>Side</th><th>Bid</th><th>Ask</th><th>Spread</th><th>Delta</th><th>IV</th></tr></thead><tbody>'+
  q.contracts.map(c=>'<tr><td>'+esc(c.trading_symbol)+'</td><td>'+esc(c.expiry)+
  '</td><td>'+esc(c.moneyness)+'</td><td>'+esc(c.side)+'</td><td>'+esc(c.bid)+
- '</td><td>'+esc(c.ask)+'</td><td>'+esc(c.spread)+'</td><td>'+esc(c.delta??'UNAVAILABLE')+
- '</td><td>'+esc(c.iv??'UNAVAILABLE')+'</td></tr>').join('')+'</tbody></table>':
+ '</td><td>'+esc(c.ask)+'</td><td>'+esc(c.spread)+'</td><td>'+esc(displayValue(c.delta))+
+ '</td><td>'+esc(displayValue(c.iv))+'</td></tr>').join('')+'</tbody></table>':
  '<p class="muted">No currently verified broker option market depth.</p>';
  const m=live.setup||{}, verified=live.status==='RECENT_BAR';
  draw(live.sampled_live_candles||[],'liveChart');
@@ -212,6 +240,8 @@ function renderSetup(live){
  const items=[
   ['Observed index close',m.observed_index_close],
   ['Candle close time',m.candle_at],
+  ['ATR (14m)',m.atr14!=null?m.atr14+' pts':null],
+  ['Min Target (dynamic)',m.min_target_required!=null?m.min_target_required+' pts':null],
   ['Liquidity sweep',m.sweep_level],
   ['IDM reference',m.idm_level],
   ['Order Block',m.order_block?.join(' – ')],
@@ -231,11 +261,25 @@ function renderSetup(live){
   ['Option delta / IV',(m.option_delta!=null&&m.option_iv!=null)?m.option_delta+' / '+m.option_iv:null],
   ['Premium SL',m.option_premium_stop],['Premium target',m.option_premium_target]
  ];
- document.getElementById('setupmetrics').innerHTML=items.map(([name,val])=>
-  '<div class="setup-metric"><small>'+esc(name)+'</small><b>'+
-  esc(val??'UNAVAILABLE')+'</b></div>').join('');
+ const metricGroups=[['Structure & Key Levels',[...items.slice(0,8)]],
+  ['Execution Bracket',[...items.slice(8,21)]],
+  ['Option Pricing',[...items.slice(21),['Premium Entry · ASK ref',m.option_ask]]]];
+ document.getElementById('setupmetrics').innerHTML=metricGroups.map(([title,metrics])=>
+  '<section class="metric-group"><h3>'+esc(title)+'</h3>'+metrics.map(([name,value])=>
+  '<div class="metric-row'+(isMissing(value)?' is-waiting':'')+'"><span>'+esc(name)+'</span><b'+
+  (/SL|Stop|stop/.test(name)?' class="bad"':/Target|^T[123]/.test(name)?' class="good"':'')+'>'+esc(displayValue(value))+'</b></div>').join('')+'</section>').join('');
  const missing=m.missing_evidence||['NO_VERIFIED_LIVE_CANDLE'];
- document.getElementById('setupevidence').innerHTML=missing.map(x=>'<p>○ '+esc(x)+'</p>').join('');
+ const checks=[['LIQUIDITY_SWEEP','Liquidity sweep',m.sweep_level!=null],['IDM_CORROBORATION','IDM corroboration',m.idm_level!=null],
+  ['ORDER_BLOCK','Order block',Array.isArray(m.order_block)&&m.order_block.length===2],['FVG','Fair value gap',Array.isArray(m.fvg)&&m.fvg.length===2],
+  ['MITIGATION_RETEST','Mitigation retest',m.setup_state==='RETEST_CONFIRMED_RESEARCH'],
+  ['INDEX_BRACKET','Research bracket',m.index_research_bracket_status==='RESEARCH_INDEX_BRACKET_PASSES']];
+ const known=new Set(checks.map(x=>x[0]));
+ missing.filter(key=>!known.has(key)).forEach(key=>checks.push([key,key.toLowerCase().replaceAll('_',' '),false]));
+ document.getElementById('setupevidence').innerHTML=checks.map(([key,label,observed])=>{
+  const passed=verified&&observed&&!missing.includes(key), notMet=verified&&m.setup_state&&m.setup_state!=='UNVERIFIED'&&!passed;
+  const state=passed?'passed':notMet?'not-met':'waiting', text=passed?'🟢 Passed':notMet?'🔴 Not Met':'⚪ Waiting';
+  return '<div class="check-row"><span>'+esc(label)+'</span><span class="check-state '+state+'">'+text+'</span></div>';
+ }).join('');
 }
 function render(){
  if(!snapshot)return;let d=sel.value, session=(snapshot.sessions||[]).find(x=>x.date===d);
@@ -250,11 +294,11 @@ function render(){
  document.getElementById('marketWarning').textContent=snapshot.historical_available===false?'AUDITED HISTORY UNAVAILABLE FOR '+snapshot.symbol:'';
  document.getElementById('quality').textContent='Source audit: '+snapshot.excluded_count+' excluded • '+snapshot.quarantined_count+' quarantined extra bars';
  document.getElementById('live').innerHTML='<p>Status: <b class="'+(live.status==='RECENT_BAR'?'good':'warn')+'">'+esc(live.status)+'</b></p>'+
- '<p>Last closed candle: '+esc(live.last_candle_close_at||'Unavailable')+'</p>'+
+ '<p>Last closed candle: '+esc(formatIST(live.last_candle_close_at))+'</p>'+
  '<p>Index close: '+esc(live.last_candle_close??'—')+'</p>'+
  '<p>Reason: '+esc(live.reason||'No verified stream yet')+'</p>';
  document.getElementById('risk').innerHTML='<p class="warn">AUTO ORDERS: OFF</p><p>Option premium / Greeks / bid-ask: UNVERIFIED unless separately sourced</p><p>Any ICT sequence is a research observation, not an order permission.</p>';
- document.getElementById('rows').innerHTML=observations.map(o=>'<tr><td>'+esc(o.confirmed_at?.slice(11,19))+'</td>'+
+ document.getElementById('rows').innerHTML=observations.map(o=>'<tr><td>'+esc(formatIST(o.confirmed_at))+'</td>'+
  '<td>'+esc(o.direction)+'</td><td>'+esc(o.ict_sequence?.status||'UNVERIFIED')+'</td>'+
  '<td>'+esc((o.ict_sequence?.missing_stages||[]).join(', '))+'</td>'+
  '<td>'+esc(o.paper_outcome?.entry_open??o.index_entry_close_reference)+'</td>'+
@@ -262,9 +306,9 @@ function render(){
  '<td>'+esc(o.index_t1_t2_t3_references?.[0]?.price??'—')+'</td>'+
  '<td>'+esc(o.paper_outcome?.exit_reason||'NO QUALIFIED BRACKET')+'</td></tr>').join('');
  document.getElementById('lifecycles').innerHTML=(session?.ict_lifecycles||[])
- .slice(-18).map(x=>'<p><small>'+esc(x.shift_at?.slice(11,19))+'</small> · '+esc(x.structure_kind)+' '+esc(x.direction)+
+ .slice(-18).map(x=>'<p><small>'+esc(formatIST(x.shift_at))+'</small> · '+esc(x.structure_kind)+' '+esc(x.direction)+
  ' · <b class="'+(x.state==='RETEST_CONFIRMED_RESEARCH'?'good':'warn')+'">'+esc(x.state)+'</b> · OB '+esc(x.ob_zone?.join('–')||'—')+
- ' · Retest '+esc(x.retest_at?.slice(11,19)||'—')+'</p>').join('')||'<p class="muted">No confirmed structure shifts in selected session.</p>';
+ ' · Retest '+esc(formatIST(x.retest_at))+'</p>').join('')||'<p class="muted">No confirmed structure shifts in selected session.</p>';
  draw(session?.candles||[]);
 }
 async function refresh(){
@@ -294,6 +338,75 @@ async function pollMarkets(){
  }
 }
 pollMarkets();setInterval(pollMarkets,5000);
+let multiBusy=false;
+function appendStrategyTiming(parent,timing){
+ if(!timing)return;
+ const badge=document.createElement('p');badge.className='timing-badge';
+ badge.textContent='⏱️ Target Expected: '+timing.expected_duration+' | Max Safe Hold: '+timing.max_hold;
+ const note=document.createElement('small');note.className='time-stop-note';
+ note.textContent='⚠️ Time-SL: '+timing.advice;
+ parent.append(badge,note);
+}
+async function pollMultiStrategies(){
+ if(multiBusy)return;
+ multiBusy=true;const desired=market.value, container=document.getElementById('multiStrategyCards');
+ try{
+  const response=await fetch('/api/multi_strategy_status?market='+encodeURIComponent(desired),{cache:'no-store'});
+  if(!response.ok)throw new Error('Data unavailable');
+  const data=await response.json();if(market.value!==desired)return;
+  container.replaceChildren();
+  for(const [key,title] of [['snr_vwap','S&R + VWAP'],['orb','15m ORB'],['oi_trap','OI Trap']]){
+   const state=data.strategies[key], card=document.createElement('article');card.className='strategy-card';
+   const headingWrap=document.createElement('div');headingWrap.className='strategy-heading';
+   const heading=document.createElement('h3');heading.textContent=title;
+   const marketName=document.createElement('span');marketName.className='strategy-market';marketName.textContent=desired;
+   headingWrap.append(heading,marketName);card.append(headingWrap);
+   const bias=document.createElement('span');
+   bias.textContent=state.direction==='BULLISH'?'🟢 BULLISH (CE)':state.direction==='BEARISH'?'🔴 BEARISH (PE)':'⚪ NEUTRAL / Waiting';
+   bias.className='direction-pill '+(state.direction==='BULLISH'?'bullish':state.direction==='BEARISH'?'bearish':'neutral');card.append(bias);
+   const status=document.createElement('p');status.className='strategy-status';status.textContent=state.status.replaceAll('_',' ')+' · '+state.reason.replaceAll('_',' ');card.append(status);
+   if(state.signal?.timestamp){const observed=document.createElement('p');observed.className='strategy-context';observed.textContent='Observed '+formatIST(state.signal.timestamp);card.append(observed)}
+   appendStrategyTiming(card,state.timing);
+   if(key==='orb'){const p=document.createElement('p');p.className='strategy-context';p.textContent='Range: '+displayValue(state.range.orb_low)+' / '+displayValue(state.range.orb_high);card.append(p)}
+   if(key==='oi_trap'){const p=document.createElement('p');p.className='strategy-context';p.textContent='PCR: '+displayValue(state.pcr)+' · Call wall: '+displayValue(state.walls.max_call_oi_strike)+' · Put wall: '+displayValue(state.walls.max_put_oi_strike);card.append(p)}
+   const strikeGrid=document.createElement('div');strikeGrid.className='strike-grid';
+   for(const kind of ['ITM','ATM','OTM']){
+    const strike=state.strikes[kind];if(!strike)continue;
+    const box=document.createElement('div');box.className='strike-box'+(kind==='ATM'?' recommended':'');
+    const kindLabel=document.createElement('span');kindLabel.className='strike-kind';kindLabel.textContent=kind;box.append(kindLabel);
+    const recommendation=document.createElement('span');recommendation.className='recommendation';recommendation.textContent=kind==='ATM'?'⭐ Recommended Momentum':'\u00a0';box.append(recommendation);
+    const contract=document.createElement('b');contract.className='strike-price';contract.textContent=displayValue(strike.strike)+' '+strike.side;box.append(contract);
+    const expiry=document.createElement('small');expiry.className='strike-expiry';expiry.textContent='Expiry '+displayValue(strike.expiry);box.append(expiry);
+    const prices=document.createElement('div');prices.className='price-grid';
+    for(const [label,value,cls] of [['Entry',strike.premium_entry,'entry'],['SL',strike.premium_sl,'stop'],['Target',strike.premium_target,'target']]){
+     const row=document.createElement('div');row.className='price-row '+cls;
+     const name=document.createElement('span');name.textContent=label;
+     const amount=document.createElement('b');amount.textContent=value==null?'—':'₹'+Number(value).toFixed(2);
+     if(value==null)amount.className='missing';row.append(name,amount);prices.append(row);
+    }
+    box.append(prices);
+    const timing=strike.timing||state.timing;
+    appendStrategyTiming(box,timing);
+    const price=v=>v==null?'— (unverified)':Number(v).toFixed(2);
+    const text=desired+' '+kind+' '+strike.strike+' '+strike.side+' | Expiry '+(strike.expiry??'UNAVAILABLE')+
+      ' | Premium Entry ₹'+price(strike.premium_entry)+' | SL ₹'+price(strike.premium_sl)+' | Target ₹'+price(strike.premium_target)+
+      (timing?' | Target Expected: '+timing.expected_duration+' | Max Safe Hold: '+timing.max_hold+' | Time-SL: '+timing.advice:'')+
+      ' | DELTA ESTIMATE · RESEARCH ONLY | Timing: configured research heuristic, measured from manual entry';
+    const copy=document.createElement('button');copy.type='button';copy.className='copy-button';copy.textContent='📋 Copy for Angel One';copy.setAttribute('aria-label','Copy '+desired+' '+kind+' strike and premium estimates');
+    copy.onclick=async()=>{
+     try{await navigator.clipboard.writeText(text);copy.textContent='Copied! ✓';copy.classList.add('copied')}
+     catch(e){let fallback=box.querySelector('textarea');if(!fallback){fallback=document.createElement('textarea');fallback.className='copy-fallback';fallback.readOnly=true;fallback.value=text;fallback.setAttribute('aria-label','Strike recommendation text to copy');box.append(fallback)}fallback.focus();fallback.select();copy.textContent='Select text to copy'}
+    };
+    box.append(copy);strikeGrid.append(box);
+   }
+   if(strikeGrid.childElementCount){card.append(strikeGrid)}else{const waiting=document.createElement('div');waiting.className='empty-strikes';waiting.textContent='Waiting for a confirmed setup';card.append(waiting)}
+   container.append(card);
+  }
+ }catch(e){if(market.value===desired)container.textContent='Multi-strategy data unavailable. Waiting for recorded candles and quotes.'}
+ finally{multiBusy=false}
+}
+market.addEventListener('change',()=>{document.getElementById('multiStrategyCards').textContent='Checking selected market…';pollMultiStrategies()});
+pollMultiStrategies();setInterval(pollMultiStrategies,2500);
 </script></body></html>"""
 
 
@@ -349,12 +462,8 @@ def _feed_status(live_path: str | Path | None,
             state_name = state.get("status")
             if state_name == "SUBSCRIBING":
                 live = _tail_live(Path(live_path) if live_path else None)
-                try:
-                    recorded = datetime.fromisoformat(live["last_candle_close_at"])
-                    if recorded > updated and live["status"] in ("RECENT_BAR", "WAIT"):
-                        return live
-                except (KeyError, ValueError, TypeError):
-                    pass
+                if live.get("status") in ("RECENT_BAR", "WAIT") and live.get("last_candle_close_at"):
+                    return live
             if state_name in ("AUTHENTICATION_REQUIRED", "AUTHENTICATED",
                               "SUBSCRIBING", "STREAM_STOPPED", "DISCONNECTED",
                               "CANCELLED", "ERROR"):
@@ -458,7 +567,7 @@ def live_screen_payload(live_path: str | Path | None,
         }
     feed["sampled_live_candles"] = (
         event.get("sampled_live_candles", []) if event is not None
-        and feed["status"] == "RECENT_BAR" else [])
+        and feed["status"] in ("RECENT_BAR", "SUBSCRIBING") else [])
     return feed
 
 
@@ -528,7 +637,8 @@ def make_handler(csv_path: str, report_path: str, live_path: str | None,
             path = parsed.path
             from .dual_market_v318 import select_symbol, market_paths
             try:
-                selected = select_symbol(parse_qs(parsed.query).get("symbol", ["NIFTY"])[0])
+                query = parse_qs(parsed.query)
+                selected = select_symbol(query.get("market" if path == "/api/multi_strategy_status" else "symbol", ["NIFTY"])[0])
             except ValueError:
                 payload, mime, status = b'{"error":"INVALID_MARKET_SYMBOL"}', "application/json", 400
                 self._respond(status, mime, payload)
@@ -561,6 +671,11 @@ def make_handler(csv_path: str, report_path: str, live_path: str | None,
                         learning_path=(live_files["learning"] if multi_root is not None
                                        else None))},
                     allow_nan=False).encode()
+                status, mime = 200, "application/json"
+            elif path == "/api/multi_strategy_status":
+                root = (Path(multi_root) / "results" if multi_root is not None else
+                        Path(live_path).parent if live_path else Path("results"))
+                payload = json.dumps(multi_strategy_payload(root, selected), allow_nan=False).encode()
                 status, mime = 200, "application/json"
             elif path == "/api/live":
                 payload = json.dumps(live_screen_payload(

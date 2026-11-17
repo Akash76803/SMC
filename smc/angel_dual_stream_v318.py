@@ -18,8 +18,45 @@ from .angel_stream_v312 import parse_tick, StreamDataError
 from .angel_stream_cli_v312 import write_live_status
 from .dual_market_v318 import market_paths, SYMBOLS
 from .live_research_v312 import LiveResearchEngine
+from .models import Candle
 from .angel_option_live_v318 import fetch_option_snapshot, write_option_snapshot
 from .option_quote_tape_v319 import append_snapshot
+
+
+def _load_session_candles(live_path: Path | None, max_candles: int = 360) -> list[Candle]:
+    """Load previously recorded closed candles from today's session."""
+    if not live_path or not live_path.is_file():
+        return []
+    today = datetime.now(timezone.utc).astimezone().date()
+    candles = []
+    seen = set()
+    try:
+        with live_path.open("r", encoding="utf-8", errors="replace") as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    ev = json.loads(line)
+                    at_str = ev.get("last_candle_close_at")
+                    close_p = ev.get("last_candle_close")
+                    if at_str and close_p and at_str not in seen:
+                        dt = datetime.fromisoformat(at_str)
+                        if dt.date() == today:
+                            sampled = ev.get("sampled_live_candles") or []
+                            matching = next((c for c in sampled if c.get("timestamp") == at_str), None)
+                            if matching:
+                                c = Candle(dt, float(matching["open"]), float(matching["high"]),
+                                           float(matching["low"]), float(matching["close"]), 0.0)
+                            else:
+                                c = Candle(dt, float(close_p), float(close_p), float(close_p), float(close_p), 0.0)
+                            candles.append(c)
+                            seen.add(at_str)
+                except (ValueError, TypeError, KeyError):
+                    continue
+    except OSError:
+        pass
+    return candles[-max_candles:]
 
 
 def run_dual_stream(*, ws, tokens: dict[str,str], outputs: dict,
@@ -28,6 +65,12 @@ def run_dual_stream(*, ws, tokens: dict[str,str], outputs: dict,
     if set(tokens)!=set(SYMBOLS) or not 5<=max_seconds<=28800:
         raise ValueError("INVALID_DUAL_FEED_CONFIG")
     engines={s:LiveResearchEngine(s) for s in SYMBOLS}
+    for s in SYMBOLS:
+        out_handle = outputs.get(s)
+        p = Path(out_handle.name) if hasattr(out_handle, "name") else None
+        prior = _load_session_candles(p)
+        if prior:
+            engines[s].builder.seed_completed(prior)
     counts={s:{"ticks":0,"candles":0,"errors":0} for s in SYMBOLS}
     stopped=False
     def safe_close():
@@ -50,14 +93,25 @@ def run_dual_stream(*, ws, tokens: dict[str,str], outputs: dict,
             for s in SYMBOLS:
                 write_live_status(statuses[s],"ERROR","DUAL_SUBSCRIPTION_FAILED")
             safe_close()
+    # Tick-level errors that mean the packet is bad but the stream is healthy.
+    _SKIP_ERRORS = frozenset({
+        "NONMONOTONIC_STREAM_SEQUENCE", "NONMONOTONIC_STREAM_TIME",
+        "STALE_WS_TICK", "FUTURE_WS_TICK", "TICK_OUTSIDE_REGULAR_SESSION",
+        "UNSUPPORTED_WS_MODE", "WS_WRONG_EXCHANGE", "WS_WRONG_TOKEN",
+        "INVALID_WS_PACKET", "INVALID_WS_TICK_FIELDS", "INVALID_WS_PRICE",
+        "CANDLE_SYMBOL_MISMATCH",
+    })
     def on_data(_ws,packet):
         if stopped or not isinstance(packet,dict):return
-        symbol=next((s for s in SYMBOLS if
-                     packet.get("exchange_type")==({"NIFTY":1,"SENSEX":3}[s])
-                     and str(packet.get("token","")).strip()==tokens[s]),None)
+        symbol=None
+        for s in SYMBOLS:
+            ex_type=1 if s=="NIFTY" else 3
+            if packet.get("exchange_type")==ex_type and str(packet.get("token","")).strip()==tokens[s]:
+                symbol=s
+                break
         if not symbol:return
         try:
-            tick=parse_tick(packet,symbol=symbol,token=tokens[s],
+            tick=parse_tick(packet,symbol=symbol,token=tokens[symbol],
                             received_at=datetime.now(timezone.utc))
             counts[symbol]["ticks"]+=1
             event=engines[symbol].on_tick(tick)
@@ -65,19 +119,25 @@ def run_dual_stream(*, ws, tokens: dict[str,str], outputs: dict,
                 counts[symbol]["candles"]+=1
                 outputs[symbol].write(json.dumps(event,separators=(",",":"))+"\n")
                 outputs[symbol].flush()
-        except (StreamDataError,ValueError):
+        except (StreamDataError,ValueError) as err:
+            err_code=str(err)
+            counts[symbol]["errors"]+=1
+            if err_code in _SKIP_ERRORS:
+                # Recoverable bad tick — reset sequence guard so next good
+                # tick is accepted; do NOT kill the stream or set ERROR status.
+                engines[symbol].builder.reset_sequence()
+                return
+            engines[symbol].on_disconnect()
+            write_live_status(statuses[symbol],"ERROR",f"FEED_ERROR: {err}")
+        except Exception as exc:
             counts[symbol]["errors"]+=1
             engines[symbol].on_disconnect()
-            write_live_status(statuses[symbol],"ERROR","INVALID_OR_GAPPED_FEED")
-        except Exception:
-            counts[symbol]["errors"]+=1
-            engines[symbol].on_disconnect()
-            write_live_status(statuses[symbol],"ERROR","LIVE_ANALYSIS_FAILED")
-    def on_error(_ws,_error):
+            write_live_status(statuses[symbol],"ERROR",f"LIVE_ERROR: {exc}")
+    def on_error(*args,**kwargs):
         for s in SYMBOLS:
             engines[s].on_disconnect()
             write_live_status(statuses[s],"DISCONNECTED","BROKER_WEBSOCKET_ERROR")
-    def on_close(_ws):
+    def on_close(*args,**kwargs):
         for s in SYMBOLS:
             engines[s].on_disconnect()
             write_live_status(statuses[s],"DISCONNECTED","BROKER_WEBSOCKET_CLOSED")
@@ -110,11 +170,18 @@ def main() -> int:
         for s in SYMBOLS:
             write_live_status(str(paths[s]["status"]),status,reason)
     state("AUTHENTICATION_REQUIRED","ENTER_TOTP_IN_BROKER_CONSOLE")
+    print("============================================================")
+    print(" SMC ANGEL ONE DUAL STREAM GATEWAY (READ-ONLY)")
+    print("============================================================")
+    print("[1/3] Loading instrument master...")
+    master = []
     try:
+        master = load_master(a.master_file)
         tokens={
-            "NIFTY":a.nifty_token or resolve_token(load_master(a.master_file),"NIFTY"),
-            "SENSEX":a.sensex_token or resolve_token(load_master(a.master_file),"SENSEX"),
+            "NIFTY":a.nifty_token or resolve_token(master,"NIFTY"),
+            "SENSEX":a.sensex_token or resolve_token(master,"SENSEX"),
         }
+        print(f"      Tokens resolved: NIFTY={tokens['NIFTY']}, SENSEX={tokens['SENSEX']}")
     except (HistoryError,ValueError):
         state("ERROR","BROKER_INDEX_TOKEN_UNAVAILABLE")
         print("FAILED: INDEX_TOKEN_MISSING_OR_AMBIGUOUS")
@@ -132,27 +199,28 @@ def main() -> int:
         return 1
     logged_in=False;client_id="";api=None
     try:
-        key,client_id,pin=resolve_login_fields(load_local_env(a.env_file))
-        otp=current_totp()
+        env_cfg = load_local_env(a.env_file)
+        key,client_id,pin=resolve_login_fields(env_cfg)
+        print("[2/3] Connecting to Angel One authentication...")
+        otp=current_totp(env_values=env_cfg)
         api=SmartConnect(api_key=key)
         try:session=api.generateSession(clientCode=client_id,password=pin,totp=otp)
-        except Exception:
-            raise CredentialError("BROKER_LOGIN_FAILED") from None
+        except Exception as exc:
+            raise CredentialError(f"BROKER_LOGIN_EXCEPTION: {exc}") from None
         if not isinstance(session,dict) or session.get("status") is not True:
-            raise CredentialError("BROKER_LOGIN_REJECTED")
+            msg = session.get("message") if isinstance(session, dict) else "REJECTED"
+            raise CredentialError(f"BROKER_LOGIN_REJECTED: {msg}")
         logged_in=True
         jwt=(session.get("data") or {}).get("jwtToken")
         feed=api.getfeedToken()
         if not jwt or not feed:
             raise CredentialError("MISSING_BROKER_FEED_TOKEN")
         state("AUTHENTICATED","BROKER_LOGIN_OK_NO_TICKS_YET")
+        print("\n[3/3] Broker login SUCCESSFUL! Connecting WebSocket stream...")
+        print("      Dual stream active. Do NOT close this console window.")
         ws=make_secure_websocket(jwt,key,client_id,feed)
         # Option snapshots use separately observed market-depth quotes.
         option_stop=Event()
-        try:
-            master=load_master(a.master_file)
-        except (HistoryError,ValueError,OSError):
-            master=[]
         def poll_options():
             from .app_terminal_v316 import _latest_live_event
             while not option_stop.is_set():
@@ -215,13 +283,21 @@ def main() -> int:
         state("CANCELLED","TOTP_OR_STREAM_CANCELLED")
         print("DUAL_LIVE_CANCELLED")
         return 130
-    except (CredentialError,ValueError):
-        state("ERROR","BROKER_LOGIN_OR_FEED_FAILED")
-        print("FAILED: BROKER_LOGIN_OR_FEED_FAILED")
+    except (CredentialError,ValueError) as exc:
+        state("ERROR",f"LOGIN_FAILED: {exc}")
+        print(f"FAILED: BROKER_LOGIN_OR_FEED_FAILED: {exc}")
+        try:
+            input("\n[ERROR] Login or Feed failed. Press Enter to exit this window...")
+        except Exception:
+            pass
         return 1
-    except Exception:
-        state("ERROR","BROKER_NETWORK_OR_SDK_ERROR")
-        print("FAILED: BROKER_NETWORK_OR_SDK_ERROR")
+    except Exception as exc:
+        state("ERROR",f"BROKER_ERROR: {exc}")
+        print(f"FAILED: BROKER_NETWORK_OR_SDK_ERROR: {exc}")
+        try:
+            input("\n[ERROR] Broker error occurred. Press Enter to exit this window...")
+        except Exception:
+            pass
         return 1
     finally:
         if "option_stop" in locals():

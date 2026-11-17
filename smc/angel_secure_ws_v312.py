@@ -19,6 +19,16 @@ def make_secure_websocket(auth_token: str, api_key: str, client_id: str,
         import websocket as websocket_module
 
     class SecureSmartWebSocketV2(ws_class):
+        def _on_close(self, *args, **kwargs):
+            if hasattr(self, 'on_close') and callable(self.on_close):
+                try: self.on_close(*args, **kwargs)
+                except Exception: pass
+
+        def _on_error(self, *args, **kwargs):
+            if hasattr(self, 'on_error') and callable(self.on_error):
+                try: self.on_error(*args, **kwargs)
+                except Exception: pass
+
         def connect(self):
             headers = {
                 "Authorization": self.auth_token,

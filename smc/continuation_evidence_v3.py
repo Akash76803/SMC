@@ -16,7 +16,8 @@ from .poi_liquidity_v3 import review_ob_fvg_poi
 
 
 def enrich_continuation(*, symbol: str, candles: list[Candle],
-                        observation: ContinuationObservation) -> dict:
+                        observation: ContinuationObservation,
+                        min_target_points: float | None = None) -> dict:
     if symbol not in ("NIFTY", "SENSEX"):
         raise ValueError("INVALID_RESEARCH_SYMBOL")
     if not candles or any(not c.complete for c in candles):
@@ -85,7 +86,8 @@ def enrich_continuation(*, symbol: str, candles: list[Candle],
         targets = rank_liquidity_targets(
             candles=prefix, levels=list(history.levels),
             events=list(history.liquidity_events), direction=direction,
-            entry=entry, stop=stop, symbol=symbol, as_of=at)
+            entry=entry, stop=stop, symbol=symbol, as_of=at,
+            min_target_points=min_target_points)
     ladder = targets.as_dict() if targets is not None else {
         "status": "NO_TRADE", "reason": "INVALID_STOP_REFERENCE",
         "targets": [], "expected_index_rr": None,

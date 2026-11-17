@@ -13,7 +13,7 @@ def build_setup_screen(event: dict | None, *, live_status: str = "NOT_CONNECTED"
     if not event.get("research_only") or event.get("orders_enabled") is not False:
         return _waiting("UNTRUSTED_LIVE_EVENT", live_status)
     quality = event.get("stream_quality") or {}
-    if live_status != "RECENT_BAR" or quality.get("quality_blocked", True):
+    if live_status not in ("RECENT_BAR", "SUBSCRIBING") or quality.get("quality_blocked", True):
         return _waiting("FEED_NOT_FRESH_OR_COMPLETE", live_status)
     if event.get("status") != "RESEARCH_ONLY":
         return _waiting(event.get("reason", "STRUCTURE_NOT_READY"), live_status)
@@ -63,7 +63,8 @@ def build_setup_screen(event: dict | None, *, live_status: str = "NOT_CONNECTED"
         missing.extend(("VERIFIED_PROTECTED_SWING", "VERIFIED_LIQUIDITY_TARGET",
                         "INDEX_RR_AT_LEAST_2", "LIVE_OPTION_BID_ASK_GREEKS"))
     return {
-        "market": event.get("symbol"), "status": "WAIT",
+        "market": event.get("symbol"),
+        "status": "RESEARCH_SEQUENCE_OBSERVED" if bracket_passed else "WAIT",
         "bias": direction, "instrument_side": "CE" if direction == "BULLISH" else "PE",
         "structure_kind": candidate.get("structure_kind"),
         "setup_state": step,
@@ -80,9 +81,11 @@ def build_setup_screen(event: dict | None, *, live_status: str = "NOT_CONNECTED"
             x.get("price") for x in (bracket.get("targets") or [])[:3]
         ] if bracket else [],
         "index_research_bracket_status": bracket.get("status") if bracket else "UNAVAILABLE",
+        "min_target_required": bracket.get("min_target_required") if bracket else None,
+        "atr14": bracket.get("atr14") if bracket else None,
         "provisional_stop_reference": stop_ref,
         "t1": None, "t2": None, "t3": None,
-        "index_rr": None,
+        "index_rr": bracket.get("index_rr_reference") if bracket else None,
         "option_strike": None, "option_bid": None, "option_ask": None,
         "option_delta": None, "option_iv": None,
         "option_premium_stop": None, "option_premium_target": None,
@@ -101,6 +104,7 @@ def _waiting(reason: str, live_status: str) -> dict:
         "fvg": None, "entry": None, "structural_stop": None,
         "index_research_entry": None, "index_research_stop": None,
         "index_research_targets": [], "index_research_bracket_status": "UNAVAILABLE",
+        "min_target_required": None, "atr14": None,
         "provisional_stop_reference": None, "t1": None, "t2": None,
         "t3": None, "index_rr": None, "option_strike": None,
         "option_bid": None, "option_ask": None, "option_delta": None,

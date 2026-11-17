@@ -25,14 +25,18 @@ if ($active.Count -gt 0) {
 }
 Write-Host "Launching updated SMC Dual Market dashboard (build SMC-OPTION-MOMENTUM-2026-11-16-R3)" -ForegroundColor Cyan
 
-# Recompute each index independently. Unavailable history stays UNAVAILABLE.
+# Recompute each index independently if report missing. Unavailable history stays UNAVAILABLE.
 foreach ($symbol in @("NIFTY", "SENSEX")) {
     $lower = $symbol.ToLowerInvariant()
     $raw = "data\${lower}_angel_historical_raw.csv"
     $report = "results\v316_${lower}_report.json"
     $brackets = "results\v316_${lower}_brackets.csv"
     $ict = "results\v316_${lower}_ict.csv"
-    if (Test-Path $raw) {
+    if (Test-Path $report) {
+        Write-Host "$symbol report cached: $report" -ForegroundColor Green
+    }
+    elseif (Test-Path $raw) {
+        Write-Host "Computing $symbol historical replay..." -ForegroundColor Yellow
         & $python -m smc.historical_replay_v314_cli --symbol $symbol `
            --input-csv $raw --out $report --candidates-csv $brackets --ict-csv $ict
         if ($LASTEXITCODE -ne 0) {
@@ -48,8 +52,10 @@ foreach ($symbol in @("NIFTY", "SENSEX")) {
     $events = "results\live_${lower}.jsonl"
     $tape = "results\live_${lower}_option_quotes.jsonl"
     $learn = "results\strategy_learning_${lower}.json"
-    & $python -m smc.self_learning_cli_v319 --market $symbol --events $events --option-tape $tape --out $learn
-    if ($LASTEXITCODE -ne 0) { Write-Warning "$symbol quote-based learning report unavailable" }
+    if (-not (Test-Path $learn)) {
+        & $python -m smc.self_learning_cli_v319 --market $symbol --events $events --option-tape $tape --out $learn
+        if ($LASTEXITCODE -ne 0) { Write-Warning "$symbol quote-based learning report unavailable" }
+    }
 }
 
 Write-Host "SMC dual-market terminal: http://127.0.0.1:$Port"
@@ -61,8 +67,8 @@ $argsList = @("-m","smc.app_terminal_v316","--multi","--root",$PSScriptRoot,
               "--port",$Port,"--open-browser")
 if ($Live) {
     $argsList += "--start-live"
-    if ($NiftyToken.Trim()) { $argsList += @("--nifty-token",$NiftyToken.Trim()) }
-    if ($SensexToken.Trim()) { $argsList += @("--sensex-token",$SensexToken.Trim()) }
+    $argsList += @("--nifty-token", $(if ($NiftyToken.Trim()) { $NiftyToken.Trim() } else { "99926000" }))
+    $argsList += @("--sensex-token", $(if ($SensexToken.Trim()) { $SensexToken.Trim() } else { "99919000" }))
 }
 & $python @argsList
 exit $LASTEXITCODE

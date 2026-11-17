@@ -12,7 +12,7 @@ class Validation:
     index_rr: float | None
 
 
-def validate_index_setup(setup: IndexSetup) -> Validation:
+def validate_index_setup(setup: IndexSetup, min_target_points: float | None = None) -> Validation:
     reasons = []
     if setup.symbol not in MIN_POINTS:
         reasons.append("UNKNOWN_SYMBOL")
@@ -29,6 +29,7 @@ def validate_index_setup(setup: IndexSetup) -> Validation:
     rr = reward / risk if risk > 0 else None
     if rr is None or rr < 2.0:
         reasons.append("INDEX_RR_BELOW_2")
-    if setup.symbol in MIN_POINTS and reward < MIN_POINTS[setup.symbol]:
+    min_required = min_target_points if min_target_points is not None else MIN_POINTS.get(setup.symbol, 0.0)
+    if min_required > 0 and reward < min_required:
         reasons.append("INDEX_TARGET_TOO_SMALL")
     return Validation(not reasons, tuple(reasons), rr)

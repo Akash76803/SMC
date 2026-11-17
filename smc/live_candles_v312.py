@@ -35,6 +35,30 @@ class LiveCandleBuilder:
     def _session_minute(at: datetime) -> datetime:
         return at.astimezone(IST).replace(second=0, microsecond=0)
 
+    def reset_sequence(self) -> None:
+        """Reset sequence/time guards after a disconnect.
+
+        Completed candles and quality_blocked flag are preserved so the
+        engine keeps its warmup history.  Only the per-tick monotonicity
+        counters are cleared so the first tick of the new sub-stream does
+        not trip the NONMONOTONIC guard.
+        """
+        self._last_sequence = None
+        self._last_tick_at = None
+
+    def seed_completed(self, candles: list[Candle]) -> None:
+        """Seed previously completed candles from today's session."""
+        if not candles:
+            return
+        today = datetime.now(IST).date()
+        valid = [c for c in candles if c.timestamp.astimezone(IST).date() == today]
+        if valid:
+            self.completed = list(valid)
+            self._last_tick_at = valid[-1].timestamp
+            self._last_session = today
+            if len(self.completed) >= 12 and self.gaps == 0:
+                self.quality_blocked = False
+
     def ingest(self, tick: ValidatedTick) -> Candle | None:
         if tick.symbol != self.symbol:
             raise StreamDataError("CANDLE_SYMBOL_MISMATCH")

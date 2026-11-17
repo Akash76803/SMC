@@ -11,6 +11,8 @@ from getpass import getpass
 from pathlib import Path
 
 ENV_KEYS = ("ANGEL_API_KEY", "ANGEL_CLIENT_ID", "ANGEL_MPIN")
+OPTIONAL_ENV_KEYS = ("ANGEL_TOTP_KEY",)
+ALL_ENV_KEYS = ENV_KEYS + OPTIONAL_ENV_KEYS
 SERVICE = "SMC.AngelOne.TOTP.v1"
 
 
@@ -36,7 +38,7 @@ def load_local_env(path: str | Path | None = None, *,
                 if "=" not in stripped:
                     raise CredentialError("INVALID_ENV_FILE")
                 key, value = (x.strip() for x in stripped.split("=", 1))
-                if key not in ENV_KEYS or key in parsed:
+                if key not in ALL_ENV_KEYS or key in parsed:
                     raise CredentialError("UNSUPPORTED_OR_DUPLICATE_ENV_KEY")
                 if len(value) >= 2 and value[0] == value[-1] and value[0] in "'\"":
                     value = value[1:-1]
@@ -46,8 +48,13 @@ def load_local_env(path: str | Path | None = None, *,
         except OSError:
             raise CredentialError("ENV_FILE_UNREADABLE") from None
     env = os.environ if environ is None else environ
-    return {key: str(env.get(key) or parsed.get(key) or "").strip()
-            for key in ENV_KEYS}
+    out = {key: str(env.get(key) or parsed.get(key) or "").strip()
+           for key in ENV_KEYS}
+    for opt in OPTIONAL_ENV_KEYS:
+        val = str(env.get(opt) or parsed.get(opt) or "").strip()
+        if val:
+            out[opt] = val
+    return out
 
 
 def resolve_login_fields(values: dict[str, str], *,
@@ -66,8 +73,13 @@ def resolve_login_fields(values: dict[str, str], *,
     return resolved["ANGEL_API_KEY"], resolved["ANGEL_CLIENT_ID"], resolved["ANGEL_MPIN"]
 
 
-def read_totp_seed(*, keyring_module=None) -> str | None:
+def read_totp_seed(*, env_values: dict[str, str] | None = None,
+                   keyring_module=None) -> str | None:
     """Read OS-managed seed, only when the operator installed keyring."""
+    if env_values and env_values.get("ANGEL_TOTP_KEY"):
+        return env_values["ANGEL_TOTP_KEY"].strip()
+    if keyring_module is None and os.environ.get("ANGEL_TOTP_KEY"):
+        return os.environ["ANGEL_TOTP_KEY"].strip()
     if keyring_module is None:
         try:
             import keyring as keyring_module
@@ -80,14 +92,15 @@ def read_totp_seed(*, keyring_module=None) -> str | None:
     return seed or None
 
 
-def current_totp(*, keyring_module=None, pyotp_module=None,
+def current_totp(*, env_values: dict[str, str] | None = None,
+                 keyring_module=None, pyotp_module=None,
                  prompt=getpass) -> str:
-    seed = read_totp_seed(keyring_module=keyring_module)
+    seed = read_totp_seed(env_values=env_values, keyring_module=keyring_module)
     if seed:
         try:
             if pyotp_module is None:
                 import pyotp as pyotp_module
-            code = pyotp_module.TOTP(seed).now()
+            code = pyotp_module.TOTP(seed.replace(" ", "")).now()
         except Exception:
             raise CredentialError("TOTP_GENERATION_FAILED") from None
     else:

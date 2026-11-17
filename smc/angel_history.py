@@ -45,15 +45,34 @@ def resolve_token(master:list[dict],symbol:str)->str:
     if len(found)!=1: raise HistoryError("INDEX_TOKEN_MISSING_OR_AMBIGUOUS")
     return found.pop()
 
+_MEMORY_MASTER: list[dict] | None = None
+
 def load_master(path:str|Path|None=None)->list[dict]:
+    global _MEMORY_MASTER
+    if path is None and _MEMORY_MASTER is not None:
+        return _MEMORY_MASTER
+    local_cache = Path("data/OpenAPIScripMaster.json")
     try:
-        if path is None:
-            with urlopen(MASTER_URL,timeout=25) as response: result=json.load(response)
-        else:
+        if path is not None:
             with open(path,encoding="utf-8-sig") as f: result=json.load(f)
+        elif local_cache.is_file() and local_cache.stat().st_size > 1_000_000:
+            with open(local_cache, encoding="utf-8-sig") as f: result=json.load(f)
+        else:
+            with urlopen(MASTER_URL,timeout=25) as response: data=response.read()
+            local_cache.parent.mkdir(parents=True, exist_ok=True)
+            local_cache.write_bytes(data)
+            result=json.loads(data.decode("utf-8-sig"))
     except Exception as exc:
-        raise HistoryError("MASTER_UNAVAILABLE") from None
+        if path is None and local_cache.is_file() and local_cache.stat().st_size > 1_000_000:
+            try:
+                with open(local_cache, encoding="utf-8-sig") as f: result=json.load(f)
+            except Exception:
+                raise HistoryError("MASTER_UNAVAILABLE") from None
+        else:
+            raise HistoryError("MASTER_UNAVAILABLE") from None
     if not isinstance(result,list): raise HistoryError("MASTER_INVALID")
+    if path is None:
+        _MEMORY_MASTER = result
     return result
 
 def batches(start:datetime,end:datetime,interval:str)->list[tuple[datetime,datetime]]:

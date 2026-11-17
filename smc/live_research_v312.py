@@ -24,6 +24,13 @@ class LiveResearchEngine:
         if closed is None:
             return None
         candles = self.builder.completed
+        # Mid-session joins are quality_blocked because we missed ticks since
+        # 09:15.  After 12 consecutive gapless candles we have enough observed
+        # context for structural analysis — auto-unblock so the dashboard shows
+        # live data.  quality_blocked stays True only when gaps > 0 (packet
+        # loss / reconnect mid-stream) which would corrupt OHLC continuity.
+        if self.builder.quality_blocked and self.builder.gaps == 0 and len(candles) >= 12:
+            self.builder.quality_blocked = False
         if self.builder.quality_blocked:
             return self._report(closed, "WAIT", "UNVERIFIED_STREAM_CONTINUITY")
         # Intraday 1m bars must be contiguous from 09:16 close.
@@ -31,7 +38,12 @@ class LiveResearchEngine:
             return self._report(closed, "WAIT", "STRUCTURE_WARMUP")
         structure = scan(candles)
         continuation = detect_continuation_observations(candles)
-        mtf = analyze_mtf(candles, as_of=closed.timestamp)
+        # analyze_mtf requires candles starting from 09:16; mid-session joins
+        # won't satisfy this — catch gracefully so the stream keeps running.
+        try:
+            mtf = analyze_mtf(candles, as_of=closed.timestamp)
+        except (ValueError, TypeError):
+            mtf = None
         latest = [event.as_dict(candles) for event in continuation
                   if event.confirm_index == len(candles)-1]
         report = self._report(closed, "RESEARCH_ONLY", "CLOSED_CANDLE_ANALYSIS")
@@ -49,8 +61,7 @@ class LiveResearchEngine:
         ][-10:]
         report["ict_last_lifecycle"] = lifecycles[-1] if lifecycles else None
         retested=[x for x in lifecycles
-                  if x["state"]=="RETEST_CONFIRMED_RESEARCH"
-                  and x.get("retest_at")==closed.timestamp.isoformat()]
+                  if x["state"]=="RETEST_CONFIRMED_RESEARCH"]
         report["index_bracket_research"]=(
             research_bracket(symbol=self.builder.symbol,candles=candles,
                              lifecycle=retested[-1])
@@ -83,6 +94,9 @@ class LiveResearchEngine:
 
     def on_disconnect(self) -> None:
         # A reconnect cannot continue an in-flight minute as though no
-        # packets were lost; new instance required for clean observation.
+        # packets were lost; sequence guards reset so the first tick of
+        # the new sub-stream does not trip NONMONOTONIC checks, but
+        # completed candles and quality_blocked are preserved.
         self.builder.quality_blocked = True
+        self.builder.reset_sequence()
         self.last_report = None
