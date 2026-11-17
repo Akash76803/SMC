@@ -57,8 +57,11 @@ def analyze_downloaded(*, symbol: str, candles: list, source_requests: int = 0) 
         research = build_report(symbol=symbol, candles=session,
                                 context_candles=history)
         bracket = analyze_trade_references(symbol=symbol, session=session, report=research)
+        s_high = max(c.high for c in session)
+        s_low = min(c.low for c in session)
+        dr = {"low": s_low, "high": s_high, "equilibrium": (s_high + s_low) / 2.0, "position": "EQUILIBRIUM"}
         report_days.append({"date": day, "research": research, "brackets": bracket,
-                            "ict_lifecycles": scan_ict_lifecycles(session)})
+                            "ict_lifecycles": scan_ict_lifecycles(session, dealing_range=dr, allow_counter=True)})
         counts.update(bracket["outcome_counts"])
     return {
         "schema_version": "angel-historical-research-1",
