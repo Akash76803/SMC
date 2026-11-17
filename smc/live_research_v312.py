@@ -54,12 +54,32 @@ class LiveResearchEngine:
         ]
         report["latest_continuation_observations"] = latest
         report["intraday_mtf"] = mtf
-        lifecycles = scan_ict_lifecycles(candles)
+        # Build a dealing_range from the 1h timeframe confirmed pivots so the
+        # Premium/Discount OB filter (Gwaidier Lecture 11) can be applied.
+        # Only pass it when both extremes are confirmed; otherwise leave None
+        # so the filter is skipped and backward-compat is preserved.
+        dealing_range: dict | None = None
+        if mtf is not None:
+            tf_1h = mtf.get("timeframes", {}).get("1h", {})
+            h1_high = tf_1h.get("confirmed_high")
+            h1_low  = tf_1h.get("confirmed_low")
+            if h1_high is not None and h1_low is not None and h1_high > h1_low:
+                eq = (h1_high + h1_low) / 2.0
+                position = ("PREMIUM" if candles[-1].close > eq
+                            else "DISCOUNT" if candles[-1].close < eq
+                            else "EQUILIBRIUM")
+                dealing_range = {
+                    "low": h1_low, "high": h1_high,
+                    "equilibrium": eq, "position": position,
+                    "source": "1H_CONFIRMED_PIVOTS",
+                }
+        lifecycles = scan_ict_lifecycles(candles, dealing_range=dealing_range)
         report["ict_active_lifecycles"] = [
             x for x in lifecycles
             if x["state"] in ("WAITING_FOR_RETEST", "RETEST_CONFIRMED_RESEARCH")
         ][-10:]
         report["ict_last_lifecycle"] = lifecycles[-1] if lifecycles else None
+        report["ict_dealing_range"] = dealing_range  # Premium/Discount context (Gwaidier L11)
         retested=[x for x in lifecycles
                   if x["state"]=="RETEST_CONFIRMED_RESEARCH"]
         report["index_bracket_research"]=(

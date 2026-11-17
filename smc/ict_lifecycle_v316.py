@@ -3,6 +3,11 @@
 Each closed-candle structure shift creates an independently tracked research
 setup. A shift never becomes a trade by itself; FVG / mitigation are allowed
 to occur later. State changes are evaluated only up to `as_of`.
+
+Premium/Discount filter (Gwaidier SMC Lecture #11):
+  - BULLISH setups: OB mid-point must be in DISCOUNT zone (below equilibrium)
+  - BEARISH setups: OB mid-point must be in PREMIUM zone (above equilibrium)
+  - If dealing_range is None, filter is skipped (backward compatible).
 """
 from __future__ import annotations
 from .engine import confirmed_pivots, fair_value_gaps, atr
@@ -10,13 +15,42 @@ from .advanced import find_order_blocks
 from .liquidity import liquidity_map
 from .models import Candle
 from .structure_v2 import detect_structure
+from .structure_v3 import structure_hierarchy
+
+
+def _ob_zone_label(ob_lower: float, ob_upper: float,
+                   equilibrium: float) -> str:
+    """Return PREMIUM / DISCOUNT / EQUILIBRIUM for an OB based on its midpoint."""
+    mid = (ob_lower + ob_upper) / 2.0
+    if mid > equilibrium:
+        return "PREMIUM"
+    if mid < equilibrium:
+        return "DISCOUNT"
+    return "EQUILIBRIUM"
+
+
+def _zone_aligned(direction: str, zone_label: str) -> bool:
+    """BULLISH OB should sit in DISCOUNT; BEARISH OB should sit in PREMIUM."""
+    if direction == "BULLISH":
+        return zone_label == "DISCOUNT"
+    return zone_label == "PREMIUM"
 
 
 def scan_ict_lifecycles(candles: list[Candle], *,
                         as_of: int | None = None,
                         max_sweep_lag: int = 35,
                         max_retest_bars: int = 20,
-                        min_displacement_atr: float = 0.5) -> list[dict]:
+                        min_displacement_atr: float = 0.5,
+                        dealing_range: dict | None = None) -> list[dict]:
+    """Scan ICT lifecycles with optional Premium/Discount OB zone filter.
+
+    Args:
+        dealing_range: Optional dict with keys ``equilibrium`` (float) and
+            ``position`` (str).  When supplied, each setup whose OB mid-point
+            sits on the *wrong* side of equilibrium is tagged
+            ``REJECTED_WRONG_ZONE`` and skipped from WAITING_FOR_RETEST
+            onwards.  Pass ``None`` (default) to disable the filter entirely.
+    """
     if not candles:
         raise ValueError("EMPTY_LIFECYCLE_INPUT")
     if as_of is None:
@@ -34,6 +68,7 @@ def scan_ict_lifecycles(candles: list[Candle], *,
         raise ValueError("MULTI_SESSION_LIFECYCLE_INPUT")
 
     pivots=confirmed_pivots(bars,k=2)
+    hierarchy=structure_hierarchy(bars) if len(bars)>=3 else ()
     all_b=detect_structure(bars,internal_k=2,external_k=5)
     seen={}
     for b in all_b:
@@ -70,30 +105,48 @@ def scan_ict_lifecycles(candles: list[Candle], *,
         fvg_kind="BULLISH_FVG" if bullish else "BEARISH_FVG"
         fvg=next((z for z in fvgs if z.kind==fvg_kind
                   and si<=z.created_at<=min(as_of,si+3)),None)
+        # Structural swing reference from structure_v3 (Gwaidier Lecture 11: ITH/ITL)
+        target_it = "ITL" if bullish else "ITH"
+        matching_it = [p for p in hierarchy if p.kind == target_it and p.confirmed_at <= si]
+        it_ref = max(matching_it, key=lambda p: p.confirmed_at, default=None)
+        target_st = "STL" if bullish else "STH"
+        matching_st = [p for p in hierarchy if p.kind == target_st and p.confirmed_at <= si]
+        st_ref = max(matching_st, key=lambda p: p.confirmed_at, default=None)
         state="WAITING_FOR_SWEEP"
         retest_i=None
         invalidated_i=None
+        ob_zone_label: str | None = None
+        zone_aligned: bool | None = None
         if sweep is not None:
             state="WAITING_FOR_IDM" if idm is None else "WAITING_FOR_DISPLACEMENT"
             if idm is not None and displacement:
                 state="WAITING_FOR_OB" if block is None else "WAITING_FOR_RETEST"
                 if block is not None:
-                    begin=max(si,fvg.created_at if fvg else si)+1
-                    deadline=min(as_of+1,begin+max_retest_bars)
-                    for i in range(begin,deadline):
-                        c=bars[i]
-                        if (c.close<block.lower if bullish else c.close>block.upper):
-                            state="INVALIDATED"
-                            invalidated_i=i
-                            break
-                        touched=c.low<=block.upper and c.high>=block.lower
-                        rejected=c.close>block.upper if bullish else c.close<block.lower
-                        if touched and rejected:
-                            state="RETEST_CONFIRMED_RESEARCH"
-                            retest_i=i
-                            break
-                    if state=="WAITING_FOR_RETEST" and as_of>=begin+max_retest_bars-1:
-                        state="EXPIRED"
+                    # --- Premium/Discount filter (Gwaidier Lecture 11) ---
+                    if dealing_range is not None:
+                        eq = dealing_range.get("equilibrium")
+                        if eq is not None:
+                            ob_zone_label = _ob_zone_label(block.lower, block.upper, eq)
+                            zone_aligned = _zone_aligned(shift.direction, ob_zone_label)
+                            if not zone_aligned:
+                                state = "REJECTED_WRONG_ZONE"
+                    if state == "WAITING_FOR_RETEST":
+                        begin=max(si,fvg.created_at if fvg else si)+1
+                        deadline=min(as_of+1,begin+max_retest_bars)
+                        for i in range(begin,deadline):
+                            c=bars[i]
+                            if (c.close<block.lower if bullish else c.close>block.upper):
+                                state="INVALIDATED"
+                                invalidated_i=i
+                                break
+                            touched=c.low<=block.upper and c.high>=block.lower
+                            rejected=c.close>block.upper if bullish else c.close<block.lower
+                            if touched and rejected:
+                                state="RETEST_CONFIRMED_RESEARCH"
+                                retest_i=i
+                                break
+                        if state=="WAITING_FOR_RETEST" and as_of>=begin+max_retest_bars-1:
+                            state="EXPIRED"
         rows.append({
             "setup_id": f"{bars[si].timestamp.isoformat()}:{shift.direction}",
             "shift_at":bars[si].timestamp.isoformat(),
@@ -110,6 +163,21 @@ def scan_ict_lifecycles(candles: list[Candle], *,
             "retest_at":bars[retest_i].timestamp.isoformat() if retest_i is not None else None,
             "invalidated_at":bars[invalidated_i].timestamp.isoformat()
                               if invalidated_i is not None else None,
+            "ob_zone_label":ob_zone_label,
+            "zone_filter_applied":dealing_range is not None,
+            "zone_aligned":zone_aligned,
+            "ith_itl_reference": {
+                "kind": it_ref.kind,
+                "price": it_ref.pivot.price,
+                "index": it_ref.pivot.index,
+                "confirmed_at": bars[it_ref.confirmed_at].timestamp.isoformat(),
+            } if it_ref is not None else None,
+            "structural_swing_reference": {
+                "kind": (it_ref or st_ref).kind,
+                "price": (it_ref or st_ref).pivot.price,
+                "index": (it_ref or st_ref).pivot.index,
+                "confirmed_at": bars[(it_ref or st_ref).confirmed_at].timestamp.isoformat(),
+            } if (it_ref or st_ref) is not None else None,
             "research_only":True,"order_allowed":False,
             "stop_protected_verified":False,
         })
