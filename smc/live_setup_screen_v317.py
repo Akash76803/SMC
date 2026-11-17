@@ -23,7 +23,8 @@ def _confluence_matrix(candidate, bracket):
                      and 0 < low < eq < high)
     poi = (context_valid and candidate.get('poi_category') in VALID_POIS
            and candidate.get('poi_valid') is True
-           and candidate.get('setup_type') in ('PRO_TREND', 'COUNTER_PULLBACK'))
+           and candidate.get('setup_type') in ('PRO_TREND', 'COUNTER_PULLBACK')
+           and candidate.get('target_is_directional', True) is not False)
     displacement = bool(candidate.get('sweep_at') and candidate.get('idm_at')
                         and candidate.get('structure_kind') in ('BOS', 'CHoCH')
                         and candidate.get('displacement_confirmed')

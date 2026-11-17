@@ -319,13 +319,20 @@ function render(){
    sl=isBull?Math.min(x.ob_zone[0],x.sweep_level??x.ob_zone[0]):Math.max(x.ob_zone[1],x.sweep_level??x.ob_zone[1]);
   }
   const slStr=sl!=null?sl.toFixed(1):'—';
-  const tgtStr=x.target_reference!=null?Number(x.target_reference).toFixed(1):'—';
-  const typeLabel=x.setup_type?' · <b>['+esc(x.setup_type)+']</b>':'';
+  const isDir=x.target_is_directional!==false;
+  let tgtDisplay='';
+  if(x.target_reference!=null){
+   const tgtVal=Number(x.target_reference).toFixed(1);
+   tgtDisplay=isDir?' · <span class="good">Target: '+tgtVal+'</span>':' · <span class="bad">Target: '+tgtVal+' (NON-DIR ⚠️ behind entry)</span>';
+  }
+  const typeLabel=x.setup_type?' · <b>['+esc(x.setup_type)+(isDir?'':' · WRONG SIDE OF EQ')+']</b>':'';
   const poiLabel=x.poi_category?' · <small class="muted">'+esc(x.poi_category)+'</small>':'';
   const retestStr=x.retest_at?' · Retest <b>'+esc(formatIST(x.retest_at))+'</b>':'';
-  const slTgt=x.state==='RETEST_CONFIRMED_RESEARCH'?' · <span class="bad">SL: '+slStr+'</span> · <span class="good">Target: '+tgtStr+'</span>':'';
+  const stateCls=(x.state==='RETEST_CONFIRMED_RESEARCH'&&isDir)?'good':'warn';
+  const stateTxt=(x.state==='RETEST_CONFIRMED_RESEARCH'&&!isDir)?'RETEST_OBSERVED (NON-DIR TARGET)':x.state;
+  const slTgt=x.state==='RETEST_CONFIRMED_RESEARCH'?' · <span class="bad">SL: '+slStr+'</span>'+tgtDisplay:'';
   return '<p><small>'+esc(formatISTDateTime(x.shift_at))+'</small> · '+esc(x.structure_kind)+' '+esc(x.direction)+
-   typeLabel+poiLabel+' · <b class="'+(x.state==='RETEST_CONFIRMED_RESEARCH'?'good':'warn')+'">'+esc(x.state)+'</b>'+
+   typeLabel+poiLabel+' · <b class="'+stateCls+'">'+esc(stateTxt)+'</b>'+
    ' · OB '+esc(x.ob_zone?.map(v=>Number(v).toFixed(1)).join('–')||'—')+
    slTgt+retestStr+'</p>';
  }).join('')||'<p class="muted">No confirmed structure shifts in selected session.</p>';
