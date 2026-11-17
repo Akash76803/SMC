@@ -49,6 +49,7 @@ canvas{width:100%;height:360px;display:block;border-radius:8px}table{border-coll
 .setup-layout{display:grid;grid-template-columns:minmax(0,3fr) minmax(260px,1fr);gap:24px}.setup-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px}.setup-metric{padding:12px;background:#1e293b66;border:1px solid #33415566;border-radius:8px;min-width:0}.setup-metric small{font-size:11px}.setup-metric b{display:block;font-size:15px;font-variant-numeric:tabular-nums;margin-top:4px;overflow-wrap:anywhere;font-weight:600}
 .status{font-size:16px;color:var(--amber);font-weight:600}#setupreason{font-size:12px;overflow-wrap:anywhere}#setupmetrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));align-items:start;gap:16px}.metric-group{min-width:0}.metric-group h3{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#94a3b8;border-bottom:1px solid var(--line);padding-bottom:10px}.metric-row{display:flex;align-items:baseline;justify-content:space-between;gap:10px;padding:8px 0;border-bottom:1px solid #33415540;font-size:11px}.metric-row span{color:#94a3b8}.metric-row b{font-size:12px;font-weight:500;text-align:right;font-variant-numeric:tabular-nums;overflow-wrap:anywhere;min-width:0}.metric-row.is-waiting b,.is-waiting b{color:#64748b;font-weight:400}
 .check-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px solid #33415540;font-size:12px}.check-state{font-size:10px;white-space:nowrap;border-radius:5px;padding:3px 6px}.check-state.waiting{color:#94a3b8;background:#33415555}.check-state.passed{color:#34d399;background:#10b98116}.check-state.not-met{color:#f87171;background:#ef444416}
+.smc-context{display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin:12px 0;color:#94a3b8;font-size:12px}.setup-type{display:inline-block;padding:5px 10px;border-radius:6px;border:1px solid #334155;font-size:11px;font-weight:700}.setup-type.pro{color:#34d399;border-color:#10b98166;background:#10b98115}.setup-type.counter{color:#fbbf24;border-color:#f59e0b66;background:#f59e0b15}
 #multiStrategyCards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin-top:20px}.strategy-card{padding:18px;background:linear-gradient(155deg,#1e293b88,#111827);border:1px solid var(--line);border-radius:10px;min-width:0}.strategy-heading{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:14px}.strategy-heading h3{font-size:16px;margin:0;letter-spacing:-.02em}.strategy-market{font-size:10px;color:#94a3b8;letter-spacing:.1em}.direction-pill{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:20px;font-size:11px;font-weight:700;letter-spacing:.03em}.direction-pill.bullish{background:#10b98119;color:#34d399;border:1px solid #10b98144}.direction-pill.bearish{background:#ef444419;color:#f87171;border:1px solid #ef444444}.direction-pill.neutral{background:#33415555;color:#94a3b8;border:1px solid #47556980}
 .strategy-status{font-size:10px;color:#94a3b8;margin:12px 0 5px;overflow-wrap:anywhere}.strategy-context{font-size:11px;color:#94a3b8;margin:8px 0}.strike-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:16px}.strike-box{position:relative;border:1px solid var(--line);border-radius:8px;padding:12px 10px;background:#0b0f1980;min-width:0}.strike-box.recommended{border-color:#f59e0b88;background:linear-gradient(180deg,#f59e0b0b,#0b0f1980)}.strike-kind{font-size:10px;letter-spacing:.12em;color:#94a3b8;font-weight:700}.recommendation{display:block;font-size:9px;color:#fbbf24;margin:5px 0;min-height:28px;line-height:1.4}.strike-price{display:block;font-size:clamp(15px,1.2vw,21px);font-weight:700;letter-spacing:-.035em;white-space:nowrap;margin:5px 0;color:#f1f5f9;font-variant-numeric:tabular-nums}.strike-expiry{font-size:9px;color:#94a3b8;display:block;margin-bottom:10px}
 .price-grid{display:grid;gap:7px;margin:12px 0}.price-row{display:flex;align-items:baseline;justify-content:space-between;gap:4px;font-size:10px}.price-row span{color:#94a3b8}.price-row b{font-size:12px;font-weight:600;font-variant-numeric:tabular-nums}.price-row.stop b{color:var(--red)}.price-row.target b{color:var(--green)}.price-row b.missing{color:#64748b}
@@ -76,10 +77,11 @@ canvas{width:100%;height:360px;display:block;border-radius:8px}table{border-coll
 <p id="bigAlertBody" style="font-size:21px"></p>
 <button id="dismissAlert" style="background:#f5be51;border:0;border-radius:8px;padding:12px 28px;cursor:pointer">Dismiss alert</button></div>
 <section class="panel" style="margin-bottom:15px"><h2>LIVE SMC TRADE SETUP · NIFTY / SENSEX</h2>
+<div class="smc-context"><span id="smcTradeType" class="setup-type">HTF setup classification waiting</span><span id="htfDealingRange">HTF range: —</span><span id="smcOptionPricing">Option pricing: unavailable · separate from index setup</span></div>
 <div class="setup-layout"><div><div id="setupstate" class="status">WAIT · MARKET DATA NOT VERIFIED</div>
 <p id="setupreason" class="muted">Checking source and confirmation stages…</p>
 <div class="setup-grid" id="setupmetrics"></div></div>
-<div><h2>Confirmation checklist</h2><div id="setupevidence" class="muted"></div>
+<div><h2>Gwaidier 3-Confluence Matrix</h2><div id="setupevidence" class="muted"></div>
 <p class="warn">INDEX LEVELS ≠ OPTION PREMIUM. NO BROKER ORDERS.</p></div></div></section>
 <section class="panel" style="margin-bottom:15px"><h2>LIVE INDEX CANDLES <small>tick-sampled, not certified exchange OHLC</small></h2><canvas id="liveChart"></canvas><small id="liveChartNote">No verified live candles yet.</small></section><section class="panel" style="margin-bottom:15px"><h2>ATM / ITM CE–PE OPTION QUOTES <small>Actual broker bid/ask only</small></h2><p id="optionStatus" class="warn">OPTION QUOTES UNAVAILABLE</p><h2>OPTION MOMENTUM RANKING · OTM INCLUDED</h2><p id="momentumStatus" class="muted">Broker quote history required.</p><div id="momentumRows" style="overflow-x:auto"></div><div id="optionRows" style="overflow-x:auto"></div><small>No inferred option exit prices or premium SL/TP. Greeks may be unavailable, especially SENSEX.</small></section><section class="panel" style="margin-bottom:15px">
 <h2>PREMIUM ENTRY / STOP LOSS / TARGET · PAPER ONLY</h2>
@@ -225,6 +227,12 @@ function renderSetup(live){
  '</td><td>'+esc(displayValue(c.iv))+'</td></tr>').join('')+'</tbody></table>':
  '<p class="muted">No currently verified broker option market depth.</p>';
  const m=live.setup||{}, verified=live.status==='RECENT_BAR';
+ const type=document.getElementById('smcTradeType');
+ type.textContent=m.setup_type==='PRO_TREND'?'PRO-TREND (BOS TARGET)':m.setup_type==='COUNTER_PULLBACK'?'COUNTER-PULLBACK (50% EQ TARGET)':'HTF setup classification waiting';
+ type.className='setup-type '+(m.setup_type==='PRO_TREND'?'pro':m.setup_type==='COUNTER_PULLBACK'?'counter':'');
+ const context=m.htf_context||{};
+ document.getElementById('htfDealingRange').textContent='HTF '+(context.timeframe||'—')+' · High '+displayValue(context.high)+' · Low '+displayValue(context.low)+' · 50% Eq '+displayValue(context.equilibrium)+' · '+(context.position||'Waiting');
+ document.getElementById('smcOptionPricing').textContent='Option pricing: '+(q.contracts?.length?'observed quotes':'unavailable')+' · separate from index setup';
  draw(live.sampled_live_candles||[],'liveChart');
  document.getElementById('liveChartNote').textContent=verified?
  'Tick-sampled candles. Full exchange market coverage NOT VERIFIED.':
@@ -269,12 +277,9 @@ function renderSetup(live){
   '<div class="metric-row'+(isMissing(value)?' is-waiting':'')+'"><span>'+esc(name)+'</span><b'+
   (/SL|Stop|stop/.test(name)?' class="bad"':/Target|^T[123]/.test(name)?' class="good"':'')+'>'+esc(displayValue(value))+'</b></div>').join('')+'</section>').join('');
  const missing=m.missing_evidence||['NO_VERIFIED_LIVE_CANDLE'];
- const checks=[['LIQUIDITY_SWEEP','Liquidity sweep',m.sweep_level!=null],['IDM_CORROBORATION','IDM corroboration',m.idm_level!=null],
-  ['ORDER_BLOCK','Order block',Array.isArray(m.order_block)&&m.order_block.length===2],['FVG','Fair value gap',Array.isArray(m.fvg)&&m.fvg.length===2],
-  ['MITIGATION_RETEST','Mitigation retest',m.setup_state==='RETEST_CONFIRMED_RESEARCH'],
-  ['INDEX_BRACKET','Research bracket',m.index_research_bracket_status==='RESEARCH_INDEX_BRACKET_PASSES']];
- const known=new Set(checks.map(x=>x[0]));
- missing.filter(key=>!known.has(key)).forEach(key=>checks.push([key,key.toLowerCase().replaceAll('_',' '),false]));
+ const checks=[['HTF_POI_VALIDATED','HTF Zone & POI (Decisional / Extreme / Sweep)',m.confluences?.HTF_POI_VALIDATED===true],
+  ['DISPLACEMENT_CONFIRMED','LTF Displacement (MSS + FVG / Volume Imbalance)',m.confluences?.DISPLACEMENT_CONFIRMED===true],
+  ['MITIGATION_RETEST','Mitigation Retest & Bracket',m.confluences?.MITIGATION_RETEST===true]];
  document.getElementById('setupevidence').innerHTML=checks.map(([key,label,observed])=>{
   const passed=verified&&observed&&!missing.includes(key), notMet=verified&&m.setup_state&&m.setup_state!=='UNVERIFIED'&&!passed;
   const state=passed?'passed':notMet?'not-met':'waiting', text=passed?'🟢 Passed':notMet?'🔴 Not Met':'⚪ Waiting';

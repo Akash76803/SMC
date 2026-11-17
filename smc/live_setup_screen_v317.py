@@ -6,6 +6,36 @@ option contract bid/ask MUST render WAIT / UNAVAILABLE, never fake prices.
 from __future__ import annotations
 from math import isfinite
 
+CONFLUENCES = ('HTF_POI_VALIDATED', 'DISPLACEMENT_CONFIRMED', 'MITIGATION_RETEST')
+VALID_POIS = {'IDM_SWEEP', 'DECISIONAL_OB', 'EXTREME_OB', 'BOS_SWEEP', 'CHOCH_SWEEP'}
+
+
+def _valid_zone(zone):
+    return (isinstance(zone, (list, tuple)) and len(zone) == 2
+            and all(isinstance(v, (int, float)) and isfinite(v) for v in zone)
+            and 0 < zone[0] < zone[1])
+
+
+def _confluence_matrix(candidate, bracket):
+    context = candidate.get('htf_context') or {}
+    high, low, eq = (context.get(key) for key in ('high', 'low', 'equilibrium'))
+    context_valid = (all(isinstance(v, (int, float)) and isfinite(v) for v in (high, low, eq))
+                     and 0 < low < eq < high)
+    poi = (context_valid and candidate.get('poi_category') in VALID_POIS
+           and candidate.get('poi_valid') is True
+           and candidate.get('setup_type') in ('PRO_TREND', 'COUNTER_PULLBACK'))
+    displacement = bool(candidate.get('sweep_at') and candidate.get('idm_at')
+                        and candidate.get('structure_kind') in ('BOS', 'CHoCH')
+                        and candidate.get('displacement_confirmed')
+                        and (_valid_zone(candidate.get('fvg_zone')) or
+                             _valid_zone(candidate.get('volume_imbalance_zone'))))
+    retest = bool(candidate.get('state') == 'RETEST_CONFIRMED_RESEARCH' and candidate.get('retest_at')
+                  and bracket and bracket.get('research_only') is True
+                  and bracket.get('status') == 'RESEARCH_INDEX_BRACKET_PASSES'
+                  and bracket.get('setup_id') == candidate.get('setup_id')
+                  and candidate.get('setup_id'))
+    return dict(zip(CONFLUENCES, (bool(poi), displacement, retest)))
+
 
 def build_setup_screen(event: dict | None, *, live_status: str = "NOT_CONNECTED") -> dict:
     if not isinstance(event, dict):
@@ -62,9 +92,26 @@ def build_setup_screen(event: dict | None, *, live_status: str = "NOT_CONNECTED"
     else:
         missing.extend(("VERIFIED_PROTECTED_SWING", "VERIFIED_LIQUIDITY_TARGET",
                         "INDEX_RR_AT_LEAST_2", "LIVE_OPTION_BID_ASK_GREEKS"))
+    upgraded = candidate.get('confluence_model') == 'GWAIDIER_V1'
+    matrix = _confluence_matrix(candidate, bracket) if upgraded else dict.fromkeys(CONFLUENCES, False)
+    if upgraded:
+        # Legacy event readers retain their historical keys; new engine events
+        # use index evidence alone and never require option Greeks for research.
+        missing = [key for key, passed in matrix.items() if not passed]
+    index_ready = all(matrix.values()) if upgraded else bracket_passed
     return {
         "market": event.get("symbol"),
-        "status": "RESEARCH_SEQUENCE_OBSERVED" if bracket_passed else "WAIT",
+        "status": "RESEARCH_SEQUENCE_OBSERVED" if index_ready else "WAIT",
+        "index_setup_status": "PASS" if index_ready else "WAIT",
+        "option_pricing_status": "UNAVAILABLE",
+        "confluence_model": candidate.get('confluence_model', 'LEGACY'),
+        "confluences": matrix,
+        "setup_type": candidate.get('setup_type'),
+        "poi_category": candidate.get('poi_category'),
+        "htf_context": candidate.get('htf_context'),
+        "target_reference": candidate.get('target_reference'),
+        "target_kind": candidate.get('target_kind'),
+        "volume_imbalance": candidate.get('volume_imbalance_zone'),
         "bias": direction, "instrument_side": "CE" if direction == "BULLISH" else "PE",
         "structure_kind": candidate.get("structure_kind"),
         "setup_state": step,
@@ -90,7 +137,8 @@ def build_setup_screen(event: dict | None, *, live_status: str = "NOT_CONNECTED"
         "option_delta": None, "option_iv": None,
         "option_premium_stop": None, "option_premium_target": None,
         "missing_evidence": missing, "live_status": live_status,
-        "no_trade_reason": "SETUP_AND_OPTION_QUOTES_UNVERIFIED",
+        "no_trade_reason": ("INDEX_RESEARCH_ONLY_OPTIONS_SEPARATE" if index_ready else
+                            '|'.join(missing)) if upgraded else "SETUP_AND_OPTION_QUOTES_UNVERIFIED",
         "order_eligible": False, "research_only": True,
     }
 
@@ -98,6 +146,10 @@ def build_setup_screen(event: dict | None, *, live_status: str = "NOT_CONNECTED"
 def _waiting(reason: str, live_status: str) -> dict:
     return {
         "status": "WAIT", "bias": None, "instrument_side": None,
+        "index_setup_status": "WAIT", "option_pricing_status": "UNAVAILABLE",
+        "confluence_model": "GWAIDIER_V1", "confluences": dict.fromkeys(CONFLUENCES, False),
+        "setup_type": None, "poi_category": None, "htf_context": None,
+        "target_reference": None, "target_kind": None, "volume_imbalance": None,
         "market": None, "structure_kind": None, "setup_state": "UNVERIFIED",
         "candle_at": None, "observed_index_close": None,
         "sweep_level": None, "idm_level": None, "order_block": None,

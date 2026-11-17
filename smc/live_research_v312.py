@@ -4,14 +4,79 @@ No live trading signals. Renders structural snapshots only after a causal
 1-minute candle closes and contiguous session evidence is present.
 """
 from __future__ import annotations
+from math import isfinite
 
 from .angel_stream_v312 import ValidatedTick, StreamDataError
 from .live_candles_v312 import LiveCandleBuilder
 from .phase2 import scan
 from .continuation_v3 import detect_continuation_observations
-from .market_context_v310 import analyze_mtf
+from .market_context_v310 import analyze_mtf, closed_timeframes
+from .engine import confirmed_pivots
 from .ict_lifecycle_v316 import scan_ict_lifecycles
 from .live_bracket_v318 import research_bracket
+from .models import IndexSetup, Side
+from .risk import validate_index_setup
+
+
+def _select_htf_context(mtf, spot):
+    """Prefer confirmed hourly extremes; use confirmed 15m extremes otherwise."""
+    for name in ("1h", "15m"):
+        snapshot = (mtf or {}).get("timeframes", {}).get(name, {})
+        high, low = snapshot.get("confirmed_high"), snapshot.get("confirmed_low")
+        if not all(isinstance(v, (int, float)) and isfinite(v) and v > 0 for v in (high, low)) or high <= low:
+            continue
+        eq = (high+low)/2
+        return dict(timeframe=name, high=high, low=low, equilibrium=eq,
+                    position="PREMIUM" if spot > eq else "DISCOUNT" if spot < eq else "EQUILIBRIUM",
+                    source=f"{name.upper()}_CONFIRMED_PIVOTS")
+    return None
+
+
+def _htf_context_history(candles):
+    """Resolve HTF extremes at their actual confirmation time, never earlier."""
+    frames = closed_timeframes(candles, as_of=candles[-1].timestamp)
+    pivots = {name: confirmed_pivots(frames[name], k=2) for name in ("1h", "15m")}
+    history = []
+    for bar in frames['15m']:
+        snapshots = {}
+        for name in ("1h", "15m"):
+            known = [p for p in pivots[name] if frames[name][p.confirmed_at].timestamp <= bar.timestamp]
+            high = next((p.price for p in reversed(known) if p.kind == 'HIGH'), None)
+            low = next((p.price for p in reversed(known) if p.kind == 'LOW'), None)
+            snapshots[name] = dict(confirmed_high=high, confirmed_low=low)
+        context = _select_htf_context({'timeframes': snapshots}, bar.close)
+        if context:
+            history.append({**context, 'available_at': bar.timestamp.isoformat()})
+    return history
+
+
+def _classified_bracket(symbol, candles, lifecycle):
+    """Apply classified target caps through the unchanged index risk policy."""
+    bracket = research_bracket(symbol=symbol, candles=candles, lifecycle=lifecycle)
+    if lifecycle.get('confluence_model') != 'GWAIDIER_V1':
+        return bracket
+    target, entry, stop = (lifecycle.get('target_reference'), bracket.get('entry_close_reference'), bracket.get('stop_reference'))
+    empty = {**bracket, 'status': 'NO_VERIFIED_INDEX_BRACKET', 'targets': [],
+             'target_t1': None, 'index_rr_reference': None}
+    if not lifecycle.get('poi_valid') or lifecycle.get('setup_type') not in ('PRO_TREND', 'COUNTER_PULLBACK'):
+        return {**empty, 'reason': 'HTF_POI_UNVERIFIED'}
+    if any(not isinstance(v, (int, float)) or not isfinite(v) for v in (target, entry, stop)):
+        return {**empty, 'reason': 'CLASSIFIED_TARGET_UNAVAILABLE'}
+    # A stopped/expired baseline bracket must never be revived by a target change.
+    if bracket.get('reason') in ('STRUCTURAL_STOP_BREACHED', 'RETEST_NOT_RECENT', 'INVALID_STRUCTURAL_STOP_PROXY'):
+        return empty
+    bullish = lifecycle['direction'] == 'BULLISH'
+    if not (stop < entry < target if bullish else target < entry < stop):
+        return {**empty, 'reason': 'CLASSIFIED_TARGET_WRONG_DIRECTION'}
+    result = validate_index_setup(IndexSetup(symbol, Side.CE if bullish else Side.PE,
+        entry, stop, target, True, 'SMC_RETEST_REFERENCE'),
+        min_target_points=bracket.get('min_target_required') or (50 if symbol == 'NIFTY' else 100))
+    passed = result.accepted and result.index_rr >= lifecycle.get('target_rr_min', 2)
+    return {**bracket, 'status': 'RESEARCH_INDEX_BRACKET_PASSES' if passed else 'NO_VERIFIED_INDEX_BRACKET',
+            'target_t1': target, 'targets': [{'price': target, 'kind': lifecycle['target_kind'], 'strength': 1}],
+            'index_rr_reference': result.index_rr, 'setup_id': lifecycle['setup_id'],
+            'setup_type': lifecycle['setup_type'], 'target_kind': lifecycle['target_kind'],
+            'reason': 'CLASSIFIED_INDEX_POLICY_PASSES' if passed else 'CLASSIFIED_TARGET_FAILS_EXISTING_RISK_POLICY'}
 
 
 class LiveResearchEngine:
@@ -54,37 +119,23 @@ class LiveResearchEngine:
         ]
         report["latest_continuation_observations"] = latest
         report["intraday_mtf"] = mtf
-        # Build a dealing_range from the 1h timeframe confirmed pivots so the
-        # Premium/Discount OB filter (Gwaidier Lecture 11) can be applied.
-        # Only pass it when both extremes are confirmed; otherwise leave None
-        # so the filter is skipped and backward-compat is preserved.
-        dealing_range: dict | None = None
-        if mtf is not None:
-            tf_1h = mtf.get("timeframes", {}).get("1h", {})
-            h1_high = tf_1h.get("confirmed_high")
-            h1_low  = tf_1h.get("confirmed_low")
-            if h1_high is not None and h1_low is not None and h1_high > h1_low:
-                eq = (h1_high + h1_low) / 2.0
-                position = ("PREMIUM" if candles[-1].close > eq
-                            else "DISCOUNT" if candles[-1].close < eq
-                            else "EQUILIBRIUM")
-                dealing_range = {
-                    "low": h1_low, "high": h1_high,
-                    "equilibrium": eq, "position": position,
-                    "source": "1H_CONFIRMED_PIVOTS",
-                }
-        lifecycles = scan_ict_lifecycles(candles, dealing_range=dealing_range)
+        dealing_range = _select_htf_context(mtf, candles[-1].close)
+        if dealing_range:
+            # A newly confirmed HTF pivot cannot reclassify earlier LTF shifts.
+            dealing_range['history'] = _htf_context_history(candles)
+        lifecycles = scan_ict_lifecycles(candles, dealing_range=dealing_range, allow_counter=True)
         report["ict_active_lifecycles"] = [
             x for x in lifecycles
             if x["state"] in ("WAITING_FOR_RETEST", "RETEST_CONFIRMED_RESEARCH")
         ][-10:]
         report["ict_last_lifecycle"] = lifecycles[-1] if lifecycles else None
         report["ict_dealing_range"] = dealing_range  # Premium/Discount context (Gwaidier L11)
+        report["htf_context"] = {k: v for k, v in dealing_range.items() if k != 'history'} if dealing_range else None
+        report["setup_type"] = lifecycles[-1].get('setup_type') if lifecycles else None
         retested=[x for x in lifecycles
                   if x["state"]=="RETEST_CONFIRMED_RESEARCH"]
         report["index_bracket_research"]=(
-            research_bracket(symbol=self.builder.symbol,candles=candles,
-                             lifecycle=retested[-1])
+            _classified_bracket(self.builder.symbol, candles, retested[-1])
             if retested else None)
         report["ict_order_eligible"] = False
         self.last_report = report
