@@ -151,6 +151,7 @@ let snapshot=null;
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const isMissing=value=>value==null||value===''||['UNAVAILABLE','UNVERIFIED','NONE','NULL'].includes(String(value).toUpperCase());
 const formatIST=value=>{if(isMissing(value))return '—';const date=new Date(value);return Number.isNaN(date.getTime())?'—':new Intl.DateTimeFormat('en-GB',{timeZone:'Asia/Kolkata',hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false}).format(date)+' IST'};
+const formatISTDateTime=value=>{if(isMissing(value))return '—';const date=new Date(value);return Number.isNaN(date.getTime())?'—':new Intl.DateTimeFormat('en-GB',{timeZone:'Asia/Kolkata',day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false}).format(date)+' IST'};
 function displayValue(value){
  if(isMissing(value))return '—';
  if(typeof value==='number')return Number.isFinite(value)?value.toLocaleString('en-IN',{maximumFractionDigits:2}):'—';
@@ -311,9 +312,23 @@ function render(){
  '<td>'+esc(o.index_t1_t2_t3_references?.[0]?.price??'—')+'</td>'+
  '<td>'+esc(o.paper_outcome?.exit_reason||'NO QUALIFIED BRACKET')+'</td></tr>').join('');
  document.getElementById('lifecycles').innerHTML=(session?.ict_lifecycles||[])
- .slice(-18).map(x=>'<p><small>'+esc(formatIST(x.shift_at))+'</small> · '+esc(x.structure_kind)+' '+esc(x.direction)+
- ' · <b class="'+(x.state==='RETEST_CONFIRMED_RESEARCH'?'good':'warn')+'">'+esc(x.state)+'</b> · OB '+esc(x.ob_zone?.join('–')||'—')+
- ' · Retest '+esc(formatIST(x.retest_at))+'</p>').join('')||'<p class="muted">No confirmed structure shifts in selected session.</p>';
+ .slice(-25).map(x=>{
+  const isBull=x.direction==='BULLISH';
+  let sl=null;
+  if(Array.isArray(x.ob_zone)&&x.ob_zone.length===2){
+   sl=isBull?Math.min(x.ob_zone[0],x.sweep_level??x.ob_zone[0]):Math.max(x.ob_zone[1],x.sweep_level??x.ob_zone[1]);
+  }
+  const slStr=sl!=null?sl.toFixed(1):'—';
+  const tgtStr=x.target_reference!=null?Number(x.target_reference).toFixed(1):'—';
+  const typeLabel=x.setup_type?' · <b>['+esc(x.setup_type)+']</b>':'';
+  const poiLabel=x.poi_category?' · <small class="muted">'+esc(x.poi_category)+'</small>':'';
+  const retestStr=x.retest_at?' · Retest <b>'+esc(formatIST(x.retest_at))+'</b>':'';
+  const slTgt=x.state==='RETEST_CONFIRMED_RESEARCH'?' · <span class="bad">SL: '+slStr+'</span> · <span class="good">Target: '+tgtStr+'</span>':'';
+  return '<p><small>'+esc(formatISTDateTime(x.shift_at))+'</small> · '+esc(x.structure_kind)+' '+esc(x.direction)+
+   typeLabel+poiLabel+' · <b class="'+(x.state==='RETEST_CONFIRMED_RESEARCH'?'good':'warn')+'">'+esc(x.state)+'</b>'+
+   ' · OB '+esc(x.ob_zone?.map(v=>Number(v).toFixed(1)).join('–')||'—')+
+   slTgt+retestStr+'</p>';
+ }).join('')||'<p class="muted">No confirmed structure shifts in selected session.</p>';
  draw(session?.candles||[]);
 }
 async function refresh(){
