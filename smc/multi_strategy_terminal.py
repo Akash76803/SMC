@@ -63,9 +63,22 @@ def multi_strategy_payload(root, market, *, now=None):
     """
     if market not in ('NIFTY', 'SENSEX'):
         raise ValueError('INVALID_MARKET_SYMBOL')
+    passed_now = now is not None
     now = now or datetime.now(timezone.utc)
     local = now.astimezone(IST)
     root = Path(root)
+    rows = _rows(root/f'live_{market.lower()}.jsonl')
+    if not passed_now and rows:
+        last_item = rows[-1]
+        last_str = last_item.get('timestamp') or last_item.get('last_candle_close_at')
+        if last_str:
+            try:
+                last_dt = datetime.fromisoformat(last_str)
+                if last_dt.tzinfo is not None and last_dt.astimezone(IST).date() != local.date():
+                    now = last_dt
+                    local = now.astimezone(IST)
+            except (ValueError, TypeError):
+                pass
     strategies = {key: dict(status='NEUTRAL' if key == 'oi_trap' else 'WAITING',
                             direction='NEUTRAL', signal=None, strikes={}, reason='NO_CANDLES',
                             **_timing_fields(key))
@@ -74,7 +87,6 @@ def multi_strategy_payload(root, market, *, now=None):
     strategies['oi_trap'].update(pcr=None, walls={})
     result = dict(market=market, timestamp=now.isoformat(), strategies=strategies,
                   research_only=True, orders_enabled=False)
-    rows = _rows(root/f'live_{market.lower()}.jsonl')
     candles, quality = {}, {}
     for row in rows:
         if row.get('symbol', row.get('market', market)) != market:
@@ -146,7 +158,7 @@ def multi_strategy_payload(root, market, *, now=None):
                 reason = 'NO_REJECTION'
             elif name == 'orb':
                 orb = evaluate_orb_15m(bars, symbol=market, interval_minutes=interval, quotes=[] if closed else quotes, now=evaluation_at)
-                state['range'] = {k: orb[k] for k in ('orb_high', 'orb_low', 'orb_midpoint', 'range_span')}
+                state['range'] = {k: orb.get(k) for k in ('orb_high', 'orb_low', 'orb_midpoint', 'range_span')}
                 signals, reason = orb['signals'], orb['status']
             else:
                 oi = evaluate_oi_trap(bars[-1]['close'], bars, quotes, symbol=market,

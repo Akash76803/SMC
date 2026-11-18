@@ -2,16 +2,20 @@
 
 Separate NIFTY/SENSEX 1m research files and atomic feed status.
 All broker credentials stay local; no brokerage order methods are used.
+
+Auto-backfill: on startup, any gap between today's first recorded candle
+and the current time is fetched from Angel One Historical API and injected
+into the live.jsonl file so the LiveResearchEngine always has gapless context.
 """
 from __future__ import annotations
 import argparse
 import json
 import logging
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from threading import Timer, Thread, Event
 
-from .angel_history import load_master, resolve_token, HistoryError
+from .angel_history import load_master, resolve_token, HistoryError, download_history
 from .angel_local_auth import load_local_env, resolve_login_fields, current_totp, CredentialError
 from .angel_secure_ws_v312 import make_secure_websocket
 from .angel_stream_v312 import parse_tick, StreamDataError
@@ -21,6 +25,101 @@ from .live_research_v312 import LiveResearchEngine
 from .models import Candle
 from .angel_option_live_v318 import fetch_option_snapshot, write_option_snapshot
 from .option_quote_tape_v319 import append_snapshot
+
+_SESSION_OPEN_H, _SESSION_OPEN_M = 9, 16   # first regular bar closes at 09:16
+
+
+def _backfill_missing_candles(api, live_path: Path, symbol: str, token: str) -> int:
+    """Fetch any intraday candles missing from live_path and insert them.
+
+    Returns the number of candles that were back-filled.
+    """
+    from zoneinfo import ZoneInfo
+    ist = ZoneInfo('Asia/Kolkata')
+    today = datetime.now(ist).date()
+
+    # Read all timestamps already recorded for today
+    recorded: dict[str, dict] = {}
+    if live_path.exists():
+        for raw in live_path.read_text(encoding='utf-8', errors='replace').splitlines():
+            raw = raw.strip()
+            if not raw:
+                continue
+            try:
+                ev = json.loads(raw)
+                ts = ev.get('last_candle_close_at', '')
+                if ts and str(today) in ts:
+                    recorded[ts] = ev
+            except (json.JSONDecodeError, ValueError):
+                continue
+
+    # Determine fetch window: from session open to (now - 1 min)
+    now_ist = datetime.now(ist)
+    fetch_start = datetime(today.year, today.month, today.day,
+                           _SESSION_OPEN_H - 1, _SESSION_OPEN_M, tzinfo=ist)
+    fetch_end = now_ist - timedelta(minutes=1)
+    if fetch_end <= fetch_start:
+        return 0  # Too early, nothing to fetch
+
+    try:
+        result = download_history(api, symbol=symbol, token=token,
+                                  interval='ONE_MINUTE',
+                                  start=fetch_start, end=fetch_end)
+    except Exception as exc:
+        print(f'[BACKFILL] {symbol}: history fetch failed: {exc}')
+        return 0
+
+    # Find candles missing from live.jsonl
+    missing_entries: list[tuple[str, str]] = []
+    for c in result.candles:
+        ts_ist = c.timestamp.astimezone(ist)
+        if ts_ist.hour < _SESSION_OPEN_H or (ts_ist.hour == _SESSION_OPEN_H and ts_ist.minute < _SESSION_OPEN_M):
+            continue   # skip pre-session
+        iso = ts_ist.isoformat()
+        if iso in recorded:
+            continue   # already present
+        synthetic = {
+            'symbol': symbol,
+            'last_candle_close_at': iso,
+            'last_candle_close': c.close,
+            'status': 'WAIT',
+            'reason': 'HISTORY_BACKFILL',
+            'stream_quality': {
+                'symbol': symbol, 'completed_candles': 0,
+                'gaps': 0, 'quality_blocked': True,
+                'orders_enabled': False, 'research_only': True,
+            },
+            'entry': None, 'stop': None, 'target': None,
+            'orders_enabled': False, 'research_only': True,
+            'sampled_live_candles': [{'timestamp': iso,
+                                      'open': c.open, 'high': c.high,
+                                      'low': c.low, 'close': c.close}],
+            'live_candle_source': 'ANGEL_HISTORY_BACKFILL',
+        }
+        missing_entries.append((iso, json.dumps(synthetic, separators=(',', ':'))))
+        hm = ts_ist.strftime('%H:%M')
+        print(f'[BACKFILL] {symbol} {hm}: O={c.open} H={c.high} L={c.low} C={c.close}')
+
+    if not missing_entries:
+        print(f'[BACKFILL] {symbol}: no missing candles — stream is continuous')
+        return 0
+
+    # Merge and re-write today's portion of the file in chronological order
+    live_path.parent.mkdir(parents=True, exist_ok=True)
+    existing_lines = live_path.read_text(encoding='utf-8', errors='replace').splitlines() if live_path.exists() else []
+    pre_today = [l for l in existing_lines
+                 if str(today) not in json.loads(l).get('last_candle_close_at', '')
+                 if l.strip()]
+    today_dict: dict[str, str] = {
+        json.loads(l).get('last_candle_close_at', ''): l
+        for l in existing_lines if l.strip() and str(today) in json.loads(l).get('last_candle_close_at', '')
+    }
+    for iso, line in missing_entries:
+        today_dict[iso] = line
+    sorted_today = [v for k, v in sorted(today_dict.items())]
+    live_path.write_text('\n'.join(pre_today + sorted_today) + '\n', encoding='utf-8')
+    print(f'[BACKFILL] {symbol}: {len(missing_entries)} candles back-filled ✓')
+    return len(missing_entries)
 
 
 def _load_session_candles(live_path: Path | None, max_candles: int = 360) -> list[Candle]:
@@ -216,6 +315,14 @@ def main() -> int:
         if not jwt or not feed:
             raise CredentialError("MISSING_BROKER_FEED_TOKEN")
         state("AUTHENTICATED","BROKER_LOGIN_OK_NO_TICKS_YET")
+        # ── Auto-backfill missing intraday candles before connecting WS ─────
+        print("\n[2.5/3] Auto-backfill: checking for missing candles since market open...")
+        for sym in SYMBOLS:
+            try:
+                _backfill_missing_candles(api, paths[sym]["live"], sym, tokens[sym])
+            except Exception as _bf_err:
+                print(f"[BACKFILL] {sym}: skipped ({_bf_err})")
+        # ────────────────────────────────────────────────────────────────────
         print("\n[3/3] Broker login SUCCESSFUL! Connecting WebSocket stream...")
         print("      Dual stream active. Do NOT close this console window.")
         ws=make_secure_websocket(jwt,key,client_id,feed)
