@@ -19,8 +19,8 @@ from .risk import validate_index_setup
 
 
 def _select_htf_context(mtf, spot):
-    """Prefer confirmed hourly extremes; use confirmed 15m extremes otherwise."""
-    for name in ("1h", "15m"):
+    """Prefer confirmed hourly extremes; use confirmed 15m or 5m extremes otherwise."""
+    for name in ("1h", "15m", "5m"):
         snapshot = (mtf or {}).get("timeframes", {}).get(name, {})
         high, low = snapshot.get("confirmed_high"), snapshot.get("confirmed_low")
         if not all(isinstance(v, (int, float)) and isfinite(v) and v > 0 for v in (high, low)) or high <= low:
@@ -35,12 +35,12 @@ def _select_htf_context(mtf, spot):
 def _htf_context_history(candles):
     """Resolve HTF extremes at their actual confirmation time, never earlier."""
     frames = closed_timeframes(candles, as_of=candles[-1].timestamp)
-    pivots = {name: confirmed_pivots(frames[name], k=2) for name in ("1h", "15m")}
+    pivots = {name: confirmed_pivots(frames[name], k=2) for name in ("1h", "15m", "5m")}
     history = []
-    for bar in frames['15m']:
+    for bar in frames.get('15m', []):
         snapshots = {}
-        for name in ("1h", "15m"):
-            known = [p for p in pivots[name] if frames[name][p.confirmed_at].timestamp <= bar.timestamp]
+        for name in ("1h", "15m", "5m"):
+            known = [p for p in pivots.get(name, []) if frames[name][p.confirmed_at].timestamp <= bar.timestamp]
             high = next((p.price for p in reversed(known) if p.kind == 'HIGH'), None)
             low = next((p.price for p in reversed(known) if p.kind == 'LOW'), None)
             snapshots[name] = dict(confirmed_high=high, confirmed_low=low)
@@ -88,7 +88,12 @@ class LiveResearchEngine:
         closed = self.builder.ingest(tick)
         if closed is None:
             return None
-        candles = self.builder.completed
+        # Deduplicate completed candles strictly by timestamp to prevent duplicate/unordered crashes
+        deduped = []
+        for c in sorted(self.builder.completed, key=lambda x: x.timestamp):
+            if not deduped or c.timestamp > deduped[-1].timestamp:
+                deduped.append(c)
+        candles = deduped
         # Mid-session joins are quality_blocked because we missed ticks since
         # 09:15.  After 12 consecutive gapless candles we have enough observed
         # context for structural analysis — auto-unblock so the dashboard shows
@@ -103,8 +108,6 @@ class LiveResearchEngine:
             return self._report(closed, "WAIT", "STRUCTURE_WARMUP")
         structure = scan(candles)
         continuation = detect_continuation_observations(candles)
-        # analyze_mtf requires candles starting from 09:16; mid-session joins
-        # won't satisfy this — catch gracefully so the stream keeps running.
         try:
             mtf = analyze_mtf(candles, as_of=closed.timestamp)
         except (ValueError, TypeError):

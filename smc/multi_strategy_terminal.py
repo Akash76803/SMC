@@ -1,5 +1,8 @@
 """Read-only adapters from recorded research tapes to independent strategies."""
 import json
+import logging
+from concurrent.futures import ThreadPoolExecutor
+from collections import Counter
 from bisect import bisect_right
 from datetime import datetime, timezone, time, timedelta
 from pathlib import Path
@@ -8,7 +11,18 @@ from zoneinfo import ZoneInfo
 from .strategy_snr_vwap import scan_snr_signals
 from .strategy_orb import evaluate_orb_15m
 from .strategy_oi_trap import evaluate_oi_trap
+from .strategy_candlestick import scan_candlestick_signals
 from .option_strike_engine import select_strikes
+
+from .independent_signals import build_signal
+from .smc_module_sweep import scan_smc_sweep
+from .smc_module_mss import scan_smc_mss
+from .smc_module_fvg import scan_smc_fvg
+from .smc_module_ob import scan_smc_ob
+from .smc_module_fibonacci import scan_smc_fibonacci
+from .strategy_pdh_pdl import scan_pdh_pdl
+
+log = logging.getLogger(__name__)
 
 IST = ZoneInfo('Asia/Kolkata')
 
@@ -18,10 +32,78 @@ TIMING_DEFAULTS = {
     'snr_vwap': (10, 20, 25, 'If no momentum after 25m, exit near cost to avoid theta decay.'),
     'orb': (15, 30, 40, 'Trend continuation expected; exit if price re-enters range after 40m.'),
     'oi_trap': (10, 25, 30, 'Fast short-covering spike; exit if momentum halts after 30m.'),
+    'candlestick': (5, 15, 20, 'Price action momentum scalp; exit if no expansion within 20m.'),
+    'smc_fib': (15, 30, 45, 'Fibonacci OTE pullback setup; exit if no expansion from golden zone.'),
 }
 
 
+def _parse_dt(val):
+    if isinstance(val, datetime):
+        return val.astimezone(IST) if val.tzinfo else val.replace(tzinfo=IST)
+    if isinstance(val, str):
+        try:
+            dt = datetime.fromisoformat(val)
+            return dt.astimezone(IST) if dt.tzinfo else dt.replace(tzinfo=IST)
+        except Exception:
+            return None
+    return None
+
+
+def evaluate_signal_outcome(signal, bars, closed=False):
+    """Evaluate whether an index signal reached target or hit stop-loss in subsequent candles."""
+    sig_time = _parse_dt(signal.get('timestamp'))
+    if not sig_time:
+        return {'status': 'UNKNOWN', 'label': 'PENDING', 'pnl_pts': 0.0, 'color': 'neutral'}
+
+    sign = 1 if signal.get('direction') == 'BULLISH' else -1
+    try:
+        entry = float(signal.get('entry', 0))
+        stop = float(signal.get('stop_loss', 0))
+        target = float(signal.get('target', 0))
+    except (ValueError, TypeError):
+        return {'status': 'UNKNOWN', 'label': 'PENDING', 'pnl_pts': 0.0, 'color': 'neutral'}
+
+    if not entry or not stop or not target:
+        return {'status': 'UNKNOWN', 'label': 'PENDING', 'pnl_pts': 0.0, 'color': 'neutral'}
+
+    subsequent_bars = []
+    for b in bars:
+        bt = _parse_dt(b.get('timestamp'))
+        if bt and bt > sig_time:
+            subsequent_bars.append(b)
+
+    if not subsequent_bars:
+        return {'status': 'ACTIVE', 'label': 'ACTIVE', 'exit_at': None, 'pnl_pts': 0.0, 'color': 'yellow'}
+
+    for b in subsequent_bars:
+        hit_stop = b['low'] <= stop if sign == 1 else b['high'] >= stop
+        hit_target = b['high'] >= target if sign == 1 else b['low'] <= target
+
+        if hit_stop and hit_target:
+            pnl = sign * (stop - entry)
+            return {'status': 'SL_HIT', 'label': f'SL HIT ({pnl:+.1f} pts)', 'exit_price': stop,
+                    'pnl_pts': round(pnl, 2), 'color': 'red'}
+        if hit_stop:
+            pnl = sign * (stop - entry)
+            return {'status': 'SL_HIT', 'label': f'SL HIT ({pnl:+.1f} pts)', 'exit_price': stop,
+                    'pnl_pts': round(pnl, 2), 'color': 'red'}
+        if hit_target:
+            pnl = sign * (target - entry)
+            return {'status': 'TARGET_ACHIEVED', 'label': f'TARGET HIT (+{pnl:.1f} pts)', 'exit_price': target,
+                    'pnl_pts': round(pnl, 2), 'color': 'green'}
+
+    last_b = subsequent_bars[-1]
+    curr_pts = sign * (last_b['close'] - entry)
+    if closed:
+        return {'status': 'EOD_EXIT', 'label': f'EOD ({curr_pts:+.1f} pts)', 'exit_price': last_b['close'],
+                'pnl_pts': round(curr_pts, 2), 'color': 'green' if curr_pts > 0 else 'red'}
+    return {'status': 'ACTIVE', 'label': f'ACTIVE ({curr_pts:+.1f} pts)', 'exit_price': last_b['close'],
+            'pnl_pts': round(curr_pts, 2), 'color': 'yellow'}
+
+
 def _timing_fields(strategy):
+    if strategy not in TIMING_DEFAULTS:
+        return {}
     minimum, maximum, hold, note = TIMING_DEFAULTS[strategy]
     fields = dict(expected_duration_min=minimum, expected_duration_max=maximum,
                   max_safe_holding_minutes=hold, time_stop_note=note)
@@ -79,15 +161,21 @@ def multi_strategy_payload(root, market, *, now=None):
                     local = now.astimezone(IST)
             except (ValueError, TypeError):
                 pass
+    independent = {
+        'smc_sweep': scan_smc_sweep, 'smc_mss': scan_smc_mss,
+        'smc_fvg': scan_smc_fvg, 'smc_ob': scan_smc_ob,
+        'smc_fib': scan_smc_fibonacci, 'pdh_pdl': scan_pdh_pdl,
+    }
     strategies = {key: dict(status='NEUTRAL' if key == 'oi_trap' else 'WAITING',
                             direction='NEUTRAL', signal=None, strikes={}, reason='NO_CANDLES',
                             **_timing_fields(key))
-                  for key in ('snr_vwap', 'orb', 'oi_trap')}
+                  for key in ('snr_vwap', 'orb', 'candlestick', 'oi_trap', *independent)}
     strategies['orb']['range'] = {}
     strategies['oi_trap'].update(pcr=None, walls={})
     result = dict(market=market, timestamp=now.isoformat(), strategies=strategies,
-                  research_only=True, orders_enabled=False)
-    candles, quality = {}, {}
+                  research_only=True, orders_enabled=False,
+                  signals={name: [] for name in strategies}, confluences=[])
+    candles, history, quality = {}, {}, {}
     for row in rows:
         if row.get('symbol', row.get('market', market)) != market:
             continue
@@ -99,23 +187,29 @@ def multi_strategy_payload(root, market, *, now=None):
                 if not isinstance(bar, dict) or bar.get('symbol', bar.get('market', market)) != market:
                     continue
                 at = datetime.fromisoformat(bar['timestamp'])
-                if at.tzinfo is None or at.astimezone(IST).date() != local.date():
+                if at.tzinfo is None or at > now:
                     continue
                 if not time(9, 15) < at.astimezone(IST).time() <= time(15, 30):
                     continue
-                candles[at] = {**bar, 'volume': bar.get('volume', 0)}
+                history[at] = {**bar, 'volume': bar.get('volume', 0)}
+                if at.astimezone(IST).date() == local.date():
+                    candles[at] = history[at]
             except (KeyError, TypeError, ValueError):
                 continue
     bars = [candles[t] for t in sorted(candles)]
     if not bars:
         return result
-    interval = 1
-    if len(bars) >= 2:
-        interval = int((sorted(candles)[-1]-sorted(candles)[-2]).total_seconds()/60)
-    if interval not in (1, 5):
-        for state in strategies.values():
-            state['reason'] = 'UNSUPPORTED_OR_GAPPED_INTERVAL'
-        return result
+    times = sorted(candles)
+    cadence = Counter(
+        int((right - left).total_seconds() / 60)
+        for left, right in zip(times, times[1:])
+        if (right - left).total_seconds() in (60, 300, 900)
+    )
+    interval = cadence.most_common(1)[0][0] if cadence else 1
+    prior_dates = {at.astimezone(IST).date() for at in history if at not in candles}
+    prior = max(prior_dates, default=None)
+    session_history = [history[at] for at in sorted(history)
+                       if at.astimezone(IST).date() in (prior, local.date())]
     closed = local.time() > time(15, 30)
     evaluation_at = max(candles) if closed else now
     fresh = (0 <= (now-max(candles)).total_seconds() <= 20
@@ -151,15 +245,25 @@ def multi_strategy_payload(root, market, *, now=None):
         return list(latest.values())
 
     quotes = quotes_at(evaluation_at)
-    for name, state in strategies.items():
+    def scan(name):
+        state = strategies[name]
+        trade_plans = {}
         try:
-            if name == 'snr_vwap':
+            if name in independent:
+                options = {'trade_plans': trade_plans} if name == 'pdh_pdl' else {}
+                signals = independent[name](session_history, symbol=market, now=evaluation_at,
+                                            interval_minutes=interval, **options)
+                reason = 'NO_SETUP'
+            elif name == 'snr_vwap':
                 signals = scan_snr_signals(bars, symbol=market, quotes=[] if closed else quotes, now=evaluation_at)
                 reason = 'NO_REJECTION'
             elif name == 'orb':
                 orb = evaluate_orb_15m(bars, symbol=market, interval_minutes=interval, quotes=[] if closed else quotes, now=evaluation_at)
                 state['range'] = {k: orb.get(k) for k in ('orb_high', 'orb_low', 'orb_midpoint', 'range_span')}
                 signals, reason = orb['signals'], orb['status']
+            elif name == 'candlestick':
+                signals = scan_candlestick_signals(bars, symbol=market, quotes=[] if closed else quotes, now=evaluation_at)
+                reason = 'WAITING_FOR_PATTERN'
             else:
                 oi = evaluate_oi_trap(bars[-1]['close'], bars, quotes, symbol=market,
                                       interval_minutes=interval, now=evaluation_at)
@@ -178,32 +282,90 @@ def multi_strategy_payload(root, market, *, now=None):
                 state.update(pcr=oi['pcr_oi'], activity_basis=oi['activity_basis'],
                              walls={k: oi[k] for k in ('max_call_oi_strike', 'max_put_oi_strike')})
                 signals, reason = oi['signals'], oi['status']
-            signal = signals[-1] if signals else None
-            # ORB/S&R scanners return history; never promote an old setup.
-            active = fresh and signal is not None and (name == 'oi_trap' or
-                     datetime.fromisoformat(signal['timestamp']) == max(candles))
+            signals = [signal for signal in signals
+                       if datetime.fromisoformat(signal['timestamp']).astimezone(IST).date() == local.date()]
+            if not closed:
+                signals = [signal for signal in signals if fresh and (name == 'oi_trap' or
+                           datetime.fromisoformat(signal['timestamp']) == times[-1])]
             state['reason'] = reason if fresh or closed else 'STALE_OR_BLOCKED_DATA'
-            if closed and signal is not None:
-                observed_at = datetime.fromisoformat(signal['timestamp'])
-                signal['strikes'] = select_strikes(signal['entry'], signal['direction'],
-                    signal['index_sl_pts'], signal['index_target_pts'], symbol=market,
-                    quotes=quotes_at(observed_at), now=observed_at,
-                    expiry=oi['expiry'] if name == 'oi_trap' else None)
-                state.update(status='SESSION_CLOSED_OBSERVATION', signal=signal,
-                             strikes=signal['strikes'], direction=signal['direction'],
-                             reason='HISTORICAL_RESEARCH_OBSERVATION', observed_at=signal['timestamp'])
-            elif active:
-                state.update(signal=signal, strikes=signal['strikes'], direction=signal['direction'])
-                state['status'] = ('ACTIVE_SIGNAL' if name == 'snr_vwap' else 'BREAKOUT_OBSERVED'
-                                   if name == 'orb' else 'SHORT_COVERING'
-                                   if signal['direction'] == 'BULLISH' else 'LONG_UNWINDING')
-                state['reason'] = 'RESEARCH_OBSERVATION'
+            published = []
+            cards = []
+            for raw in signals:
+                observed_at = datetime.fromisoformat(raw['timestamp'])
+                snapshot = quotes_at(observed_at) if closed else quotes
+                sign = 1 if raw['direction'] == 'BULLISH' else -1
+                if name in independent:
+                    signal = dict(raw)
+                    strikes = select_strikes(raw['entry'], raw['direction'], raw['index_sl_pts'],
+                                             raw['index_target_pts'], symbol=market,
+                                             quotes=snapshot, now=observed_at if closed else evaluation_at)
+                    signal['strikes'] = [
+                        dict(strike=row['strike'], option_type=row['side'], premium_entry=row['premium_entry'],
+                             premium_sl=row['premium_sl'], premium_target=row['premium_target'])
+                        for row in strikes.values()
+                    ]
+                else:
+                    pattern = (raw.get('pattern') or raw.get('signal_type') or raw.get('setup')
+                               or 'LEVEL_REJECTION')
+                    signal = build_signal(name.upper(), pattern, observed_at, market, sign,
+                                          raw['entry'], raw['stop_loss'], raw['target'],
+                                          15 if name == 'orb' else interval)
+                    if signal is None:
+                        continue
+                    strikes = raw['strikes']
+                    if closed:
+                        strikes = select_strikes(raw['entry'], raw['direction'], raw['index_sl_pts'],
+                                                 raw['index_target_pts'], symbol=market, quotes=snapshot,
+                                                 now=observed_at, expiry=oi['expiry'] if name == 'oi_trap' else None)
+                    for contract, row in zip(signal['strikes'], strikes.values()):
+                        contract.update({key: row[key] for key in ('premium_entry', 'premium_sl', 'premium_target')})
+                outcome = evaluate_signal_outcome(raw, bars, closed=closed)
+                signal['outcome'] = outcome
+                raw['outcome'] = outcome
+                published.append(signal)
+                timing = _timing_fields(name)
+                if timing:
+                    for row in strikes.values():
+                        row['timing'] = _timing_fields(name)['timing']
+                cards.append(dict(signal={**raw, **timing, 'strikes': strikes, 'outcome': outcome},
+                                  strikes=strikes, trade_plan=trade_plans.get(raw.get('setup_id')),
+                                  setup_id=signal['setup_id'], outcome=outcome))
+
+            if cards:
+                newest = cards[-1]
+                state.update(signal=newest['signal'], strikes=newest['strikes'],
+                             direction=newest['signal']['direction'])
+                if closed:
+                    state.update(status='SESSION_CLOSED_OBSERVATION',
+                                 reason='HISTORICAL_RESEARCH_OBSERVATION',
+                                 observed_at=newest['signal']['timestamp'])
+                else:
+                    state['status'] = ('BREAKOUT_OBSERVED' if name == 'orb' else
+                                       ('SHORT_COVERING' if state['direction'] == 'BULLISH' else 'LONG_UNWINDING')
+                                       if name == 'oi_trap' else 'ACTIVE_SIGNAL')
+                    state['reason'] = 'RESEARCH_OBSERVATION'
+                state['cards'] = cards if not closed else [newest]
             if name == 'oi_trap' and state.get('activity_basis') not in ('OI', 'UNAVAILABLE'):
-                state['reason'] += ' · '+state['activity_basis']
-            if state['signal'] is not None:
-                state['signal'].update(_timing_fields(name))
-                for strike in state['strikes'].values():
-                    strike['timing'] = _timing_fields(name)['timing']
-        except (ValueError, KeyError, TypeError, OverflowError):
+                state['reason'] += ' · ' + state['activity_basis']
+            return published if not closed else published[-1:]
+        except Exception:
+            log.exception('Research scanner failed: %s', name)
             state['reason'] = 'INVALID_OR_INCOMPLETE_DATA'
+            return []
+
+    with ThreadPoolExecutor(max_workers=len(strategies)) as executor:
+        result['signals'] = dict(zip(strategies, executor.map(scan, strategies)))
+
+    aligned = {}
+    for name, signals in result['signals'].items():
+        for signal in signals:
+            key = (datetime.fromisoformat(signal['timestamp']).astimezone(IST).isoformat(),
+                   signal['direction'])
+            aligned.setdefault(key, {}).setdefault(name, []).append(signal['setup_id'])
+    for (at, direction), engines in aligned.items():
+        if len(engines) >= 2:
+            result['confluences'].append(dict(
+                timestamp=at, direction=direction, confluence_score='HIGH',
+                engines=list(engines), setup_ids=[setup for ids in engines.values() for setup in ids],
+            ))
     return result

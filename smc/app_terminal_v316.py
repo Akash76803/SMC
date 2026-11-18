@@ -10,8 +10,11 @@ import socket
 import subprocess
 import sys
 from collections import Counter
-from datetime import datetime
+from datetime import datetime, time
+from zoneinfo import ZoneInfo
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+
+IST = ZoneInfo('Asia/Kolkata')
 from pathlib import Path
 from urllib.parse import urlparse, parse_qs
 
@@ -50,10 +53,58 @@ canvas{width:100%;height:360px;display:block;border-radius:8px}table{border-coll
 .status{font-size:16px;color:var(--amber);font-weight:600}#setupreason{font-size:12px;overflow-wrap:anywhere}#setupmetrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));align-items:start;gap:16px}.metric-group{min-width:0}.metric-group h3{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#94a3b8;border-bottom:1px solid var(--line);padding-bottom:10px}.metric-row{display:flex;align-items:baseline;justify-content:space-between;gap:10px;padding:8px 0;border-bottom:1px solid #33415540;font-size:11px}.metric-row span{color:#94a3b8}.metric-row b{font-size:12px;font-weight:500;text-align:right;font-variant-numeric:tabular-nums;overflow-wrap:anywhere;min-width:0}.metric-row.is-waiting b,.is-waiting b{color:#64748b;font-weight:400}
 .check-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px solid #33415540;font-size:12px}.check-state{font-size:10px;white-space:nowrap;border-radius:5px;padding:3px 6px}.check-state.waiting{color:#94a3b8;background:#33415555}.check-state.passed{color:#34d399;background:#10b98116}.check-state.not-met{color:#f87171;background:#ef444416}
 .smc-context{display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin:12px 0;color:#94a3b8;font-size:12px}.setup-type{display:inline-block;padding:5px 10px;border-radius:6px;border:1px solid #334155;font-size:11px;font-weight:700}.setup-type.pro{color:#34d399;border-color:#10b98166;background:#10b98115}.setup-type.counter{color:#fbbf24;border-color:#f59e0b66;background:#f59e0b15}
-#multiStrategyCards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin-top:20px}.strategy-card{padding:18px;background:linear-gradient(155deg,#1e293b88,#111827);border:1px solid var(--line);border-radius:10px;min-width:0}.strategy-heading{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:14px}.strategy-heading h3{font-size:16px;margin:0;letter-spacing:-.02em}.strategy-market{font-size:10px;color:#94a3b8;letter-spacing:.1em}.direction-pill{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:20px;font-size:11px;font-weight:700;letter-spacing:.03em}.direction-pill.bullish{background:#10b98119;color:#34d399;border:1px solid #10b98144}.direction-pill.bearish{background:#ef444419;color:#f87171;border:1px solid #ef444444}.direction-pill.neutral{background:#33415555;color:#94a3b8;border:1px solid #47556980}
-.strategy-status{font-size:10px;color:#94a3b8;margin:12px 0 5px;overflow-wrap:anywhere}.strategy-context{font-size:11px;color:#94a3b8;margin:8px 0}.strike-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:16px}.strike-box{position:relative;border:1px solid var(--line);border-radius:8px;padding:12px 10px;background:#0b0f1980;min-width:0}.strike-box.recommended{border-color:#f59e0b88;background:linear-gradient(180deg,#f59e0b0b,#0b0f1980)}.strike-kind{font-size:10px;letter-spacing:.12em;color:#94a3b8;font-weight:700}.recommendation{display:block;font-size:9px;color:#fbbf24;margin:5px 0;min-height:28px;line-height:1.4}.strike-price{display:block;font-size:clamp(15px,1.2vw,21px);font-weight:700;letter-spacing:-.035em;white-space:nowrap;margin:5px 0;color:#f1f5f9;font-variant-numeric:tabular-nums}.strike-expiry{font-size:9px;color:#94a3b8;display:block;margin-bottom:10px}
-.price-grid{display:grid;gap:7px;margin:12px 0}.price-row{display:flex;align-items:baseline;justify-content:space-between;gap:4px;font-size:10px}.price-row span{color:#94a3b8}.price-row b{font-size:12px;font-weight:600;font-variant-numeric:tabular-nums}.price-row.stop b{color:var(--red)}.price-row.target b{color:var(--green)}.price-row b.missing{color:#64748b}
-.timing-badge{padding:9px 10px;margin:12px 0 5px;border:1px solid #334155;border-radius:6px;background:#1e293b80;color:#cbd5e1;font-size:10px;font-weight:500;line-height:1.6}.time-stop-note{display:block;margin:6px 0;color:#d9a855;font-size:10px;line-height:1.6}.strike-box .timing-badge{padding:7px 5px;font-size:9px}.strike-box .time-stop-note{font-size:9px}.copy-button{width:100%;margin-top:12px;border:1px solid #475569;border-radius:6px;padding:8px 5px;background:#1e293b;color:#e2e8f0;font-size:10px;font-weight:600;min-height:36px}.copy-button.copied{background:#10b98122;border-color:var(--green);color:#34d399}.copy-fallback{width:100%;min-height:110px;margin-top:8px;background:#0b0f19;color:#cbd5e1;border:1px solid #475569;padding:8px;border-radius:6px;font:11px monospace}.empty-strikes{border:1px dashed #334155;border-radius:8px;color:#64748b;text-align:center;padding:28px 12px;font-size:12px;margin-top:16px}
+.strat-category-bar{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0 10px;padding:4px;background:#0f172a;border:1px solid #1e293b;border-radius:10px;width:fit-content}
+.strat-filter-btn{background:transparent;color:#94a3b8;border:1px solid transparent;padding:7px 14px;border-radius:7px;font-size:12px;font-weight:600;cursor:pointer;transition:all .15s ease}
+.strat-filter-btn:hover{color:#f1f5f9;background:#1e293b80}
+.strat-filter-btn.active{background:#1e293b;color:#38bdf8;border-color:#38bdf866;box-shadow:0 2px 8px rgba(56,189,248,.15)}
+#multiStrategyCards{display:grid;grid-template-columns:repeat(auto-fit,minmax(360px,1fr));gap:18px;margin-top:16px}
+.strategy-card{padding:18px 20px;background:linear-gradient(165deg,#1e293b99 0%,#0f172a 100%);border:1px solid #334155;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,.35);min-width:0;display:flex;flex-direction:column}
+.strategy-heading{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px}
+.strategy-heading h3{font-size:17px;font-weight:700;margin:0;letter-spacing:-.02em;color:#f8fafc}
+.strategy-market{font-size:11px;color:#38bdf8;background:#0284c71a;border:1px solid #0284c744;padding:2px 8px;border-radius:4px;font-weight:600;letter-spacing:.05em}
+.strategy-badges{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+.direction-pill{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:20px;font-size:11px;font-weight:700;letter-spacing:.03em}
+.direction-pill.bullish{background:#10b98119;color:#34d399;border:1px solid #10b98144}
+.direction-pill.bearish{background:#ef444419;color:#f87171;border:1px solid #ef444444}
+.direction-pill.neutral{background:#33415555;color:#94a3b8;border:1px solid #47556980}
+.confluence-pill{background:#f59e0b20;color:#fbbf24;border:1px solid #f59e0b88;box-shadow:0 0 10px #f59e0b22}
+.outcome-badge{display:inline-flex;align-items:center;gap:5px;padding:3px 8px;border-radius:6px;font-size:10px;font-weight:800;letter-spacing:.04em}
+.outcome-badge.outcome-target{background:#10b98122;color:#34d399;border:1px solid #10b98188;box-shadow:0 0 10px rgba(16,185,129,.25)}
+.outcome-badge.outcome-sl{background:#ef444422;color:#f87171;border:1px solid #ef444488;box-shadow:0 0 10px rgba(239,68,68,.25)}
+.outcome-badge.outcome-active{background:#f59e0b22;color:#fbbf24;border:1px solid #f59e0b88}
+.outcome-badge.outcome-eod{background:#38bdf822;color:#38bdf8;border:1px solid #38bdf888}
+.strategy-status{font-size:10px;color:#94a3b8;margin:6px 0;overflow-wrap:anywhere}
+.strategy-context{font-size:11px;color:#94a3b8;margin:4px 0}
+.index-summary-box{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;background:#090d16;border:1px solid #1e293b;border-radius:8px;padding:8px 10px;margin:10px 0}
+.index-summary-item{display:flex;flex-direction:column;gap:2px}
+.index-summary-item span{font-size:9px;text-transform:uppercase;color:#94a3b8;letter-spacing:.05em}
+.index-summary-item b{font-size:12px;font-weight:700;color:#f5be51;font-variant-numeric:tabular-nums}
+.index-summary-item.sl b{color:#f87171}
+.index-summary-item.tgt b{color:#34d399}
+.index-summary-item.rr b{color:#38bdf8}
+.strike-tab-bar{display:flex;gap:6px;margin:12px 0 8px;background:#080c14;padding:4px;border-radius:8px;border:1px solid #1e293b}
+.strike-tab-btn{flex:1;background:transparent;border:1px solid transparent;color:#94a3b8;padding:6px 8px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;text-align:center;transition:all .15s ease}
+.strike-tab-btn:hover{color:#f1f5f9;background:#1e293b66}
+.strike-tab-btn.active{background:#1e293b;color:#f8fafc;border-color:#475569}
+.strike-tab-btn.is-atm{color:#fbbf24}
+.strike-tab-btn.is-atm.active{background:#f59e0b18;border-color:#f59e0b88;color:#fbbf24}
+.strike-grid{display:block;margin-top:4px}
+.strike-box{display:none;position:relative;border:1px solid #334155;border-radius:10px;padding:14px;background:#080c16;box-shadow:inset 0 1px 0 rgba(255,255,255,.04)}
+.strike-box.active{display:block}
+.strike-box.recommended{border-color:#f59e0b88;background:linear-gradient(180deg,#f59e0b0d,#080c16)}
+.strike-hero-header{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:10px;border-bottom:1px solid #1e293b;padding-bottom:8px}
+.strike-price{font-size:20px;font-weight:700;color:#f8fafc;letter-spacing:-.02em}
+.strike-expiry{font-size:11px;color:#94a3b8}
+.recommendation{font-size:11px;font-weight:600;color:#fbbf24}
+.price-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:12px 0;background:#0f172a80;border:1px solid #1e293b;border-radius:8px;padding:8px 12px}
+.price-row{display:flex;flex-direction:column;gap:3px;font-size:10px}
+.price-row span{color:#94a3b8;text-transform:uppercase;font-size:9px}
+.price-row b{font-size:14px;font-weight:700;font-variant-numeric:tabular-nums}
+.price-row.entry b{color:#f8fafc}
+.price-row.stop b{color:#f87171}
+.price-row.target b{color:#34d399}
+.price-row b.missing{color:#64748b;font-size:11px}
+.timing-badge{padding:9px 10px;margin:12px 0 5px;border:1px solid #334155;border-radius:6px;background:#1e293b80;color:#cbd5e1;font-size:10px;font-weight:500;line-height:1.6}.time-stop-note{display:block;margin:6px 0;color:#d9a855;font-size:10px;line-height:1.6}.strike-box .timing-badge{padding:7px 5px;font-size:9px}.strike-box .time-stop-note{font-size:9px}.copy-button{width:100%;margin-top:12px;border:1px solid #38bdf866;border-radius:8px;padding:9px 14px;background:#0284c722;color:#38bdf8;font-size:11px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;transition:all .15s ease}.copy-button:hover{background:#0284c744;border-color:#38bdf8;color:#f0f9ff}.copy-button.copied{background:#10b98126;border-color:#10b981;color:#34d399}.copy-fallback{width:100%;min-height:110px;margin-top:8px;background:#0b0f19;color:#cbd5e1;border:1px solid #475569;padding:8px;border-radius:6px;font:11px monospace}.empty-strikes{border:1px dashed #334155;border-radius:8px;color:#64748b;text-align:center;padding:28px 12px;font-size:12px;margin-top:16px}
 @media(max-width:1250px){#multiStrategyCards{grid-template-columns:1fr}.strike-box{padding:16px}.price-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.price-row{flex-direction:column}.price-row b{font-size:17px}.strike-price{font-size:24px}.recommendation{min-height:15px}.strike-box .timing-badge{font-size:11px}.strike-box .time-stop-note{font-size:10px}.copy-button{font-size:12px}.setup-layout{grid-template-columns:1fr}}
 @media(max-width:850px){.grid{grid-template-columns:1fr}.header-inner{padding:13px 16px;gap:10px}h1{font-size:16px}main{padding:14px}.panel{padding:16px}#setupmetrics{grid-template-columns:1fr}.metric-group h3{margin-top:12px}.toolbar{gap:8px}.header-inner small{font-size:10px}}
 @media(max-width:520px){.strike-grid{grid-template-columns:1fr}.strike-box{padding:16px}.recommendation{min-height:0}.strike-price{font-size:26px}.price-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.toolbar{width:100%;justify-content:space-between}.market-tabs button{padding:8px 13px}#allowAlerts{font-size:10px;padding:8px}#marketWarning{max-width:none;width:100%}.strategy-card{padding:14px}.header-inner .eyebrow{display:none}.grid canvas{height:320px}}
@@ -67,9 +118,15 @@ canvas{width:100%;height:360px;display:block;border-radius:8px}table{border-coll
 <button id="allowAlerts" type="button">Enable desktop alerts</button><strong class="warn" id="marketWarning"></strong></div></div></header>
 <main>
 <section class="panel" style="margin-bottom:15px" aria-label="Multi-strategy research">
-<h2>MULTI-STRATEGY SIGNALS · S&R + VWAP / ORB / OI TRAP</h2>
+<h2>MULTI-STRATEGY SIGNALS</h2>
 <p class="muted">Research observations · Fixed-delta premium estimates · Manual mobile execution only</p>
 <small class="muted">Timing windows are configured research heuristics, not measured statistics or guaranteed safe holding limits. Minutes are measured from manual entry.</small>
+<div class="strat-category-bar" role="tablist" aria-label="Strategy Category Filter">
+<button type="button" class="strat-filter-btn active" data-cat="ALL">All Strategies (10)</button>
+<button type="button" class="strat-filter-btn" data-cat="SMC">SMC Institutional (5)</button>
+<button type="button" class="strat-filter-btn" data-cat="PA">Price Action & Candlesticks (2)</button>
+<button type="button" class="strat-filter-btn" data-cat="MOM">Momentum & Flow (3)</button>
+</div>
 <div id="multiStrategyCards" class="setup-grid" aria-live="polite">Checking recorded data…</div>
 </section>
 <div id="bigAlert" role="alert" aria-live="assertive" style="display:none;position:fixed;left:3%;right:3%;top:9%;z-index:1000;background:#193750;border:3px solid #f5be51;border-radius:16px;box-shadow:0 10px 60px #000; padding:25px">
@@ -295,11 +352,11 @@ function render(){
  document.getElementById('cards').innerHTML=[
  ['Historical sessions',snapshot.sessions.length],['Observations',snapshot.observation_count],
  ['ICT complete',snapshot.ict_complete],['Paper brackets',snapshot.index_brackets],['Lifecycle retests',snapshot.retest_confirmed],
- ['Live state',live.status||'NOT_CONNECTED']
+ ['Live state',live.status==='MARKET_CLOSED'?'MARKET_CLOSED (Review)':live.status||'NOT_CONNECTED']
  ].map(x=>'<div class="card">'+esc(x[0])+'<strong>'+esc(x[1])+'</strong></div>').join('');
  document.getElementById('marketWarning').textContent=snapshot.historical_available===false?'AUDITED HISTORY UNAVAILABLE FOR '+snapshot.symbol:'';
  document.getElementById('quality').textContent='Source audit: '+snapshot.excluded_count+' excluded • '+snapshot.quarantined_count+' quarantined extra bars';
- document.getElementById('live').innerHTML='<p>Status: <b class="'+(live.status==='RECENT_BAR'?'good':'warn')+'">'+esc(live.status)+'</b></p>'+
+ document.getElementById('live').innerHTML='<p>Status: <b class="'+(live.status==='RECENT_BAR'||live.status==='MARKET_CLOSED'?'good':'warn')+'">'+esc(live.status)+'</b></p>'+
  '<p>Last closed candle: '+esc(formatIST(live.last_candle_close_at))+'</p>'+
  '<p>Index close: '+esc(live.last_candle_close??'—')+'</p>'+
  '<p>Reason: '+esc(live.reason||'No verified stream yet')+'</p>';
@@ -374,6 +431,23 @@ function appendStrategyTiming(parent,timing){
  note.textContent='⚠️ Time-SL: '+timing.advice;
  parent.append(badge,note);
 }
+let currentStratCat='ALL';
+const strategyTitles={
+ snr_vwap:'S&R + VWAP',orb:'15m ORB',candlestick:'Candlestick Price Action',oi_trap:'OI Trap',
+ smc_sweep:'Liquidity Sweep',smc_mss:'Market Structure Shift',smc_fvg:'Fair Value Gap',
+ smc_ob:'Order Block Retest',smc_fib:'Fibonacci OTE Golden Pocket',pdh_pdl:'Previous Day High / Low'
+};
+const strategyCategories={
+ smc_sweep:'SMC',smc_mss:'SMC',smc_fvg:'SMC',smc_ob:'SMC',smc_fib:'SMC',
+ candlestick:'PA',pdh_pdl:'PA',
+ snr_vwap:'MOM',orb:'MOM',oi_trap:'MOM'
+};
+document.querySelectorAll('.strat-filter-btn').forEach(btn=>{
+ btn.onclick=()=>{
+  document.querySelectorAll('.strat-filter-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');currentStratCat=btn.dataset.cat;pollMultiStrategies();
+ };
+});
 async function pollMultiStrategies(){
  if(multiBusy)return;
  multiBusy=true;const desired=market.value, container=document.getElementById('multiStrategyCards');
@@ -382,33 +456,106 @@ async function pollMultiStrategies(){
   if(!response.ok)throw new Error('Data unavailable');
   const data=await response.json();if(market.value!==desired)return;
   container.replaceChildren();
-  for(const [key,title] of [['snr_vwap','S&R + VWAP'],['orb','15m ORB'],['oi_trap','OI Trap']]){
-   const state=data.strategies[key], card=document.createElement('article');card.className='strategy-card';
+  const confluenceIds=new Set((data.confluences||[]).flatMap(group=>group.setup_ids));
+  const cards=Object.entries(data.strategies).flatMap(([key,state])=>
+   (state.cards?.length?state.cards:[state]).map(setup=>({key,state,setup})));
+  for(const {key,state,setup} of cards){
+   if(currentStratCat!=='ALL'&&strategyCategories[key]!==currentStratCat)continue;
+   const card=document.createElement('article');card.className='strategy-card';
+   const title=strategyTitles[key]||key.replaceAll('_',' ');
+   const {signal:sig,strikes}=setup;
+   const dir=sig?.direction||state.direction;
+
    const headingWrap=document.createElement('div');headingWrap.className='strategy-heading';
    const heading=document.createElement('h3');heading.textContent=title;
    const marketName=document.createElement('span');marketName.className='strategy-market';marketName.textContent=desired;
    headingWrap.append(heading,marketName);card.append(headingWrap);
+
+   const badgeWrap=document.createElement('div');badgeWrap.className='strategy-badges';
    const bias=document.createElement('span');
-   bias.textContent=state.direction==='BULLISH'?'🟢 BULLISH (CE)':state.direction==='BEARISH'?'🔴 BEARISH (PE)':'⚪ NEUTRAL / Waiting';
-   bias.className='direction-pill '+(state.direction==='BULLISH'?'bullish':state.direction==='BEARISH'?'bearish':'neutral');card.append(bias);
-   const status=document.createElement('p');status.className='strategy-status';status.textContent=state.status.replaceAll('_',' ')+' · '+state.reason.replaceAll('_',' ');card.append(status);
-   if(state.signal?.timestamp){const observed=document.createElement('p');observed.className='strategy-context';observed.textContent='Observed '+formatIST(state.signal.timestamp);card.append(observed)}
+   bias.textContent=dir==='BULLISH'?'🟢 BULLISH (CE)':dir==='BEARISH'?'🔴 BEARISH (PE)':'⚪ NEUTRAL / Waiting';
+   bias.className='direction-pill '+(dir==='BULLISH'?'bullish':dir==='BEARISH'?'bearish':'neutral');badgeWrap.append(bias);
+   if(confluenceIds.has(setup.setup_id)){
+    const badge=document.createElement('span');badge.className='direction-pill confluence-pill';
+    badge.textContent='High confluence';badgeWrap.append(badge);
+   }
+   const out=sig?.outcome||setup.outcome;
+   if(out&&out.status!=='UNKNOWN'&&out.status!=='PENDING'){
+    const outBadge=document.createElement('span');
+    const isTgt=out.status==='TARGET_ACHIEVED';
+    const isSl=out.status==='SL_HIT';
+    const isEod=out.status==='EOD_EXIT';
+    outBadge.className='outcome-badge '+(isTgt?'outcome-target':isSl?'outcome-sl':isEod?'outcome-eod':'outcome-active');
+    outBadge.textContent=(isTgt?'🎯 ':isSl?'🛑 ':isEod?'🏁 ':'⚡ ')+out.label;
+    badgeWrap.append(outBadge);
+   }
+   card.append(badgeWrap);
+
+   const status=document.createElement('p');status.className='strategy-status';
+   status.textContent=state.status.replaceAll('_',' ')+' · '+state.reason.replaceAll('_',' ');
+   card.append(status);
+
+   if(sig?.timestamp){
+    const observed=document.createElement('p');observed.className='strategy-context';observed.textContent=[sig.pattern_or_trigger||sig.pattern||sig.signal_type||sig.setup,
+      'Observed '+formatIST(sig.timestamp)].filter(Boolean).join(' · ').replaceAll('_',' ');card.append(observed);
+    if(sig?.entry!=null){
+      const idxBox=document.createElement('div');idxBox.className='index-summary-box';
+      const rrVal=sig.risk_reward!=null?sig.risk_reward:'2.0';
+      idxBox.innerHTML='<div class="index-summary-item"><span>Entry</span><b>'+displayValue(sig.entry)+'</b></div>'+
+       '<div class="index-summary-item sl"><span>Stop Loss</span><b>'+displayValue(sig.stop_loss)+'</b></div>'+
+       '<div class="index-summary-item tgt"><span>Target</span><b>'+displayValue(sig.target)+'</b></div>'+
+       '<div class="index-summary-item rr"><span>R:R</span><b>1:'+displayValue(rrVal)+'</b></div>';
+      card.append(idxBox);
+      const idxLvl=document.createElement('p');idxLvl.className='strategy-context';
+      idxLvl.style.display='none';
+      idxLvl.textContent='Index: Entry '+displayValue(sig.entry)+' · SL '+displayValue(sig.stop_loss)+' · Target '+displayValue(sig.target)+' · R:R 1:'+displayValue(sig.risk_reward);
+      card.append(idxLvl);
+    }
+    if(setup.trade_plan){
+      const plan=setup.trade_plan;
+      const levels=document.createElement('p');levels.className='strategy-context';
+      levels.textContent='Target 2 '+displayValue(plan.target_2)+' · ATR (10, 2) trailing stop '+displayValue(plan.trailing_stop);
+      card.append(levels);
+    }
+   }
    appendStrategyTiming(card,state.timing);
    if(key==='orb'){const p=document.createElement('p');p.className='strategy-context';p.textContent='Range: '+displayValue(state.range.orb_low)+' / '+displayValue(state.range.orb_high);card.append(p)}
    if(key==='oi_trap'){const p=document.createElement('p');p.className='strategy-context';p.textContent='PCR: '+displayValue(state.pcr)+' · Call wall: '+displayValue(state.walls.max_call_oi_strike)+' · Put wall: '+displayValue(state.walls.max_put_oi_strike);card.append(p)}
+
    const strikeGrid=document.createElement('div');strikeGrid.className='strike-grid';
+   const tabGroup=document.createElement('div');tabGroup.className='strike-tab-bar';
+   const kinds=['ITM','ATM','OTM'].filter(k=>strikes[k]);
+   const defaultKind=strikes['ATM']?'ATM':(kinds[0]||null);
+
    for(const kind of ['ITM','ATM','OTM']){
-    const strike=state.strikes[kind];if(!strike)continue;
-    const box=document.createElement('div');box.className='strike-box'+(kind==='ATM'?' recommended':'');
-    const kindLabel=document.createElement('span');kindLabel.className='strike-kind';kindLabel.textContent=kind;box.append(kindLabel);
-    const recommendation=document.createElement('span');recommendation.className='recommendation';recommendation.textContent=kind==='ATM'?'⭐ Recommended Momentum':'\u00a0';box.append(recommendation);
-    const contract=document.createElement('b');contract.className='strike-price';contract.textContent=displayValue(strike.strike)+' '+strike.side;box.append(contract);
-    const expiry=document.createElement('small');expiry.className='strike-expiry';expiry.textContent='Expiry '+displayValue(strike.expiry);box.append(expiry);
+    const strike=strikes[kind];if(!strike)continue;
+    const isDef=kind===defaultKind;
+
+    const tabBtn=document.createElement('button');tabBtn.type='button';
+    tabBtn.className='strike-tab-btn'+(kind==='ATM'?' is-atm':'')+(isDef?' active':'');
+    tabBtn.textContent=(kind==='ATM'?'⭐ ATM ':kind+' ')+displayValue(strike.strike)+(kind==='ATM'?' (Rec)':'');
+    tabGroup.append(tabBtn);
+
+    const box=document.createElement('div');box.className='strike-box'+(kind==='ATM'?' recommended':'')+(isDef?' active':'');
+    const heroHdr=document.createElement('div');heroHdr.className='strike-hero-header';
+    const heroTitle=document.createElement('div');heroTitle.style.display='flex';heroTitle.style.alignItems='baseline';heroTitle.style.gap='8px';
+    const contract=document.createElement('b');contract.className='strike-price';contract.textContent=displayValue(strike.strike)+' '+strike.side;
+    const kindLabel=document.createElement('span');kindLabel.className='strike-kind';kindLabel.textContent=kind;
+    const expiry=document.createElement('small');expiry.className='strike-expiry';expiry.textContent='Expiry '+displayValue(strike.expiry);
+    heroTitle.append(contract,kindLabel,expiry);
+    const recommendation=document.createElement('span');recommendation.className='recommendation';
+    recommendation.textContent=kind==='ATM'?'⭐ Recommended Momentum':'\u00a0';
+    heroHdr.append(heroTitle,recommendation);box.append(heroHdr);
+
     const prices=document.createElement('div');prices.className='price-grid';
     for(const [label,value,cls] of [['Entry',strike.premium_entry,'entry'],['SL',strike.premium_sl,'stop'],['Target',strike.premium_target,'target']]){
      const row=document.createElement('div');row.className='price-row '+cls;
      const name=document.createElement('span');name.textContent=label;
-     const amount=document.createElement('b');amount.textContent=value==null?'—':'₹'+Number(value).toFixed(2);
+     const amount=document.createElement('b');
+     if(value!=null){amount.textContent='₹'+Number(value).toFixed(2);}
+     else if(label==='SL'&&strike.premium_sl_pts!=null){amount.textContent='-'+strike.premium_sl_pts+' pts';}
+     else if(label==='Target'&&strike.premium_target_pts!=null){amount.textContent='+'+strike.premium_target_pts+' pts';}
+     else{amount.textContent='— (Quote pending)';}
      if(value==null)amount.className='missing';row.append(name,amount);prices.append(row);
     }
     box.append(prices);
@@ -419,13 +566,21 @@ async function pollMultiStrategies(){
       ' | Premium Entry ₹'+price(strike.premium_entry)+' | SL ₹'+price(strike.premium_sl)+' | Target ₹'+price(strike.premium_target)+
       (timing?' | Target Expected: '+timing.expected_duration+' | Max Safe Hold: '+timing.max_hold+' | Time-SL: '+timing.advice:'')+
       ' | DELTA ESTIMATE · RESEARCH ONLY | Timing: configured research heuristic, measured from manual entry';
-    const copy=document.createElement('button');copy.type='button';copy.className='copy-button';copy.textContent='📋 Copy for Angel One';copy.setAttribute('aria-label','Copy '+desired+' '+kind+' strike and premium estimates');
+    const copy=document.createElement('button');copy.type='button';copy.className='copy-button';copy.textContent='📋 Copy for Angel One ('+kind+' '+displayValue(strike.strike)+')';copy.setAttribute('aria-label','Copy '+desired+' '+kind+' strike and premium estimates');
     copy.onclick=async()=>{
      try{await navigator.clipboard.writeText(text);copy.textContent='Copied! ✓';copy.classList.add('copied')}
      catch(e){let fallback=box.querySelector('textarea');if(!fallback){fallback=document.createElement('textarea');fallback.className='copy-fallback';fallback.readOnly=true;fallback.value=text;fallback.setAttribute('aria-label','Strike recommendation text to copy');box.append(fallback)}fallback.focus();fallback.select();copy.textContent='Select text to copy'}
     };
     box.append(copy);strikeGrid.append(box);
+
+    tabBtn.onclick=()=>{
+     tabGroup.querySelectorAll('.strike-tab-btn').forEach(b=>b.classList.remove('active'));
+     tabBtn.classList.add('active');
+     strikeGrid.querySelectorAll('.strike-box').forEach(b=>b.classList.remove('active'));
+     box.classList.add('active');
+    };
    }
+   if(kinds.length>1){card.append(tabGroup)}
    if(strikeGrid.childElementCount){card.append(strikeGrid)}else{const waiting=document.createElement('div');waiting.className='empty-strikes';waiting.textContent='Waiting for a confirmed setup';card.append(waiting)}
    container.append(card);
   }
@@ -491,9 +646,19 @@ def _feed_status(live_path: str | Path | None,
                 live = _tail_live(Path(live_path) if live_path else None)
                 if live.get("status") in ("RECENT_BAR", "WAIT") and live.get("last_candle_close_at"):
                     return live
+            if state_name in ("STREAM_STOPPED", "SESSION_CLOSED", "DISCONNECTED"):
+                now_ist = datetime.now().astimezone(IST)
+                if now_ist.time() >= time(15, 30) or now_ist.time() < time(9, 0) or now_ist.weekday() >= 5:
+                    live = _tail_live(Path(live_path) if live_path else None)
+                    return {
+                        "status": "MARKET_CLOSED",
+                        "reason": "SESSION_CLOSED_HISTORICAL_REVIEW",
+                        "last_candle_close_at": live.get("last_candle_close_at"),
+                        "last_candle_close": live.get("last_candle_close")
+                    }
             if state_name in ("AUTHENTICATION_REQUIRED", "AUTHENTICATED",
-                              "SUBSCRIBING", "STREAM_STOPPED", "DISCONNECTED",
-                              "CANCELLED", "ERROR"):
+                              "SUBSCRIBING", "STREAM_STOPPED", "SESSION_CLOSED",
+                              "DISCONNECTED", "CANCELLED", "ERROR"):
                 return {"status": state_name, "reason": state.get("reason", "")}
         except (OSError, ValueError, TypeError, KeyError):
             pass
@@ -672,10 +837,14 @@ def make_handler(csv_path: str, report_path: str, live_path: str | None,
                 return
             if multi_root is not None:
                 live_files = market_paths(multi_root, selected)
-                live_file = live_files["live"] if selected in live_symbols else None
-                status_file = live_files["status"] if selected in live_symbols else None
+                has_feed = selected in live_symbols or live_files["live"].exists()
+                live_file = live_files["live"] if has_feed else None
+                status_file = live_files["status"] if (selected in live_symbols or live_files["status"].exists()) else None
+                options_file = live_files["options"] if (selected in live_symbols or live_files["options"].exists()) else None
+                tape_file = live_files["option_tape"] if (selected in live_symbols or live_files["option_tape"].exists()) else None
             else:
                 live_file, status_file = live_path, status_path
+                options_file, tape_file = None, None
             if path == "/":
                 payload, mime, status = HTML.encode(), "text/html; charset=utf-8", 200
             elif path == "/api/version":
@@ -689,12 +858,9 @@ def make_handler(csv_path: str, report_path: str, live_path: str | None,
                     chosen = unavailable_snapshot(selected, "HISTORY_NOT_LOADED")
                 payload = json.dumps(
                     {**chosen, "live": live_screen_payload(
-                        live_file,status_file,
-                        live_files["options"] if multi_root is not None
-                        and selected in live_symbols else None,
+                        live_file, status_file, options_file,
                         symbol=selected,
-                        tape_path=(live_files["option_tape"] if multi_root is not None
-                                   and selected in live_symbols else None),
+                        tape_path=tape_file,
                         learning_path=(live_files["learning"] if multi_root is not None
                                        else None))},
                     allow_nan=False).encode()
@@ -706,12 +872,9 @@ def make_handler(csv_path: str, report_path: str, live_path: str | None,
                 status, mime = 200, "application/json"
             elif path == "/api/live":
                 payload = json.dumps(live_screen_payload(
-                    live_file,status_file,
-                    live_files["options"] if multi_root is not None
-                    and selected in live_symbols else None,
+                    live_file, status_file, options_file,
                     symbol=selected,
-                    tape_path=(live_files["option_tape"] if multi_root is not None
-                               and selected in live_symbols else None),
+                    tape_path=tape_file,
                     learning_path=(live_files["learning"] if multi_root is not None
                                    else None))).encode()
                 status, mime = 200, "application/json"

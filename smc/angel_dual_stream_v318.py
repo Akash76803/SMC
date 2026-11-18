@@ -53,13 +53,12 @@ def _backfill_missing_candles(api, live_path: Path, symbol: str, token: str) -> 
             except (json.JSONDecodeError, ValueError):
                 continue
 
-    # Determine fetch window: from session open to (now - 1 min)
+    # Determine fetch window: from session open (09:15) to current minute (minute-aligned)
     now_ist = datetime.now(ist)
-    fetch_start = datetime(today.year, today.month, today.day,
-                           _SESSION_OPEN_H - 1, _SESSION_OPEN_M, tzinfo=ist)
-    fetch_end = now_ist - timedelta(minutes=1)
+    fetch_start = datetime(today.year, today.month, today.day, 9, 15, tzinfo=ist)
+    fetch_end = datetime(today.year, today.month, today.day, now_ist.hour, now_ist.minute, tzinfo=ist)
     if fetch_end <= fetch_start:
-        return 0  # Too early, nothing to fetch
+        return 0  # Market not yet open or too early
 
     try:
         result = download_history(api, symbol=symbol, token=token,
@@ -198,7 +197,7 @@ def run_dual_stream(*, ws, tokens: dict[str,str], outputs: dict,
         "STALE_WS_TICK", "FUTURE_WS_TICK", "TICK_OUTSIDE_REGULAR_SESSION",
         "UNSUPPORTED_WS_MODE", "WS_WRONG_EXCHANGE", "WS_WRONG_TOKEN",
         "INVALID_WS_PACKET", "INVALID_WS_TICK_FIELDS", "INVALID_WS_PRICE",
-        "CANDLE_SYMBOL_MISMATCH",
+        "CANDLE_SYMBOL_MISMATCH", "candles must be ordered",
     })
     def on_data(_ws,packet):
         if stopped or not isinstance(packet,dict):return
@@ -317,8 +316,10 @@ def main() -> int:
         state("AUTHENTICATED","BROKER_LOGIN_OK_NO_TICKS_YET")
         # ── Auto-backfill missing intraday candles before connecting WS ─────
         print("\n[2.5/3] Auto-backfill: checking for missing candles since market open...")
-        for sym in SYMBOLS:
+        for i, sym in enumerate(SYMBOLS):
             try:
+                if i > 0:
+                    import time; time.sleep(1.0)
                 _backfill_missing_candles(api, paths[sym]["live"], sym, tokens[sym])
             except Exception as _bf_err:
                 print(f"[BACKFILL] {sym}: skipped ({_bf_err})")
@@ -359,13 +360,50 @@ def main() -> int:
             paths[s]["live"].parent.mkdir(parents=True,exist_ok=True)
         with paths["NIFTY"]["live"].open("a",encoding="utf-8") as n, \
              paths["SENSEX"]["live"].open("a",encoding="utf-8") as b:
-            totals=run_dual_stream(
-                ws=ws,tokens=tokens,outputs={"NIFTY":n,"SENSEX":b},
-                statuses={s:str(paths[s]["status"]) for s in SYMBOLS},
-                max_seconds=a.seconds)
+            elapsed = 0
+            start_stream = datetime.now(timezone.utc)
+            retry_count = 0
+            while not option_stop.is_set() and elapsed < a.seconds:
+                now_ist = datetime.now(timezone.utc).astimezone(IST)
+                if now_ist.time() >= time(15, 30) and now_ist.time() < time(18, 0):
+                    print("[DUAL_STREAM] Market hours ended (15:30 IST). Completing session.")
+                    break
+                try:
+                    remaining = max(10, int(a.seconds - elapsed))
+                    totals = run_dual_stream(
+                        ws=ws, tokens=tokens, outputs={"NIFTY": n, "SENSEX": b},
+                        statuses={s: str(paths[s]["status"]) for s in SYMBOLS},
+                        max_seconds=remaining)
+                except Exception as stream_err:
+                    print(f"[DUAL_STREAM] Stream exception: {stream_err}")
+
+                elapsed = (datetime.now(timezone.utc) - start_stream).total_seconds()
+                now_ist = datetime.now(timezone.utc).astimezone(IST)
+                if now_ist.time() >= time(15, 30) and now_ist.time() < time(18, 0):
+                    break
+                if elapsed >= a.seconds:
+                    break
+
+                # Automatic reconnect loop during active market hours
+                retry_count += 1
+                if retry_count > 10:
+                    print("[DUAL_STREAM] Exceeded maximum reconnect attempts.")
+                    break
+                print(f"[DUAL_STREAM] Reconnecting WebSocket in 3 seconds (attempt {retry_count}/10)...")
+                state("RECONNECTING", f"RECONNECT_ATTEMPT_{retry_count}")
+                import time as _t; _t.sleep(3.0)
+                try:
+                    ws = make_secure_websocket(jwt, key, client_id, feed)
+                except Exception as ws_err:
+                    print(f"[DUAL_STREAM] WebSocket recreate failed: {ws_err}")
+
         option_stop.set()
         poller.join(timeout=3)
-        state("STREAM_STOPPED","DUAL_STREAM_SESSION_ENDED")
+        now_ist = datetime.now(timezone.utc).astimezone(IST)
+        if now_ist.time() >= time(15, 30):
+            state("SESSION_CLOSED", "MARKET_HOURS_ENDED_330PM")
+        else:
+            state("STREAM_STOPPED", "DUAL_STREAM_SESSION_ENDED")
         # Re-evaluate research only after the observed quote tape is closed
         # or the stream session has finished. Uses the previous day records;
         # no live strategy changes, broker orders or account mutations.

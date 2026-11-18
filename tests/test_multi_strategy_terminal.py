@@ -62,7 +62,10 @@ def test_get_endpoint_missing_files_returns_safe_json(server, market):
     assert data['timestamp']
     assert data['research_only'] is True
     assert data['orders_enabled'] is False
-    assert set(data['strategies']) == {'snr_vwap', 'orb', 'oi_trap'}
+    assert set(data['strategies']) == {
+        'snr_vwap', 'orb', 'candlestick', 'oi_trap', 'smc_sweep', 'smc_mss',
+        'smc_fvg', 'smc_ob', 'smc_fib', 'pdh_pdl',
+    }
     for state in data['strategies'].values():
         assert state['signal'] is None
         assert state['strikes'] == {}
@@ -232,13 +235,17 @@ def test_invalid_ohlc_fails_closed(tmp_path):
     b[-1]['high'] = 1
     write_rows(tmp_path/'live_nifty.jsonl', b)
     data = multi_strategy_payload(tmp_path, 'NIFTY', now=NOW)
-    assert all(s['reason'] == 'INVALID_OR_INCOMPLETE_DATA' for s in data['strategies'].values())
+    assert all(s['reason'] == 'INVALID_OR_INCOMPLETE_DATA' for key, s in data['strategies'].items()
+               if key in ('snr_vwap', 'orb', 'candlestick', 'oi_trap'))
 
 
 def test_ui_and_existing_routes_still_present(server):
     with urlopen(server+'/') as response:
         html = response.read().decode()
-    assert 'MULTI-STRATEGY SIGNALS · S&R + VWAP / ORB / OI TRAP' in html
+    assert 'MULTI-STRATEGY SIGNALS' in html
+    assert 'Object.entries(data.strategies)' in html
+    assert "badge.textContent='High confluence'" in html
+    assert 'isCached' not in html
     assert 'setInterval(pollMultiStrategies,2500)' in html
     assert 'navigator.clipboard.writeText(text)' in html
     assert 'SMC / MARKET RESEARCH TERMINAL' in html
@@ -252,7 +259,7 @@ def test_ui_and_existing_routes_still_present(server):
 def test_http_timing_available_even_without_signals(server, market):
     with urlopen(server+'/api/multi_strategy_status?market='+market) as response:
         states = json.load(response)['strategies']
-    for key, expected in {'snr_vwap': (10, 20, 25), 'orb': (15, 30, 40), 'oi_trap': (10, 25, 30)}.items():
+    for key, expected in {'snr_vwap': (10, 20, 25), 'orb': (15, 30, 40), 'candlestick': (5, 15, 20), 'oi_trap': (10, 25, 30)}.items():
         minimum, maximum, hold = expected
         state = states[key]
         assert state['expected_duration_min'] == minimum
@@ -267,7 +274,7 @@ def test_http_timing_available_even_without_signals(server, market):
 
 
 @pytest.mark.parametrize('closed', [False, True])
-@pytest.mark.parametrize('strategy', ['snr_vwap', 'orb', 'oi_trap'])
+@pytest.mark.parametrize('strategy', ['snr_vwap', 'orb', 'candlestick', 'oi_trap'])
 def test_timing_propagates_to_live_and_historical_signals_and_strikes(tmp_path, strategy, closed):
     if strategy == 'snr_vwap':
         data = [dict(timestamp=NOW.isoformat(), open=25406, high=25409, low=25400, close=25408, volume=0)]
@@ -275,6 +282,15 @@ def test_timing_propagates_to_live_and_historical_signals_and_strikes(tmp_path, 
     elif strategy == 'orb':
         data = [dict(b, volume=0) for b in bars()]
         note = 'Trend continuation expected; exit if price re-enters range after 40m.'
+    elif strategy == 'candlestick':
+        data = [
+            dict(timestamp=(NOW-timedelta(minutes=4)).isoformat(), open=25415, high=25418, low=25410, close=25412, volume=0),
+            dict(timestamp=(NOW-timedelta(minutes=3)).isoformat(), open=25412, high=25415, low=25405, close=25406, volume=0),
+            dict(timestamp=(NOW-timedelta(minutes=2)).isoformat(), open=25406, high=25408, low=25398, close=25400, volume=0),
+            dict(timestamp=(NOW-timedelta(minutes=1)).isoformat(), open=25400, high=25402, low=25392, close=25394, volume=0),
+            dict(timestamp=NOW.isoformat(), open=25393, high=25395, low=25382, close=25394, volume=0),
+        ]
+        note = 'Price action momentum scalp; exit if no expansion within 20m.'
     else:
         data = [dict(timestamp=(NOW-timedelta(minutes=20-i*5)).isoformat(),
                      open=25398 if i == 0 else 25403, high=25408,
@@ -309,3 +325,30 @@ def test_dashboard_renders_and_copies_timing(server):
     assert "timing.expected_duration+' | Max Safe Hold: '+timing.max_hold+' | Time-SL: '+timing.advice" in html
     assert 'Timing windows are configured research heuristics' in html
     assert 'Minutes are measured from manual entry.' in html
+
+
+def test_dispatcher_publishes_single_engine_and_optional_confluence(tmp_path, monkeypatch):
+    from smc import multi_strategy_terminal as dispatcher
+    from smc.independent_signals import build_signal
+
+    def sweep(*args, **kwargs):
+        return [build_signal('SMC_SWEEP', 'TURTLE_SOUP_PDL', NOW, 'NIFTY', 1,
+                             25425, 25415, 25445, 5)]
+
+    def failed_scanner(*args, **kwargs):
+        raise RuntimeError('isolated scanner failure')
+
+    write_rows(tmp_path/'live_nifty.jsonl', bars())
+    monkeypatch.setattr(dispatcher, 'scan_smc_mss', failed_scanner)
+    standalone = multi_strategy_payload(tmp_path, 'NIFTY', now=NOW)
+    assert standalone['signals']['orb']
+    assert standalone['confluences'] == []
+    assert standalone['strategies']['smc_mss']['reason'] == 'INVALID_OR_INCOMPLETE_DATA'
+
+    monkeypatch.setattr(dispatcher, 'scan_smc_sweep', sweep)
+    aligned = multi_strategy_payload(tmp_path, 'NIFTY', now=NOW)
+    assert aligned['signals']['orb'] == standalone['signals']['orb']
+    assert aligned['signals']['smc_sweep'][0]['strikes'][0]['option_type'] == 'CE'
+    badge, = aligned['confluences']
+    assert badge['confluence_score'] == 'HIGH'
+    assert set(badge['engines']) == {'orb', 'smc_sweep'}
