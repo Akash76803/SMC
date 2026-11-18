@@ -720,16 +720,19 @@ def make_handler(csv_path: str, report_path: str, live_path: str | None,
             self._respond(status, mime, payload)
 
         def _respond(self, status, mime, payload):
-            self.send_response(status)
-            self.send_header("Content-Type", mime)
-            self.send_header("Content-Length", str(len(payload)))
-            self.send_header("Cache-Control", "no-store")
-            self.send_header("X-Content-Type-Options", "nosniff")
-            self.send_header("Content-Security-Policy",
-                             "default-src 'self'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; "
-                             "connect-src 'self'; object-src 'none'; frame-ancestors 'none'")
-            self.end_headers()
-            self.wfile.write(payload)
+            try:
+                self.send_response(status)
+                self.send_header("Content-Type", mime)
+                self.send_header("Content-Length", str(len(payload)))
+                self.send_header("Cache-Control", "no-store")
+                self.send_header("X-Content-Type-Options", "nosniff")
+                self.send_header("Content-Security-Policy",
+                                 "default-src 'self'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; "
+                                 "connect-src 'self'; object-src 'none'; frame-ancestors 'none'")
+                self.end_headers()
+                self.wfile.write(payload)
+            except (ConnectionResetError, ConnectionAbortedError, BrokenPipeError):
+                pass
 
     return Handler
 
