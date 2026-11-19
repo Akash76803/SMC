@@ -284,8 +284,6 @@ def multi_strategy_payload(root, market, *, now=None):
                 signals, reason = oi['signals'], oi['status']
             today_signals = [signal for signal in signals
                              if datetime.fromisoformat(signal['timestamp']).astimezone(IST).date() == local.date()]
-            if not closed and not fresh:
-                today_signals = []
             state['reason'] = reason if fresh or closed else 'STALE_OR_BLOCKED_DATA'
             published = []
             cards = []
@@ -334,7 +332,7 @@ def multi_strategy_payload(root, market, *, now=None):
 
             if cards:
                 newest = cards[-1]
-                is_fresh_newest = closed or (name == 'oi_trap') or (datetime.fromisoformat(newest['signal']['timestamp']) == times[-1])
+                is_fresh_newest = fresh and (name == 'oi_trap' or datetime.fromisoformat(newest['signal']['timestamp']) == times[-1])
                 if closed:
                     state.update(signal=newest['signal'], strikes=newest['strikes'],
                                  direction=newest['signal']['direction'],

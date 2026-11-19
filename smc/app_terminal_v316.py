@@ -59,6 +59,9 @@ canvas{width:100%;height:360px;display:block;border-radius:8px}table{border-coll
 .strat-filter-btn.active{background:#1e293b;color:#38bdf8;border-color:#38bdf866;box-shadow:0 2px 8px rgba(56,189,248,.15)}
 #multiStrategyCards{display:grid;grid-template-columns:repeat(auto-fit,minmax(360px,1fr));gap:18px;margin-top:16px}
 .strategy-card{padding:18px 20px;background:linear-gradient(165deg,#1e293b99 0%,#0f172a 100%);border:1px solid #334155;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,.35);min-width:0;display:flex;flex-direction:column}
+.strategy-card.is-active-target{border:2px solid #10b981;box-shadow:0 0 25px rgba(16,185,129,.35);background:linear-gradient(165deg,#064e3b38 0%,#0f172a 100%)}
+.active-target-banner{display:flex;align-items:center;justify-content:space-between;background:#10b98126;border:1px solid #10b98188;color:#34d399;padding:6px 12px;border-radius:8px;font-size:12px;font-weight:700;margin-bottom:12px;letter-spacing:.04em}
+.live-pulse-badge{display:inline-flex;align-items:center;gap:6px;background:#10b98133;padding:2px 8px;border-radius:12px;font-size:11px;color:#a7f3d0}
 .strategy-heading{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px}
 .strategy-heading h3{font-size:17px;font-weight:700;margin:0;letter-spacing:-.02em;color:#f8fafc}
 .strategy-market{font-size:11px;color:#38bdf8;background:#0284c71a;border:1px solid #0284c744;padding:2px 8px;border-radius:4px;font-weight:600;letter-spacing:.05em}
@@ -459,12 +462,37 @@ async function pollMultiStrategies(){
   const confluenceIds=new Set((data.confluences||[]).flatMap(group=>group.setup_ids));
   const cards=Object.entries(data.strategies).flatMap(([key,state])=>
    (state.cards?.length?state.cards:[state]).map(setup=>({key,state,setup})));
+  cards.sort((a,b)=>{
+   const getSig=x=>x.setup?.signal||(x.setup?.entry!=null?x.setup:null)||x.state?.signal;
+   const getOut=x=>getSig(x)?.outcome||x.setup?.outcome||x.state?.signal?.outcome||{};
+   const sigA=getSig(a), sigB=getSig(b);
+   const outA=getOut(a), outB=getOut(b);
+   const hasA=sigA?.entry!=null, hasB=sigB?.entry!=null;
+   const isActA=hasA&&(outA.status==='ACTIVE');
+   const isActB=hasB&&(outB.status==='ACTIVE');
+   if(isActA!==isActB) return isActA?-1:1;
+   const isResA=hasA&&(outA.status==='TARGET_ACHIEVED'||outA.status==='SL_HIT');
+   const isResB=hasB&&(outB.status==='TARGET_ACHIEVED'||outB.status==='SL_HIT');
+   if(isResA!==isResB) return isResA?-1:1;
+   if(hasA!==hasB) return hasA?-1:1;
+   const timeA=sigA?.timestamp||'';
+   const timeB=sigB?.timestamp||'';
+   return timeB.localeCompare(timeA);
+  });
   for(const {key,state,setup} of cards){
    if(currentStratCat!=='ALL'&&strategyCategories[key]!==currentStratCat)continue;
    const card=document.createElement('article');card.className='strategy-card';
    const title=strategyTitles[key]||key.replaceAll('_',' ');
    const {signal:sig,strikes}=setup;
    const dir=sig?.direction||state.direction;
+   const out=sig?.outcome||setup.outcome;
+   const isActTarget = (sig?.entry!=null) && (out?.status==='ACTIVE');
+   if(isActTarget){
+    card.classList.add('is-active-target');
+    const banner=document.createElement('div');banner.className='active-target-banner';
+    banner.innerHTML='<span>⚡ <strong>LIVE ACTIVE TARGET</strong></span><span class="live-pulse-badge">RUNNING: '+displayValue(out.label||'+0.0 pts')+'</span>';
+    card.append(banner);
+   }
 
    const headingWrap=document.createElement('div');headingWrap.className='strategy-heading';
    const heading=document.createElement('h3');heading.textContent=title;
