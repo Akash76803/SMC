@@ -11,10 +11,11 @@ from __future__ import annotations
 import argparse
 import json
 import logging
-from datetime import datetime, timedelta, timezone, time
+from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 from pathlib import Path
 from threading import Timer, Thread, Event
+import time as time_mod
 
 IST = ZoneInfo('Asia/Kolkata')
 
@@ -322,7 +323,7 @@ def main() -> int:
         for i, sym in enumerate(SYMBOLS):
             try:
                 if i > 0:
-                    import time; time.sleep(1.0)
+                    time_mod.sleep(1.0)
                 _backfill_missing_candles(api, paths[sym]["live"], sym, tokens[sym])
             except Exception as _bf_err:
                 print(f"[BACKFILL] {sym}: skipped ({_bf_err})")
@@ -368,7 +369,8 @@ def main() -> int:
             retry_count = 0
             while not option_stop.is_set() and elapsed < a.seconds:
                 now_ist = datetime.now(timezone.utc).astimezone(IST)
-                if now_ist.time() >= time(15, 30) and now_ist.time() < time(18, 0):
+                is_after_market = (now_ist.hour > 15 or (now_ist.hour == 15 and now_ist.minute >= 30)) and now_ist.hour < 18
+                if is_after_market:
                     print("[DUAL_STREAM] Market hours ended (15:30 IST). Completing session.")
                     break
                 try:
@@ -382,9 +384,8 @@ def main() -> int:
 
                 elapsed = (datetime.now(timezone.utc) - start_stream).total_seconds()
                 now_ist = datetime.now(timezone.utc).astimezone(IST)
-                if now_ist.time() >= time(15, 30) and now_ist.time() < time(18, 0):
-                    break
-                if elapsed >= a.seconds:
+                is_after_market = (now_ist.hour > 15 or (now_ist.hour == 15 and now_ist.minute >= 30)) and now_ist.hour < 18
+                if is_after_market or elapsed >= a.seconds:
                     break
 
                 # Automatic reconnect loop during active market hours
@@ -394,7 +395,7 @@ def main() -> int:
                     break
                 print(f"[DUAL_STREAM] Reconnecting WebSocket in 3 seconds (attempt {retry_count}/10)...")
                 state("RECONNECTING", f"RECONNECT_ATTEMPT_{retry_count}")
-                import time as _t; _t.sleep(3.0)
+                time_mod.sleep(3.0)
                 try:
                     ws = make_secure_websocket(jwt, key, client_id, feed)
                 except Exception as ws_err:
@@ -403,7 +404,7 @@ def main() -> int:
         option_stop.set()
         poller.join(timeout=3)
         now_ist = datetime.now(timezone.utc).astimezone(IST)
-        if now_ist.time() >= time(15, 30):
+        if now_ist.hour > 15 or (now_ist.hour == 15 and now_ist.minute >= 30):
             state("SESSION_CLOSED", "MARKET_HOURS_ENDED_330PM")
         else:
             state("STREAM_STOPPED", "DUAL_STREAM_SESSION_ENDED")
