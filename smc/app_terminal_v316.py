@@ -586,7 +586,21 @@ async function pollMultiStrategies(){
    const isBear=mtf.master_bias==='BEARISH';
    const biasText=isBull?'🟢 STRONG BULLISH (CE Bias)':isBear?'🔴 STRONG BEARISH (PE Bias)':'⚪ NEUTRAL / Choppy Range';
    const actionCls=isBull?'good-bg':isBear?'bad-bg':'warn-bg';
-   bannerBox.innerHTML='<div class="mtf-header"><div class="mtf-title"><span class="mtf-eyebrow">TOP-DOWN MULTI-TIMEFRAME TREND CONFIRMATION (DAILY ➡️ 5M)</span><h3>🧭 Master Bias: <strong class="'+(isBull?'good':isBear?'bad':'warn')+'">'+biasText+'</strong></h3></div>'+
+   const reg=mtf.market_regime||'EXPANSION';
+   const regDesc=mtf.regime_desc||reg;
+   const regIcon=reg==='EXPANSION'?'🚀':reg==='RETRACEMENT'?'🔄':reg==='REVERSAL'?'⚠️':'📦';
+   const regCls=reg==='EXPANSION'?(isBull?'chip-bull':'chip-bear'):reg==='RETRACEMENT'?'chip-neutral':reg==='REVERSAL'?'chip-bear':'chip-neutral';
+   const pdhTxt=mtf.pdh!=null?'₹'+Number(mtf.pdh).toFixed(1):'—';
+   const pdlTxt=mtf.pdl!=null?'₹'+Number(mtf.pdl).toFixed(1):'—';
+   const pdcTxt=mtf.pdc!=null?'₹'+Number(mtf.pdc).toFixed(1):'—';
+
+   bannerBox.innerHTML='<div class="mtf-header"><div class="mtf-title">'+
+    '<span class="mtf-eyebrow">TOP-DOWN MULTI-TIMEFRAME TREND CONFIRMATION (DAILY ➡️ 5M)</span>'+
+    '<h3>🧭 Master Bias: <strong class="'+(isBull?'good':isBear?'bad':'warn')+'">'+biasText+'</strong></h3>'+
+    '<div style="margin-top:6px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">'+
+    '<span class="tf-chip '+regCls+'" style="font-size:12px;font-weight:800;letter-spacing:.02em;padding:4px 10px">⚡ MARKET STATE: '+regIcon+' '+reg+' ('+regDesc+')</span>'+
+    '<span style="font-size:11px;color:#94a3b8;background:#0f172a88;border:1px solid #334155;border-radius:6px;padding:3px 9px">📍 <strong>PDH:</strong> '+pdhTxt+' &nbsp;|&nbsp; <strong>PDL:</strong> '+pdlTxt+' &nbsp;|&nbsp; <strong>PDC:</strong> '+pdcTxt+'</span>'+
+    '</div></div>'+
     '<div class="mtf-action-box '+actionCls+'"><span>PERMITTED ACTION:</span><strong>'+(mtf.action_permitted||'HIGH CONFLUENCE')+'</strong></div></div>'+
     '<div class="mtf-pills-row">'+
     ['daily','4h','1h','45m','30m','15m','5m'].map(tf=>'<span class="tf-chip '+(mtf[tf]==='BULLISH'?'chip-bull':mtf[tf]==='BEARISH'?'chip-bear':'chip-neutral')+'">'+tf.toUpperCase()+': '+(mtf[tf]||'—')+'</span>').join('')+

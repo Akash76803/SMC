@@ -314,10 +314,53 @@ def calculate_multi_timeframe_trend(bars, session_history=None, *, root=None, ma
         master_bias = 'NEUTRAL'
         action_permitted = 'HIGH CONFLUENCE ONLY'
 
+    # Market Regime Detection: EXPANSION, RETRACEMENT, REVERSAL, or RANGE_BOUND
+    market_regime = 'RANGE_BOUND'
+    regime_desc = 'Consolidation / Range-Bound Chop'
+    if bars:
+        curr_close = bars[-1]['close']
+        highs = [b['high'] for b in bars]
+        lows = [b['low'] for b in bars]
+        session_high = max(highs)
+        session_low = min(lows)
+        range_span = max(1.0, session_high - session_low)
+
+        # 1. Expansion: Above PDH or Below PDL with strong multi-timeframe alignment
+        if pdh and curr_close > pdh and bull_count >= 4:
+            market_regime = 'EXPANSION'
+            regime_desc = 'Bullish Expansion (PDH Breakout Run)'
+        elif pdl and curr_close < pdl and bear_count >= 4:
+            market_regime = 'EXPANSION'
+            regime_desc = 'Bearish Expansion (PDL Breakdown Run)'
+        # 2. Reversal: High/Low swept PDH/PDL with wick but close reversed opposite to MTF
+        elif pdh and pdc and session_high > pdh and curr_close < pdc and bear_count >= 4:
+            market_regime = 'REVERSAL'
+            regime_desc = 'Bearish Reversal (PDH Liquidity Sweep Trap)'
+        elif pdl and pdc and session_low < pdl and curr_close > pdc and bull_count >= 4:
+            market_regime = 'REVERSAL'
+            regime_desc = 'Bullish Reversal (PDL Liquidity Sweep Trap)'
+        # 3. Retracement: In a trend, but pulling back towards 50% discount/premium equilibrium
+        elif master_bias == 'BULLISH' and (session_high - curr_close) > 0.35 * range_span:
+            market_regime = 'RETRACEMENT'
+            regime_desc = 'Bullish Retracement (Pullback to Discount POI)'
+        elif master_bias == 'BEARISH' and (curr_close - session_low) > 0.35 * range_span:
+            market_regime = 'RETRACEMENT'
+            regime_desc = 'Bearish Retracement (Pullback to Premium POI)'
+        elif bull_count >= 5:
+            market_regime = 'EXPANSION'
+            regime_desc = 'Bullish Trend Expansion'
+        elif bear_count >= 5:
+            market_regime = 'EXPANSION'
+            regime_desc = 'Bearish Trend Expansion'
+        else:
+            market_regime = 'RANGE_BOUND'
+            regime_desc = 'Consolidation / Inside Range'
+
     return {
         'daily': trend_daily, '4h': trend_4h, '1h': trend_1h,
         '45m': trend_45m, '30m': trend_30m, '15m': trend_15m, '5m': trend_5m,
         'master_bias': master_bias, 'action_permitted': action_permitted,
+        'market_regime': market_regime, 'regime_desc': regime_desc,
         'score': f"{max(bull_count, bear_count)}/7 ALIGNED",
         'bull_count': bull_count, 'bear_count': bear_count,
         'pdh': pdh, 'pdl': pdl, 'pdc': pdc
