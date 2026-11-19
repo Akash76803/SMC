@@ -11,9 +11,12 @@ from __future__ import annotations
 import argparse
 import json
 import logging
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta, timezone, time
+from zoneinfo import ZoneInfo
 from pathlib import Path
 from threading import Timer, Thread, Event
+
+IST = ZoneInfo('Asia/Kolkata')
 
 from .angel_history import load_master, resolve_token, HistoryError, download_history
 from .angel_local_auth import load_local_env, resolve_login_fields, current_totp, CredentialError
