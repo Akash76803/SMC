@@ -146,9 +146,9 @@ def _rows(path):
         return []
 
 
-def calculate_multi_timeframe_trend(bars, session_history=None):
-    """Determine top-down trend across Daily, 4h, 1h, 45m, 30m, 15m, 5m."""
-    all_bars = session_history if session_history else bars
+def calculate_multi_timeframe_trend(bars, session_history=None, *, root=None, market=None):
+    """Determine top-down trend across Daily, 4h, 1h, 45m, 30m, 15m, 5m using multi-session history."""
+    all_bars = list(session_history if session_history else bars)
     if not all_bars:
         return {
             'daily': 'NEUTRAL', '4h': 'NEUTRAL', '1h': 'NEUTRAL',
@@ -156,6 +156,71 @@ def calculate_multi_timeframe_trend(bars, session_history=None):
             'master_bias': 'NEUTRAL', 'action_permitted': 'HIGH CONFLUENCE ONLY',
             'score': '0/7 ALIGNED', 'bull_count': 0, 'bear_count': 0
         }
+
+    # Load multi-session historical data if available for true Daily & 4h/1h HTF trends
+    historical_bars = []
+    daily_candles = []
+    if root and market:
+        try:
+            r = Path(root)
+            candidates = [
+                r / 'data' / f'{market.lower()}_angel_historical_raw.csv',
+                r.parent / 'data' / f'{market.lower()}_angel_historical_raw.csv',
+                Path('data') / f'{market.lower()}_angel_historical_raw.csv'
+            ]
+            csv_path = next((p for p in candidates if p.exists()), None)
+            if csv_path:
+                import csv
+                daily_groups = {}
+                with open(csv_path, 'r', encoding='utf-8') as f:
+                    for row in csv.DictReader(f):
+                        try:
+                            dt = datetime.fromisoformat(row['timestamp'])
+                            b_item = {
+                                'timestamp': row['timestamp'],
+                                'open': float(row['open']), 'high': float(row['high']),
+                                'low': float(row['low']), 'close': float(row['close']),
+                                'volume': float(row.get('volume', 0)),
+                            }
+                            historical_bars.append(b_item)
+                            d = dt.astimezone(IST).date()
+                            daily_groups.setdefault(d, []).append(b_item)
+                        except Exception:
+                            continue
+                for d, d_bars in sorted(daily_groups.items()):
+                    daily_candles.append({
+                        'date': d, 'open': d_bars[0]['open'],
+                        'high': max(x['high'] for x in d_bars),
+                        'low': min(x['low'] for x in d_bars),
+                        'close': d_bars[-1]['close'],
+                    })
+        except Exception:
+            pass
+
+    # Ensure daily_candles includes previous sessions from session_history if not already present
+    today_date = None
+    if bars:
+        try:
+            today_date = datetime.fromisoformat(bars[0]['timestamp']).astimezone(IST).date()
+        except Exception:
+            pass
+    if today_date:
+        session_prev_bars = [b for b in all_bars if datetime.fromisoformat(b['timestamp']).astimezone(IST).date() < today_date]
+        if session_prev_bars:
+            prev_d = datetime.fromisoformat(session_prev_bars[-1]['timestamp']).astimezone(IST).date()
+            if not any(dc['date'] == prev_d for dc in daily_candles):
+                day_b = [b for b in session_prev_bars if datetime.fromisoformat(b['timestamp']).astimezone(IST).date() == prev_d]
+                daily_candles.append({
+                    'date': prev_d,
+                    'open': day_b[0]['open'],
+                    'high': max(x['high'] for x in day_b),
+                    'low': min(x['low'] for x in day_b),
+                    'close': day_b[-1]['close'],
+                })
+                daily_candles.sort(key=lambda x: x['date'])
+
+    # Merge multi-session bars for HTF 4h/1h
+    htf_bars = (historical_bars[-2000:] + all_bars) if historical_bars else all_bars
 
     def _resample(b_list, mins):
         grouped = {}
@@ -199,8 +264,8 @@ def calculate_multi_timeframe_trend(bars, session_history=None):
     bars_15m = _resample(all_bars, 15)
     bars_30m = _resample(all_bars, 30)
     bars_45m = _resample(all_bars, 45)
-    bars_1h = _resample(all_bars, 60)
-    bars_4h = _resample(all_bars, 240)
+    bars_1h = _resample(htf_bars, 60)
+    bars_4h = _resample(htf_bars, 240)
 
     trend_5m = _determine_trend(bars_5m)
     trend_15m = _determine_trend(bars_15m)
@@ -209,10 +274,29 @@ def calculate_multi_timeframe_trend(bars, session_history=None):
     trend_1h = _determine_trend(bars_1h)
     trend_4h = _determine_trend(bars_4h)
 
+    # Daily Trend with Previous Day High (PDH) & Previous Day Low (PDL) Analysis
+    pdh, pdl, pdc = None, None, None
     if bars:
-        today_open = bars[0]['open']
         curr_close = bars[-1]['close']
-        trend_daily = 'BULLISH' if curr_close >= today_open else 'BEARISH'
+        today_open = bars[0]['open']
+        prior_daily = [dc for dc in daily_candles if dc['date'] < today_date] if today_date else daily_candles
+        if prior_daily:
+            yesterday_bar = prior_daily[-1]
+            pdh = yesterday_bar['high']
+            pdl = yesterday_bar['low']
+            pdc = yesterday_bar['close']
+            if curr_close > pdh:
+                trend_daily = 'BULLISH'  # PDH Breakout (Institutional Trend Day)
+            elif curr_close < pdl:
+                trend_daily = 'BEARISH'  # PDL Breakdown
+            elif curr_close > pdc:
+                trend_daily = 'BULLISH'
+            elif curr_close < pdc:
+                trend_daily = 'BEARISH'
+            else:
+                trend_daily = 'BULLISH' if curr_close >= today_open else 'BEARISH'
+        else:
+            trend_daily = 'BULLISH' if curr_close >= today_open else 'BEARISH'
     else:
         trend_daily = 'NEUTRAL'
 
@@ -235,7 +319,8 @@ def calculate_multi_timeframe_trend(bars, session_history=None):
         '45m': trend_45m, '30m': trend_30m, '15m': trend_15m, '5m': trend_5m,
         'master_bias': master_bias, 'action_permitted': action_permitted,
         'score': f"{max(bull_count, bear_count)}/7 ALIGNED",
-        'bull_count': bull_count, 'bear_count': bear_count
+        'bull_count': bull_count, 'bear_count': bear_count,
+        'pdh': pdh, 'pdl': pdl, 'pdc': pdc
     }
 
 
@@ -572,7 +657,7 @@ def multi_strategy_payload(root, market, *, now=None):
     prior = max(prior_dates, default=None)
     session_history = [history[at] for at in sorted(history)
                        if at.astimezone(IST).date() in (prior, local.date())]
-    mtf_trend = calculate_multi_timeframe_trend(bars, session_history)
+    mtf_trend = calculate_multi_timeframe_trend(bars, session_history, root=root, market=market)
     result['mtf_trend'] = mtf_trend
     master_bias = mtf_trend.get('master_bias')
     closed = local.time() > time(15, 30)
