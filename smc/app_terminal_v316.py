@@ -563,8 +563,19 @@ async function pollMultiStrategies(){
     '<div class="hero-condition-box cond-entry"><div class="cond-header hdr-entry"><span>✓</span> Entry Confirmation Condition</div><p class="cond-text">'+h.entry_condition+'</p><div class="cond-footer">Holding Horizon: '+h.holding_horizon+'</div></div>'+
     '<div class="hero-condition-box cond-exit"><div class="cond-header hdr-exit"><span>ⓘ</span> Invalidating Condition (Immediate Exit)</div><p class="cond-text">'+h.invalidating_condition+'</p><div class="cond-footer">Underlying Trigger: '+h.underlying_trigger+'</div></div>'+
     '</div>'+
-    '<button type="button" class="hero-copy-btn" onclick="navigator.clipboard.writeText(''+copyTxt+'').then(()=>{this.textContent='Copied to Clipboard! ✓';this.classList.add('copied')})">📋 Copy Confirmed '+h.side+' Strike for Angel One Order</button>'+
+    '<button type="button" class="hero-copy-btn" id="heroCopyBtn">📋 Copy Confirmed '+h.side+' Strike for Angel One Order</button>'+
     '</div></div>';
+   const hBtn=document.getElementById('heroCopyBtn');
+   if(hBtn){
+    hBtn.onclick=()=>{
+     if(navigator.clipboard&&navigator.clipboard.writeText){
+      navigator.clipboard.writeText(copyTxt).then(()=>{
+       hBtn.textContent='Copied to Clipboard! ✓';
+       hBtn.classList.add('copied');
+      }).catch(()=>{});
+     }
+    };
+   }
   }
   const bannerBox=document.getElementById('masterTrendBanner');
   if(bannerBox&&data.mtf_trend){
