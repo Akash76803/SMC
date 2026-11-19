@@ -70,7 +70,7 @@ canvas{width:100%;height:360px;display:block;border-radius:8px}table{border-coll
 .direction-pill.bullish{background:#10b98119;color:#34d399;border:1px solid #10b98144}
 .direction-pill.bearish{background:#ef444419;color:#f87171;border:1px solid #ef444444}
 .direction-pill.neutral{background:#33415555;color:#94a3b8;border:1px solid #47556980}
-.confluence-pill{background:#f59e0b20;color:#fbbf24;border:1px solid #f59e0b88;box-shadow:0 0 10px #f59e0b22}
+.confluence-pill{background:#f59e0b20;color:#fbbf24;border:1px solid #f59e0b88;box-shadow:0 0 10px #f59e0b22;font-weight:800}.confluence-pill::before{content:'🔥 '}
 .outcome-badge{display:inline-flex;align-items:center;gap:5px;padding:3px 8px;border-radius:6px;font-size:10px;font-weight:800;letter-spacing:.04em}
 .outcome-badge.outcome-target{background:#10b98122;color:#34d399;border:1px solid #10b98188;box-shadow:0 0 10px rgba(16,185,129,.25)}
 .outcome-badge.outcome-sl{background:#ef444422;color:#f87171;border:1px solid #ef444488;box-shadow:0 0 10px rgba(239,68,68,.25)}
