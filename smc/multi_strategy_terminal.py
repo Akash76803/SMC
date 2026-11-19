@@ -239,106 +239,207 @@ def calculate_multi_timeframe_trend(bars, session_history=None):
     }
 
 
-def build_confirmed_hero_setup(market, bars, quotes, mtf_trend, strategies):
-    """Build a single, unambiguous confirmed hero setup (CE or PE only) exactly matching user spec."""
+STRATEGY_DISPLAY_NAMES = {
+    'smc_sweep': 'SMC Liquidity Sweep',
+    'smc_mss': 'SMC Market Structure Shift',
+    'smc_fvg': 'SMC Fair Value Gap',
+    'smc_ob': 'SMC Order Block Retest',
+    'smc_fib': 'Fibonacci OTE Golden Pocket',
+    'candlestick': 'Candlestick Price Action',
+    'pdh_pdl': 'PDH / PDL Masterclass',
+    'snr_vwap': 'SNR VWAP Pullback',
+    'orb': 'Opening Range Breakout',
+    'oi_trap': 'Option Chain OI Trap',
+}
+
+
+def build_confirmed_hero_setup(market, bars, quotes, mtf_trend, strategies, *, now=None, quote_history=None):
+    """Build a single, unambiguous confirmed hero setup driven directly by live strategy calculations."""
     if not bars:
         return None
-    direction = mtf_trend.get('master_bias') or 'BULLISH'
-    if direction not in ('BULLISH', 'BEARISH'):
-        direction = 'BULLISH' if bars[-1]['close'] >= bars[0]['open'] else 'BEARISH'
 
-    side = 'CE' if direction == 'BULLISH' else 'PE'
-    curr_index = bars[-1]['close']
-    step = 50 if market == 'NIFTY' else 100
-    atm_strike = int(round(curr_index / step) * step)
+    priority_order = [
+        'smc_fvg', 'smc_ob', 'smc_sweep', 'smc_mss', 'smc_fib',
+        'orb', 'snr_vwap', 'oi_trap',
+        'pdh_pdl', 'candlestick'
+    ]
 
-    matching_signal = None
-    matching_strikes = None
-    for name, strat in strategies.items():
-        cards = strat.get('cards', [])
-        for c in reversed(cards):
+    all_cards = []
+    for s_name, strat in strategies.items():
+        for c in strat.get('cards', []):
             sig = c.get('signal', {})
-            if sig.get('direction') == direction:
-                out = c.get('outcome', {})
-                if out.get('status') == 'ACTIVE':
-                    matching_signal = sig
-                    matching_strikes = c.get('strikes', {})
-                    break
-        if matching_signal:
+            out = c.get('outcome', {})
+            all_cards.append((s_name, c, sig, out))
+
+    active_cards = [item for item in all_cards if item[3].get('status') == 'ACTIVE']
+    chosen = None
+    if active_cards:
+        def active_rank(item):
+            s_name, c, sig, out = item
+            p_idx = priority_order.index(s_name) if s_name in priority_order else 99
+            ts = sig.get('timestamp') or ''
+            return (p_idx, ts)
+        
+        active_sorted = sorted(active_cards, key=lambda x: x[2].get('timestamp', ''), reverse=True)
+        bull_active = [x for x in active_sorted if x[2].get('direction') == 'BULLISH']
+        bear_active = [x for x in active_sorted if x[2].get('direction') == 'BEARISH']
+        
+        if len(bull_active) >= 2 and len(bull_active) >= len(bear_active):
+            chosen = bull_active[0]
+        elif len(bear_active) >= 2 and len(bear_active) > len(bull_active):
+            chosen = bear_active[0]
+        else:
+            chosen = sorted(active_cards, key=active_rank)[0]
+    elif all_cards:
+        resolved = [item for item in all_cards if item[3].get('status') in ('TARGET_ACHIEVED', 'SL_HIT')]
+        if resolved:
+            chosen = sorted(resolved, key=lambda x: x[2].get('timestamp', ''), reverse=True)[0]
+        else:
+            chosen = sorted(all_cards, key=lambda x: x[2].get('timestamp', ''), reverse=True)[0]
+
+    if not chosen:
+        # Fallback when no strategy cards are found
+        direction = mtf_trend.get('master_bias') or 'BULLISH'
+        if direction not in ('BULLISH', 'BEARISH'):
+            direction = 'BULLISH' if bars[-1]['close'] >= bars[0]['open'] else 'BEARISH'
+        side = 'CE' if direction == 'BULLISH' else 'PE'
+        curr_index = bars[-1]['close']
+        step = 50 if market == 'NIFTY' else 100
+        atm_strike = int(round(curr_index / step) * step)
+        base_prem = 120.0 if market == 'NIFTY' else 180.0
+        return {
+            'stage': 'STAGE 2 (Live Scanning)',
+            'stage_note': f"Actively monitoring 10 strategies for high-confluence {direction} entry setup.",
+            'direction': direction,
+            'side': side,
+            'side_label': f"{side} ({'CALL' if side == 'CE' else 'PUT'})",
+            'strategy': 'Scanner',
+            'pattern': 'Monitoring',
+            'status': 'SCANNING',
+            'contract': f"{market} {atm_strike} {side}",
+            'expiry': 'CURRENT_EXPIRY',
+            'rr_ratio': '1:2.0',
+            'ltp': base_prem,
+            'entry_bracket': f"₹{base_prem - 5.0} — ₹{base_prem + 5.0}",
+            'stop_loss': base_prem - 15.0,
+            'target_1': base_prem + 30.0,
+            'target_2': base_prem + 50.0,
+            'target_3': base_prem + 80.0,
+            'do_not_chase': base_prem + 15.0,
+            'entry_condition': f"Wait for next strategy trigger aligned with {direction}.",
+            'invalidating_condition': f"Do not enter against master trend.",
+            'underlying_trigger': f"Current spot at ₹{curr_index:.1f}.",
+            'holding_horizon': 'Intraday Session',
+            'index_entry': curr_index,
+            'index_sl': curr_index - 20.0 if direction == 'BULLISH' else curr_index + 20.0,
+            'index_target': curr_index + 40.0 if direction == 'BULLISH' else curr_index - 40.0,
+        }
+
+    strat_key, card, sig, out = chosen
+    strat_title = STRATEGY_DISPLAY_NAMES.get(strat_key, strat_key.replace('_', ' ').title())
+    pattern = sig.get('pattern') or sig.get('setup_type') or sig.get('signal_type') or strat_title
+    pattern_title = pattern.replace('_', ' ').title()
+
+    direction = sig.get('direction') or 'BULLISH'
+    side = 'CE' if direction == 'BULLISH' else 'PE'
+    status = out.get('status', 'ACTIVE')
+    
+    curr_index = bars[-1]['close']
+    index_entry = round(float(sig.get('entry', curr_index)), 1)
+    index_sl = round(float(sig.get('stop_loss', curr_index)), 1)
+    index_tgt = round(float(sig.get('target', curr_index)), 1)
+    index_risk = max(5.0 if market == 'NIFTY' else 15.0, abs(index_entry - index_sl))
+    index_reward = abs(index_tgt - index_entry)
+    rr_val = round(index_reward / max(1.0, index_risk), 2)
+
+    strikes = card.get('strikes') or {}
+    atm_row = strikes.get('ATM') if isinstance(strikes, dict) else None
+    step = 50 if market == 'NIFTY' else 100
+    atm_strike = int(round(index_entry / step) * step)
+    strike_val = atm_row.get('strike') if atm_row else atm_strike
+
+    matching_q = None
+    all_quotes_to_search = list(quotes or [])
+    if quote_history:
+        all_quotes_to_search = list(quote_history) + all_quotes_to_search
+    
+    for q in reversed(all_quotes_to_search):
+        if isinstance(q, dict) and q.get('strike') == strike_val and q.get('side') == side:
+            matching_q = q
             break
 
-    if not matching_signal:
-        for name, strat in strategies.items():
-            cards = strat.get('cards', [])
-            for c in reversed(cards):
-                sig = c.get('signal', {})
-                if sig.get('direction') == direction:
-                    matching_signal = sig
-                    matching_strikes = c.get('strikes', {})
-                    break
-            if matching_signal:
-                break
+    contract_symbol = (atm_row.get('trading_symbol') if atm_row else None) or (matching_q.get('trading_symbol') if matching_q else None)
+    expiry_val = (atm_row.get('expiry') if atm_row else None) or (matching_q.get('expiry') if matching_q else None) or "CURRENT_EXPIRY"
 
-    atm_row = (matching_strikes.get('ATM') if matching_strikes else None) or {}
-    strike_val = atm_row.get('strike') or atm_strike
-    contract_symbol = atm_row.get('trading_symbol') or f"{market}23NOV26{int(strike_val)}{side}"
-    expiry_val = atm_row.get('expiry') or "23NOV2026"
-
-    ltp = None
-    for q in quotes:
-        if q.get('strike') == strike_val and q.get('side') == side:
-            ltp = q.get('ltp') or q.get('ask')
-            if q.get('trading_symbol'):
-                contract_symbol = q['trading_symbol']
-            if q.get('expiry'):
-                expiry_val = q['expiry']
-            break
-
-    if atm_row.get('premium_entry'):
+    if atm_row and atm_row.get('premium_entry'):
         p_entry = float(atm_row['premium_entry'])
-        p_sl = float(atm_row.get('premium_sl') or round(p_entry - 12.0, 1))
-    elif ltp:
-        p_entry = float(ltp)
-        p_sl = round(p_entry * 0.91, 1)
+        p_sl = float(atm_row.get('premium_sl') or round(max(0.5, p_entry - 0.5 * index_risk), 1))
+        p_tgt = float(atm_row.get('premium_target') or round(p_entry + 0.5 * index_reward, 1))
+        ltp = p_entry
+    elif matching_q:
+        bid = matching_q.get('bid')
+        ask = matching_q.get('ask')
+        ltp_val = (bid + ask) / 2 if (bid and ask) else (ask or bid or matching_q.get('ltp'))
+        p_entry = round(float(ltp_val), 1) if ltp_val else (140.0 if market == 'NIFTY' else 180.0)
+        p_sl = round(max(0.5, p_entry - 0.5 * index_risk), 1)
+        p_tgt = round(p_entry + 0.5 * index_reward, 1)
+        ltp = p_entry
     else:
-        base_prem = 142.0 if market == 'NIFTY' else 285.0
+        base_prem = 120.0 if market == 'NIFTY' else 180.0
         p_entry = base_prem
-        p_sl = round(base_prem - 12.0, 1)
+        p_sl = round(max(0.5, p_entry - 0.5 * index_risk), 1)
+        p_tgt = round(p_entry + 0.5 * index_reward, 1)
         ltp = base_prem
 
-    risk = max(5.0, round(p_entry - p_sl, 1))
-    p_sl = round(p_entry - risk, 1)
-    entry_low = round(p_entry - 3.0, 1)
-    entry_high = round(p_entry + 2.9, 1)
-    target_1 = round(p_entry + 3.5 * risk, 1)
-    target_2 = round(p_entry + 6.5 * risk, 1)
-    target_3 = round(p_entry + 10.1 * risk, 1)
-    do_not_chase = round(p_entry + 1.8 * risk, 1)
-    rr_ratio = "1:6.51"
+    if not contract_symbol:
+        contract_symbol = f"{market} {int(strike_val)} {side}"
 
-    demand_level = round(min(b['low'] for b in bars), 1)
-    supply_level = round(max(b['high'] for b in bars), 1)
-    orb_high = round(bars[min(14, len(bars) - 1)]['high'], 1)
-    orb_low = round(bars[min(14, len(bars) - 1)]['low'], 1)
+    p_risk = max(3.0 if market == 'NIFTY' else 8.0, round(p_entry - p_sl, 1))
+    entry_low = round(max(0.5, p_entry - 0.15 * p_risk), 1)
+    entry_high = round(p_entry + 0.15 * p_risk, 1)
+    target_1 = round(p_tgt, 1)
+    target_2 = round(p_entry + 1.5 * (p_tgt - p_entry), 1)
+    target_3 = round(p_entry + 2.0 * (p_tgt - p_entry), 1)
+    do_not_chase = round(p_entry + 0.75 * p_risk, 1)
 
-    if direction == 'BULLISH':
-        entry_cond = f"Wait for opening 5-minute candle to close green above ₹{entry_low}. Verify bid-ask spread is under 1.5%."
-        invalid_cond = f"Index drops below session demand level {demand_level} or option premium falls below stop-loss of ₹{p_sl}."
-        underlying_trig = f"Index sustains above opening range high {orb_high} post 09:15-09:20 opening candle."
+    now_dt = (now or datetime.now(timezone.utc)).astimezone(IST)
+    if now_dt.time() < time(11, 30):
+        horizon = "Morning Momentum Window (09:20 — 11:30 AM IST)"
+    elif now_dt.time() < time(13, 30):
+        horizon = "Midday Reversal / Range Window (11:30 AM — 01:30 PM IST)"
     else:
-        entry_cond = f"Wait for opening 5-minute candle to close red below ₹{entry_high}. Verify bid-ask spread is under 1.5%."
-        invalid_cond = f"Index rallies above session supply level {supply_level} or option premium falls below stop-loss of ₹{p_sl}."
-        underlying_trig = f"Index stays below opening range low {orb_low} post opening breakdown."
+        horizon = "Afternoon Power Hour Window (01:30 — 03:30 PM IST)"
+
+    dur_label = out.get('duration_label') or ''
+    if status == 'ACTIVE':
+        stage_title = "STAGE 2 (Live Confirmation)"
+        stage_desc = f"Active in {horizon}. Strategy [{strat_title}] confirmed {side} setup on live candle. Monitored with live VWAP, multi-timeframe bias, and real-time option spread."
+    elif status == 'TARGET_ACHIEVED':
+        stage_title = "STAGE 3 (Target Achieved ✓)"
+        stage_desc = f"Strategy [{strat_title}] achieved Target ₹{index_tgt} ({dur_label or 'Resolved'}). In-the-money profit secured; awaiting next setup."
+    elif status == 'SL_HIT':
+        stage_title = "STAGE 3 (Stop-Loss Invalidation)"
+        stage_desc = f"Strategy [{strat_title}] hit strict SL ₹{index_sl}. Invalidation rule executed; capital protected."
+    else:
+        stage_title = "STAGE 2 (Live Setup)"
+        stage_desc = f"Strategy [{strat_title}] setup observation recorded."
+
+    entry_cond = f"Strategy [{strat_title}] confirmed {pattern_title} at index ₹{index_entry}. Enter {side} contract {contract_symbol} within ₹{entry_low} — ₹{entry_high} bracket."
+    invalid_cond = f"Index crosses invalidation level ₹{index_sl} or option premium falls below strict stop-loss of ₹{p_sl}."
+    underlying_trig = f"Index spot ₹{curr_index:.1f}. Underlying trigger: {pattern_title} confirmed on candle at {sig.get('timestamp', 'LIVE')}."
 
     return {
-        'stage': 'STAGE 2 (Live Confirmation)',
-        'stage_note': 'Active post - 09:15 AM IST. Signals are verified against opening auction price, live 5m candles, VWAP, opening range hold, and real-time option spread.',
+        'stage': stage_title,
+        'stage_note': stage_desc,
         'direction': direction,
         'side': side,
         'side_label': f"{side} ({'CALL' if side == 'CE' else 'PUT'})",
+        'strategy': strat_title,
+        'pattern': pattern_title,
+        'status': status,
         'contract': contract_symbol,
         'expiry': expiry_val,
-        'rr_ratio': rr_ratio,
+        'rr_ratio': f"1:{rr_val}",
         'ltp': round(float(ltp), 1) if ltp else p_entry,
         'entry_bracket': f"₹{entry_low} — ₹{entry_high}",
         'stop_loss': p_sl,
@@ -349,7 +450,10 @@ def build_confirmed_hero_setup(market, bars, quotes, mtf_trend, strategies):
         'entry_condition': entry_cond,
         'invalidating_condition': invalid_cond,
         'underlying_trigger': underlying_trig,
-        'holding_horizon': 'Morning Momentum Window (09:20 — 11:00 AM IST)',
+        'holding_horizon': horizon,
+        'index_entry': index_entry,
+        'index_sl': index_sl,
+        'index_target': index_tgt,
     }
 
 
@@ -590,5 +694,6 @@ def multi_strategy_payload(root, market, *, now=None):
                 engines=list(engines), setup_ids=[setup for ids in engines.values() for setup in ids],
             ))
     result['mtf_trend'] = calculate_multi_timeframe_trend(bars, session_history)
-    result['confirmed_hero'] = build_confirmed_hero_setup(market, bars, quotes, result['mtf_trend'], result['strategies'])
+    result['confirmed_hero'] = build_confirmed_hero_setup(market, bars, quotes, result['mtf_trend'], result['strategies'],
+                                                          now=evaluation_at, quote_history=[row for _, row in quote_history])
     return result

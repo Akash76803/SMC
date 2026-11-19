@@ -548,15 +548,16 @@ async function pollMultiStrategies(){
     '<div class="confirmed-hero-card '+(isCe?'':'bearish-theme')+'">'+
     '<div class="hero-top-row"><div class="hero-contract-info">'+
     '<span class="hero-side-pill '+(isCe?'pill-ce':'pill-pe')+'">'+h.side_label+'</span>'+
+    (h.strategy?'<span class="hero-strategy-pill" style="margin-left:8px;font-size:11px;font-weight:700;color:#38bdf8;background:#0369a133;padding:4px 8px;border-radius:6px;border:1px solid #0284c7">⚡ '+(h.strategy)+(h.pattern?' · '+h.pattern:'')+'</span>':'')+
     '<h2 class="hero-contract-title">'+h.contract+' <small>('+h.expiry+')</small></h2>'+
     '</div><div class="hero-rr-badge">R:R '+h.rr_ratio+'</div></div>'+
     '<div class="hero-metrics-grid">'+
     '<div class="hero-metric-box"><div class="metric-lbl">Live Market LTP</div><div class="metric-val">₹'+h.ltp+'</div><div class="metric-sub">Angel One NFO Live</div></div>'+
     '<div class="hero-metric-box box-entry"><div class="metric-lbl">Suggested Entry</div><div class="metric-val val-green">'+h.entry_bracket+'</div><div class="metric-sub">Planned bracket</div></div>'+
     '<div class="hero-metric-box box-sl"><div class="metric-lbl">Stop-Loss (SL)</div><div class="metric-val val-red">₹'+h.stop_loss+'</div><div class="metric-sub">Strict invalidation</div></div>'+
-    '<div class="hero-metric-box box-tgt"><div class="metric-lbl">Target 1 (3.5R)</div><div class="metric-val val-green">₹'+h.target_1+'</div><div class="metric-sub">Book 50% lot</div></div>'+
-    '<div class="hero-metric-box box-tgt"><div class="metric-lbl">Target 2 (6.5R)</div><div class="metric-val val-green">₹'+h.target_2+'</div><div class="metric-sub">Runner target</div></div>'+
-    '<div class="hero-metric-box box-tgt"><div class="metric-lbl">Target 3 (10.1R)</div><div class="metric-val val-green">₹'+h.target_3+'</div><div class="metric-sub">Trend stretch</div></div>'+
+    '<div class="hero-metric-box box-tgt"><div class="metric-lbl">Target 1 (Primary)</div><div class="metric-val val-green">₹'+h.target_1+'</div><div class="metric-sub">Book 50% lot</div></div>'+
+    '<div class="hero-metric-box box-tgt"><div class="metric-lbl">Target 2 (Runner)</div><div class="metric-val val-green">₹'+h.target_2+'</div><div class="metric-sub">Runner target</div></div>'+
+    '<div class="hero-metric-box box-tgt"><div class="metric-lbl">Target 3 (Stretch)</div><div class="metric-val val-green">₹'+h.target_3+'</div><div class="metric-sub">Trend stretch</div></div>'+
     '</div>'+
     '<div class="hero-do-not-chase"><span class="info-circle" style="background:#f59e0b33;color:#fbbf24">ⓘ</span><span><strong>DO-NOT-CHASE THRESHOLD: ₹'+h.do_not_chase+'</strong> (If premium gaps above this, setup is EXPIRED / DO NOT CHASE)</span></div>'+
     '<div class="hero-conditions-grid">'+
