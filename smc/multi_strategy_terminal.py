@@ -572,6 +572,9 @@ def multi_strategy_payload(root, market, *, now=None):
     prior = max(prior_dates, default=None)
     session_history = [history[at] for at in sorted(history)
                        if at.astimezone(IST).date() in (prior, local.date())]
+    mtf_trend = calculate_multi_timeframe_trend(bars, session_history)
+    result['mtf_trend'] = mtf_trend
+    master_bias = mtf_trend.get('master_bias')
     closed = local.time() > time(15, 30)
     evaluation_at = max(candles) if closed else now
     fresh = (0 <= (now-max(candles)).total_seconds() <= 20
@@ -688,9 +691,10 @@ def multi_strategy_payload(root, market, *, now=None):
                 is_fresh = closed or (name == 'oi_trap') or (datetime.fromisoformat(raw['timestamp']) == times[-1])
                 if is_fresh:
                     published.append(signal)
-                cards.append(dict(signal={**raw, **timing, 'strikes': strikes, 'outcome': outcome},
+                is_trend_aligned = not master_bias or (raw['direction'] == master_bias)
+                cards.append(dict(signal={**raw, **timing, 'strikes': strikes, 'outcome': outcome, 'trend_aligned': is_trend_aligned},
                                   strikes=strikes, trade_plan=trade_plans.get(raw.get('setup_id')),
-                                  setup_id=signal['setup_id'], outcome=outcome))
+                                  setup_id=signal['setup_id'], outcome=outcome, trend_aligned=is_trend_aligned))
 
             if cards:
                 newest = cards[-1]
@@ -732,7 +736,7 @@ def multi_strategy_payload(root, market, *, now=None):
                 timestamp=at, direction=direction, confluence_score='HIGH',
                 engines=list(engines), setup_ids=[setup for ids in engines.values() for setup in ids],
             ))
-    result['mtf_trend'] = calculate_multi_timeframe_trend(bars, session_history)
+    # mtf_trend already computed at session analysis start
     result['confirmed_hero'] = build_confirmed_hero_setup(market, bars, quotes, result['mtf_trend'], result['strategies'],
                                                           now=evaluation_at, quote_history=[row for _, row in quote_history])
     return result
