@@ -507,7 +507,6 @@ async function pollMultiStrategies(){
     const badge=document.createElement('span');badge.className='direction-pill confluence-pill';
     badge.textContent='High confluence';badgeWrap.append(badge);
    }
-   const out=sig?.outcome||setup.outcome;
    if(out&&out.status!=='UNKNOWN'&&out.status!=='PENDING'){
     const outBadge=document.createElement('span');
     const isTgt=out.status==='TARGET_ACHIEVED';
