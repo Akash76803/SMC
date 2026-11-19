@@ -282,15 +282,14 @@ def multi_strategy_payload(root, market, *, now=None):
                 state.update(pcr=oi['pcr_oi'], activity_basis=oi['activity_basis'],
                              walls={k: oi[k] for k in ('max_call_oi_strike', 'max_put_oi_strike')})
                 signals, reason = oi['signals'], oi['status']
-            signals = [signal for signal in signals
-                       if datetime.fromisoformat(signal['timestamp']).astimezone(IST).date() == local.date()]
-            if not closed:
-                signals = [signal for signal in signals if fresh and (name == 'oi_trap' or
-                           datetime.fromisoformat(signal['timestamp']) == times[-1])]
+            today_signals = [signal for signal in signals
+                             if datetime.fromisoformat(signal['timestamp']).astimezone(IST).date() == local.date()]
+            if not closed and not fresh:
+                today_signals = []
             state['reason'] = reason if fresh or closed else 'STALE_OR_BLOCKED_DATA'
             published = []
             cards = []
-            for raw in signals:
+            for raw in today_signals:
                 observed_at = datetime.fromisoformat(raw['timestamp'])
                 snapshot = quotes_at(observed_at) if closed else quotes
                 sign = 1 if raw['direction'] == 'BULLISH' else -1
@@ -322,24 +321,29 @@ def multi_strategy_payload(root, market, *, now=None):
                 outcome = evaluate_signal_outcome(raw, bars, closed=closed)
                 signal['outcome'] = outcome
                 raw['outcome'] = outcome
-                published.append(signal)
                 timing = _timing_fields(name)
                 if timing:
                     for row in strikes.values():
                         row['timing'] = _timing_fields(name)['timing']
+                is_fresh = closed or (name == 'oi_trap') or (datetime.fromisoformat(raw['timestamp']) == times[-1])
+                if is_fresh:
+                    published.append(signal)
                 cards.append(dict(signal={**raw, **timing, 'strikes': strikes, 'outcome': outcome},
                                   strikes=strikes, trade_plan=trade_plans.get(raw.get('setup_id')),
                                   setup_id=signal['setup_id'], outcome=outcome))
 
             if cards:
                 newest = cards[-1]
-                state.update(signal=newest['signal'], strikes=newest['strikes'],
-                             direction=newest['signal']['direction'])
+                is_fresh_newest = closed or (name == 'oi_trap') or (datetime.fromisoformat(newest['signal']['timestamp']) == times[-1])
                 if closed:
-                    state.update(status='SESSION_CLOSED_OBSERVATION',
+                    state.update(signal=newest['signal'], strikes=newest['strikes'],
+                                 direction=newest['signal']['direction'],
+                                 status='SESSION_CLOSED_OBSERVATION',
                                  reason='HISTORICAL_RESEARCH_OBSERVATION',
                                  observed_at=newest['signal']['timestamp'])
-                else:
+                elif is_fresh_newest:
+                    state.update(signal=newest['signal'], strikes=newest['strikes'],
+                                 direction=newest['signal']['direction'])
                     state['status'] = ('BREAKOUT_OBSERVED' if name == 'orb' else
                                        ('SHORT_COVERING' if state['direction'] == 'BULLISH' else 'LONG_UNWINDING')
                                        if name == 'oi_trap' else 'ACTIVE_SIGNAL')
