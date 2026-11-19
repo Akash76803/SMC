@@ -258,10 +258,13 @@ def build_confirmed_hero_setup(market, bars, quotes, mtf_trend, strategies, *, n
     if not bars:
         return None
 
+    now_dt = (now or datetime.now(timezone.utc)).astimezone(IST)
+    is_post_cutoff = now_dt.time() >= time(15, 0)
+
+    # Priority order favoring institutional structural setups over 1m candle noise
     priority_order = [
-        'smc_fvg', 'smc_ob', 'smc_sweep', 'smc_mss', 'smc_fib',
-        'orb', 'snr_vwap', 'oi_trap',
-        'pdh_pdl', 'candlestick'
+        'smc_ob', 'smc_fib', 'smc_fvg', 'orb', 'smc_mss',
+        'smc_sweep', 'candlestick', 'pdh_pdl', 'snr_vwap', 'oi_trap'
     ]
 
     all_cards = []
@@ -271,7 +274,29 @@ def build_confirmed_hero_setup(market, bars, quotes, mtf_trend, strategies, *, n
             out = c.get('outcome', {})
             all_cards.append((s_name, c, sig, out))
 
-    active_cards = [item for item in all_cards if item[3].get('status') == 'ACTIVE']
+    # Pre-15:00 active cards only; no new active entries post 15:00 IST
+    active_cards = []
+    if not is_post_cutoff:
+        for item in all_cards:
+            if item[3].get('status') == 'ACTIVE':
+                sig_time = item[2].get('timestamp')
+                try:
+                    s_at = datetime.fromisoformat(sig_time).astimezone(IST).time()
+                    if s_at < time(15, 0):
+                        active_cards.append(item)
+                except Exception:
+                    active_cards.append(item)
+
+    # Strict Trend-Alignment Gate: Only accept setups aligned with Master Trend
+    master_bias = mtf_trend.get('master_bias')
+    if master_bias in ('BULLISH', 'BEARISH') and active_cards:
+        trend_aligned = [item for item in active_cards if item[2].get('direction') == master_bias]
+        if trend_aligned:
+            active_cards = trend_aligned
+        else:
+            # All active cards are counter-trend traps -> block them from Hero Setup!
+            active_cards = []
+
     chosen = None
     if active_cards:
         def active_rank(item):
@@ -284,6 +309,7 @@ def build_confirmed_hero_setup(market, bars, quotes, mtf_trend, strategies, *, n
         bull_active = [x for x in active_sorted if x[2].get('direction') == 'BULLISH']
         bear_active = [x for x in active_sorted if x[2].get('direction') == 'BEARISH']
         
+        # Confluence takes top priority (2+ engines agreeing)
         if len(bull_active) >= 2 and len(bull_active) >= len(bear_active):
             chosen = bull_active[0]
         elif len(bear_active) >= 2 and len(bear_active) > len(bull_active):
@@ -291,9 +317,19 @@ def build_confirmed_hero_setup(market, bars, quotes, mtf_trend, strategies, *, n
         else:
             chosen = sorted(active_cards, key=active_rank)[0]
     elif all_cards:
+        # After 15:00 or when no active setup, pick best resolved trend-aligned setup of the day
         resolved = [item for item in all_cards if item[3].get('status') in ('TARGET_ACHIEVED', 'SL_HIT')]
+        if master_bias in ('BULLISH', 'BEARISH'):
+            trend_res = [item for item in resolved if item[2].get('direction') == master_bias]
+            if trend_res:
+                resolved = trend_res
         if resolved:
-            chosen = sorted(resolved, key=lambda x: x[2].get('timestamp', ''), reverse=True)[0]
+            # Prefer targets achieved
+            tgt_achieved = [x for x in resolved if x[3].get('status') == 'TARGET_ACHIEVED']
+            if tgt_achieved:
+                chosen = sorted(tgt_achieved, key=lambda x: x[2].get('timestamp', ''), reverse=True)[0]
+            else:
+                chosen = sorted(resolved, key=lambda x: x[2].get('timestamp', ''), reverse=True)[0]
         else:
             chosen = sorted(all_cards, key=lambda x: x[2].get('timestamp', ''), reverse=True)[0]
 
@@ -411,9 +447,12 @@ def build_confirmed_hero_setup(market, bars, quotes, mtf_trend, strategies, *, n
         horizon = "Afternoon Power Hour Window (01:30 — 03:30 PM IST)"
 
     dur_label = out.get('duration_label') or ''
-    if status == 'ACTIVE':
+    if is_post_cutoff:
+        stage_title = "STAGE 3 (Session Closed · 03:00 PM Cut-off)"
+        stage_desc = f"Active trading window closed at 03:00 PM IST. Capital Protection Rule: Zero new option entries in final 30 minutes to protect against theta decay and expiry spikes. Showing top resolved setup [{strat_title}]."
+    elif status == 'ACTIVE':
         stage_title = "STAGE 2 (Live Confirmation)"
-        stage_desc = f"Active in {horizon}. Strategy [{strat_title}] confirmed {side} setup on live candle. Monitored with live VWAP, multi-timeframe bias, and real-time option spread."
+        stage_desc = f"Active in {horizon}. Strategy [{strat_title}] confirmed {side} setup aligned with {master_bias} trend. Monitored with live VWAP and real-time option spread."
     elif status == 'TARGET_ACHIEVED':
         stage_title = "STAGE 3 (Target Achieved ✓)"
         stage_desc = f"Strategy [{strat_title}] achieved Target ₹{index_tgt} ({dur_label or 'Resolved'}). In-the-money profit secured; awaiting next setup."

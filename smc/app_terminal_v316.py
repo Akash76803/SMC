@@ -194,6 +194,7 @@ canvas{width:100%;height:360px;display:block;border-radius:8px}table{border-coll
 <div id="masterTrendBanner" class="master-trend-banner">Checking Multi-Timeframe Trend…</div>
 <div class="trade-status-bar" role="tablist" aria-label="Trade Status Filter">
 <button type="button" class="trade-tab-btn active" data-tab="active">⚡ ACTIVE SETUPS (<span id="activeCount">0</span>)</button>
+<button type="button" class="trade-tab-btn" data-tab="quality">⭐ A+ QUALITY (Trend-Aligned) (<span id="qualityCount">0</span>)</button>
 <button type="button" class="trade-tab-btn" data-tab="resolved">🎯 RESOLVED TRADES (History) (<span id="resolvedCount">0</span>)</button>
 <button type="button" class="trade-tab-btn" data-tab="all">📋 ALL STRATEGIES</button>
 </div>
@@ -595,17 +596,21 @@ async function pollMultiStrategies(){
   const allCards=Object.entries(data.strategies).flatMap(([key,state])=>
    (state.cards?.length?state.cards:[state]).map(setup=>({key,state,setup})));
 
-  let actCount=0, resCount=0;
+  let actCount=0, resCount=0, qualCount=0;
   for(const item of allCards){
    const sig=item.setup?.signal||(item.setup?.entry!=null?item.setup:null)||item.state?.signal;
    const out=sig?.outcome||item.setup?.outcome||{};
    if(sig?.entry!=null){
     if(out.status==='ACTIVE') actCount++;
     else if(out.status==='TARGET_ACHIEVED'||out.status==='SL_HIT'||out.status==='EOD_EXIT') resCount++;
+    const isTrendAligned = !data.mtf_trend?.master_bias || (sig.direction === data.mtf_trend.master_bias);
+    const isPreCutoff = !sig.timestamp || sig.timestamp.slice(11, 16) < '15:00';
+    if(isTrendAligned && isPreCutoff) qualCount++;
    }
   }
   const acEl=document.getElementById('activeCount'); if(acEl) acEl.textContent=actCount;
   const rcEl=document.getElementById('resolvedCount'); if(rcEl) rcEl.textContent=resCount;
+  const qcEl=document.getElementById('qualityCount'); if(qcEl) qcEl.textContent=qualCount;
 
   const cards=allCards.filter(item=>{
    if(currentStratCat!=='ALL'&&strategyCategories[item.key]!==currentStratCat) return false;
@@ -613,6 +618,11 @@ async function pollMultiStrategies(){
    const out=sig?.outcome||item.setup?.outcome||{};
    const hasSig=sig?.entry!=null;
    if(currentTradeTab==='active') return hasSig&&out.status==='ACTIVE';
+   if(currentTradeTab==='quality'){
+    const isTrendAligned = !data.mtf_trend?.master_bias || (sig?.direction === data.mtf_trend.master_bias);
+    const isPreCutoff = !sig?.timestamp || sig.timestamp.slice(11, 16) < '15:00';
+    return hasSig && isTrendAligned && isPreCutoff;
+   }
    if(currentTradeTab==='resolved') return hasSig&&(out.status==='TARGET_ACHIEVED'||out.status==='SL_HIT'||out.status==='EOD_EXIT');
    return true;
   });
@@ -642,6 +652,13 @@ async function pollMultiStrategies(){
    empty.innerHTML='<h3 style="color:#38bdf8;font-size:18px;margin-bottom:8px">⚡ Scanning 10 Strategies for Next Trend-Aligned Entry</h3>'+
     '<p class="muted" style="font-size:13px;max-width:600px;margin:auto">Currently no active trade position open. The scanner is actively monitoring for setups aligned with <strong>'+allowed+'</strong>.</p>'+
     '<p style="font-size:12px;color:#94a3b8;margin-top:14px">👉 Click <strong>🎯 RESOLVED TRADES (History)</strong> above to see completed targets and past trade durations.</p>';
+   container.append(empty);
+  }
+  if(currentTradeTab==='quality'&&cards.length===0){
+   const empty=document.createElement('div');empty.className='panel';
+   empty.style.gridColumn='1 / -1';empty.style.textAlign='center';empty.style.padding='36px 20px';
+   empty.innerHTML='<h3 style="color:#fbbf24;font-size:18px;margin-bottom:8px">⭐ A+ Quality Filter Active</h3>'+
+    '<p class="muted" style="font-size:13px;max-width:600px;margin:auto">No trend-aligned setups matching the strict 3:00 PM cut-off. Counter-trend traps have been blocked to protect capital.</p>';
    container.append(empty);
   }
 
