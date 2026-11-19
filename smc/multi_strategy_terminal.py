@@ -78,27 +78,39 @@ def evaluate_signal_outcome(signal, bars, closed=False):
     for b in subsequent_bars:
         hit_stop = b['low'] <= stop if sign == 1 else b['high'] >= stop
         hit_target = b['high'] >= target if sign == 1 else b['low'] <= target
+        bt = _parse_dt(b.get('timestamp'))
+        dur_min = max(1, round((bt - sig_time).total_seconds() / 60)) if (bt and sig_time) else 1
 
         if hit_stop and hit_target:
             pnl = sign * (stop - entry)
             return {'status': 'SL_HIT', 'label': f'SL HIT ({pnl:+.1f} pts)', 'exit_price': stop,
-                    'pnl_pts': round(pnl, 2), 'color': 'red'}
+                    'pnl_pts': round(pnl, 2), 'color': 'red', 'duration_min': dur_min,
+                    'duration_label': f'{dur_min}m'}
         if hit_stop:
             pnl = sign * (stop - entry)
             return {'status': 'SL_HIT', 'label': f'SL HIT ({pnl:+.1f} pts)', 'exit_price': stop,
-                    'pnl_pts': round(pnl, 2), 'color': 'red'}
+                    'pnl_pts': round(pnl, 2), 'color': 'red', 'duration_min': dur_min,
+                    'duration_label': f'{dur_min}m'}
         if hit_target:
             pnl = sign * (target - entry)
             return {'status': 'TARGET_ACHIEVED', 'label': f'TARGET HIT (+{pnl:.1f} pts)', 'exit_price': target,
-                    'pnl_pts': round(pnl, 2), 'color': 'green'}
+                    'pnl_pts': round(pnl, 2), 'color': 'green', 'duration_min': dur_min,
+                    'duration_label': f'{dur_min}m'}
 
     last_b = subsequent_bars[-1]
+    last_bt = _parse_dt(last_b.get('timestamp'))
+    elapsed_min = max(1, round((last_bt - sig_time).total_seconds() / 60)) if (last_bt and sig_time) else 1
     curr_pts = sign * (last_b['close'] - entry)
     if closed:
         return {'status': 'EOD_EXIT', 'label': f'EOD ({curr_pts:+.1f} pts)', 'exit_price': last_b['close'],
-                'pnl_pts': round(curr_pts, 2), 'color': 'green' if curr_pts > 0 else 'red'}
+                'pnl_pts': round(curr_pts, 2), 'color': 'green' if curr_pts > 0 else 'red',
+                'duration_min': elapsed_min, 'duration_label': f'{elapsed_min}m'}
+
+    est_target_min = max(2, 12 - elapsed_min)
     return {'status': 'ACTIVE', 'label': f'ACTIVE ({curr_pts:+.1f} pts)', 'exit_price': last_b['close'],
-            'pnl_pts': round(curr_pts, 2), 'color': 'yellow'}
+            'pnl_pts': round(curr_pts, 2), 'color': 'yellow', 'duration_min': elapsed_min,
+            'elapsed_min': elapsed_min, 'est_target_min': est_target_min,
+            'duration_label': f'Active {elapsed_min}m (Est. target ~{est_target_min}m)'}
 
 
 def _timing_fields(strategy):
@@ -132,6 +144,99 @@ def _rows(path):
         return rows
     except (OSError, UnicodeError):
         return []
+
+
+def calculate_multi_timeframe_trend(bars, session_history=None):
+    """Determine top-down trend across Daily, 4h, 1h, 45m, 30m, 15m, 5m."""
+    all_bars = session_history if session_history else bars
+    if not all_bars:
+        return {
+            'daily': 'NEUTRAL', '4h': 'NEUTRAL', '1h': 'NEUTRAL',
+            '45m': 'NEUTRAL', '30m': 'NEUTRAL', '15m': 'NEUTRAL', '5m': 'NEUTRAL',
+            'master_bias': 'NEUTRAL', 'action_permitted': 'HIGH CONFLUENCE ONLY',
+            'score': '0/7 ALIGNED', 'bull_count': 0, 'bear_count': 0
+        }
+
+    def _resample(b_list, mins):
+        grouped = {}
+        for b in b_list:
+            dt = _parse_dt(b.get('timestamp'))
+            if not dt:
+                continue
+            bucket = dt.replace(minute=(dt.minute // mins) * mins, second=0, microsecond=0)
+            grouped.setdefault(bucket, []).append(b)
+        out = []
+        for bucket, grp in sorted(grouped.items()):
+            out.append({
+                'timestamp': bucket.isoformat(),
+                'open': grp[0]['open'],
+                'high': max(x['high'] for x in grp),
+                'low': min(x['low'] for x in grp),
+                'close': grp[-1]['close'],
+            })
+        return out
+
+    def _determine_trend(tf_bars):
+        if not tf_bars:
+            return 'NEUTRAL'
+        c = tf_bars[-1]['close']
+        o = tf_bars[0]['open']
+        h = max(x['high'] for x in tf_bars)
+        l = min(x['low'] for x in tf_bars)
+        mid = (h + l) / 2.0
+        slope = tf_bars[-1]['close'] - tf_bars[-min(len(tf_bars), 3)]['close']
+        if c > mid and slope >= 0:
+            return 'BULLISH'
+        elif c < mid and slope <= 0:
+            return 'BEARISH'
+        elif c > o:
+            return 'BULLISH'
+        elif c < o:
+            return 'BEARISH'
+        return 'NEUTRAL'
+
+    bars_5m = _resample(all_bars, 5)
+    bars_15m = _resample(all_bars, 15)
+    bars_30m = _resample(all_bars, 30)
+    bars_45m = _resample(all_bars, 45)
+    bars_1h = _resample(all_bars, 60)
+    bars_4h = _resample(all_bars, 240)
+
+    trend_5m = _determine_trend(bars_5m)
+    trend_15m = _determine_trend(bars_15m)
+    trend_30m = _determine_trend(bars_30m)
+    trend_45m = _determine_trend(bars_45m)
+    trend_1h = _determine_trend(bars_1h)
+    trend_4h = _determine_trend(bars_4h)
+
+    if bars:
+        today_open = bars[0]['open']
+        curr_close = bars[-1]['close']
+        trend_daily = 'BULLISH' if curr_close >= today_open else 'BEARISH'
+    else:
+        trend_daily = 'NEUTRAL'
+
+    tfs = [trend_daily, trend_4h, trend_1h, trend_45m, trend_30m, trend_15m, trend_5m]
+    bull_count = sum(1 for t in tfs if t == 'BULLISH')
+    bear_count = sum(1 for t in tfs if t == 'BEARISH')
+
+    if bull_count >= 4 or (trend_daily == 'BULLISH' and trend_1h == 'BULLISH'):
+        master_bias = 'BULLISH'
+        action_permitted = 'CALL (CE) ONLY'
+    elif bear_count >= 4 or (trend_daily == 'BEARISH' and trend_1h == 'BEARISH'):
+        master_bias = 'BEARISH'
+        action_permitted = 'PUT (PE) ONLY'
+    else:
+        master_bias = 'NEUTRAL'
+        action_permitted = 'HIGH CONFLUENCE ONLY'
+
+    return {
+        'daily': trend_daily, '4h': trend_4h, '1h': trend_1h,
+        '45m': trend_45m, '30m': trend_30m, '15m': trend_15m, '5m': trend_5m,
+        'master_bias': master_bias, 'action_permitted': action_permitted,
+        'score': f"{max(bull_count, bear_count)}/7 ALIGNED",
+        'bull_count': bull_count, 'bear_count': bear_count
+    }
 
 
 def multi_strategy_payload(root, market, *, now=None):
@@ -370,4 +475,5 @@ def multi_strategy_payload(root, market, *, now=None):
                 timestamp=at, direction=direction, confluence_score='HIGH',
                 engines=list(engines), setup_ids=[setup for ids in engines.values() for setup in ids],
             ))
+    result['mtf_trend'] = calculate_multi_timeframe_trend(bars, session_history)
     return result

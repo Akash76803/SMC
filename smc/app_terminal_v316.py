@@ -62,6 +62,31 @@ canvas{width:100%;height:360px;display:block;border-radius:8px}table{border-coll
 .strategy-card.is-active-target{border:2px solid #10b981;box-shadow:0 0 25px rgba(16,185,129,.35);background:linear-gradient(165deg,#064e3b38 0%,#0f172a 100%)}
 .active-target-banner{display:flex;align-items:center;justify-content:space-between;background:#10b98126;border:1px solid #10b98188;color:#34d399;padding:6px 12px;border-radius:8px;font-size:12px;font-weight:700;margin-bottom:12px;letter-spacing:.04em}
 .live-pulse-badge{display:inline-flex;align-items:center;gap:6px;background:#10b98133;padding:2px 8px;border-radius:12px;font-size:11px;color:#a7f3d0}
+.master-trend-banner{background:linear-gradient(135deg,#0f172a 0%,#1e293b 100%);border:1px solid #334155;border-radius:12px;padding:16px 20px;margin-bottom:16px;box-shadow:0 4px 20px rgba(0,0,0,.4)}
+.mtf-header{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-bottom:12px;border-bottom:1px solid #33415580;padding-bottom:12px}
+.mtf-title{display:flex;flex-direction:column;gap:3px}
+.mtf-eyebrow{font-size:10px;letter-spacing:.15em;font-weight:700;color:#94a3b8}
+.mtf-title h3{margin:0;font-size:17px;font-weight:700;letter-spacing:-.02em}
+.mtf-action-box{display:flex;align-items:center;gap:10px;padding:8px 16px;border-radius:8px;font-weight:700}
+.mtf-action-box.good-bg{background:#10b98122;border:1.5px solid #10b98188;color:#34d399}
+.mtf-action-box.bad-bg{background:#ef444422;border:1.5px solid #ef444488;color:#f87171}
+.mtf-action-box.warn-bg{background:#f59e0b22;border:1.5px solid #f59e0b88;color:#fbbf24}
+.mtf-action-box span{font-size:11px;color:#94a3b8;letter-spacing:.05em}
+.mtf-action-box strong{font-size:13px;letter-spacing:.03em}
+.mtf-pills-row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.tf-chip{font-size:11px;font-weight:600;padding:4px 10px;border-radius:6px;display:inline-flex;align-items:center;gap:4px}
+.tf-chip.chip-bull{background:#10b98118;color:#34d399;border:1px solid #10b98155}
+.tf-chip.chip-bear{background:#ef444418;color:#f87171;border:1px solid #ef444455}
+.tf-chip.chip-neutral{background:#33415540;color:#94a3b8;border:1px solid #47556955}
+.tf-alignment-badge{font-size:11px;font-weight:800;color:#fbbf24;background:#f59e0b1a;border:1px solid #f59e0b66;padding:4px 10px;border-radius:6px;margin-left:auto}
+.trade-status-bar{display:flex;gap:8px;margin-bottom:12px;background:#0b0f19;padding:5px;border-radius:10px;border:1px solid #334155}
+.trade-tab-btn{flex:1;background:transparent;border:0;color:#94a3b8;font-size:13px;font-weight:700;padding:9px 14px;border-radius:7px;cursor:pointer;transition:all .15s;display:flex;align-items:center;justify-content:center;gap:6px}
+.trade-tab-btn:hover{color:#f1f5f9;background:#1e293b80}
+.trade-tab-btn.active{background:#1e293b;color:#38bdf8;box-shadow:0 2px 8px rgba(0,0,0,.35)}
+.trade-tab-btn span{background:#334155;color:#e2e8f0;padding:2px 7px;border-radius:10px;font-size:11px}
+.trade-tab-btn.active span{background:#0284c7;color:#fff}
+.counter-trend-warning{font-size:10px;color:#f87171;background:#ef444418;border:1px solid #ef444455;padding:3px 8px;border-radius:4px;font-weight:700;display:inline-flex;align-items:center;gap:4px}
+.duration-chip{display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:700;color:#38bdf8;background:#0284c718;border:1px solid #0284c744;padding:2px 6px;border-radius:4px}
 .strategy-heading{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px}
 .strategy-heading h3{font-size:17px;font-weight:700;margin:0;letter-spacing:-.02em;color:#f8fafc}
 .strategy-market{font-size:11px;color:#38bdf8;background:#0284c71a;border:1px solid #0284c744;padding:2px 8px;border-radius:4px;font-weight:600;letter-spacing:.05em}
@@ -124,10 +149,16 @@ canvas{width:100%;height:360px;display:block;border-radius:8px}table{border-coll
 <h2>MULTI-STRATEGY SIGNALS</h2>
 <p class="muted">Research observations · Fixed-delta premium estimates · Manual mobile execution only</p>
 <small class="muted">Timing windows are configured research heuristics, not measured statistics or guaranteed safe holding limits. Minutes are measured from manual entry.</small>
+<div id="masterTrendBanner" class="master-trend-banner">Checking Multi-Timeframe Trend…</div>
+<div class="trade-status-bar" role="tablist" aria-label="Trade Status Filter">
+<button type="button" class="trade-tab-btn active" data-tab="active">⚡ ACTIVE SETUPS (<span id="activeCount">0</span>)</button>
+<button type="button" class="trade-tab-btn" data-tab="resolved">🎯 RESOLVED TRADES (History) (<span id="resolvedCount">0</span>)</button>
+<button type="button" class="trade-tab-btn" data-tab="all">📋 ALL STRATEGIES</button>
+</div>
 <div class="strat-category-bar" role="tablist" aria-label="Strategy Category Filter">
-<button type="button" class="strat-filter-btn active" data-cat="ALL">All Strategies (10)</button>
+<button type="button" class="strat-filter-btn active" data-cat="ALL">All Categories</button>
 <button type="button" class="strat-filter-btn" data-cat="SMC">SMC Institutional (5)</button>
-<button type="button" class="strat-filter-btn" data-cat="PA">Price Action & Candlesticks (2)</button>
+<button type="button" class="strat-filter-btn" data-cat="PA">Price Action (2)</button>
 <button type="button" class="strat-filter-btn" data-cat="MOM">Momentum & Flow (3)</button>
 </div>
 <div id="multiStrategyCards" class="setup-grid" aria-live="polite">Checking recorded data…</div>
@@ -434,7 +465,13 @@ function appendStrategyTiming(parent,timing){
  note.textContent='⚠️ Time-SL: '+timing.advice;
  parent.append(badge,note);
 }
-let currentStratCat='ALL';
+let currentStratCat='ALL', currentTradeTab='active';
+document.querySelectorAll('.trade-tab-btn').forEach(btn=>{
+ btn.onclick=()=>{
+  document.querySelectorAll('.trade-tab-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');currentTradeTab=btn.dataset.tab;pollMultiStrategies();
+ };
+});
 const strategyTitles={
  snr_vwap:'S&R + VWAP',orb:'15m ORB',candlestick:'Candlestick Price Action',oi_trap:'OI Trap',
  smc_sweep:'Liquidity Sweep',smc_mss:'Market Structure Shift',smc_fvg:'Fair Value Gap',
@@ -459,9 +496,45 @@ async function pollMultiStrategies(){
   if(!response.ok)throw new Error('Data unavailable');
   const data=await response.json();if(market.value!==desired)return;
   container.replaceChildren();
+  const bannerBox=document.getElementById('masterTrendBanner');
+  if(bannerBox&&data.mtf_trend){
+   const mtf=data.mtf_trend;
+   const isBull=mtf.master_bias==='BULLISH';
+   const isBear=mtf.master_bias==='BEARISH';
+   const biasText=isBull?'🟢 STRONG BULLISH (CE Bias)':isBear?'🔴 STRONG BEARISH (PE Bias)':'⚪ NEUTRAL / Choppy Range';
+   const actionCls=isBull?'good-bg':isBear?'bad-bg':'warn-bg';
+   bannerBox.innerHTML='<div class="mtf-header"><div class="mtf-title"><span class="mtf-eyebrow">TOP-DOWN MULTI-TIMEFRAME TREND CONFIRMATION (DAILY ➡️ 5M)</span><h3>🧭 Master Bias: <strong class="'+(isBull?'good':isBear?'bad':'warn')+'">'+biasText+'</strong></h3></div>'+
+    '<div class="mtf-action-box '+actionCls+'"><span>PERMITTED ACTION:</span><strong>'+(mtf.action_permitted||'HIGH CONFLUENCE')+'</strong></div></div>'+
+    '<div class="mtf-pills-row">'+
+    ['daily','4h','1h','45m','30m','15m','5m'].map(tf=>'<span class="tf-chip '+(mtf[tf]==='BULLISH'?'chip-bull':mtf[tf]==='BEARISH'?'chip-bear':'chip-neutral')+'">'+tf.toUpperCase()+': '+(mtf[tf]||'—')+'</span>').join('')+
+    '<span class="tf-alignment-badge">'+(mtf.score||'ALIGNED')+'</span></div>';
+  }
   const confluenceIds=new Set((data.confluences||[]).flatMap(group=>group.setup_ids));
-  const cards=Object.entries(data.strategies).flatMap(([key,state])=>
+  const allCards=Object.entries(data.strategies).flatMap(([key,state])=>
    (state.cards?.length?state.cards:[state]).map(setup=>({key,state,setup})));
+
+  let actCount=0, resCount=0;
+  for(const item of allCards){
+   const sig=item.setup?.signal||(item.setup?.entry!=null?item.setup:null)||item.state?.signal;
+   const out=sig?.outcome||item.setup?.outcome||{};
+   if(sig?.entry!=null){
+    if(out.status==='ACTIVE') actCount++;
+    else if(out.status==='TARGET_ACHIEVED'||out.status==='SL_HIT'||out.status==='EOD_EXIT') resCount++;
+   }
+  }
+  const acEl=document.getElementById('activeCount'); if(acEl) acEl.textContent=actCount;
+  const rcEl=document.getElementById('resolvedCount'); if(rcEl) rcEl.textContent=resCount;
+
+  const cards=allCards.filter(item=>{
+   if(currentStratCat!=='ALL'&&strategyCategories[item.key]!==currentStratCat) return false;
+   const sig=item.setup?.signal||(item.setup?.entry!=null?item.setup:null)||item.state?.signal;
+   const out=sig?.outcome||item.setup?.outcome||{};
+   const hasSig=sig?.entry!=null;
+   if(currentTradeTab==='active') return hasSig&&out.status==='ACTIVE';
+   if(currentTradeTab==='resolved') return hasSig&&(out.status==='TARGET_ACHIEVED'||out.status==='SL_HIT'||out.status==='EOD_EXIT');
+   return true;
+  });
+
   cards.sort((a,b)=>{
    const getSig=x=>x.setup?.signal||(x.setup?.entry!=null?x.setup:null)||x.state?.signal;
    const getOut=x=>getSig(x)?.outcome||x.setup?.outcome||x.state?.signal?.outcome||{};
@@ -479,6 +552,17 @@ async function pollMultiStrategies(){
    const timeB=sigB?.timestamp||'';
    return timeB.localeCompare(timeA);
   });
+
+  if(currentTradeTab==='active'&&cards.length===0){
+   const empty=document.createElement('div');empty.className='panel';
+   empty.style.gridColumn='1 / -1';empty.style.textAlign='center';empty.style.padding='36px 20px';
+   const allowed=data.mtf_trend?.action_permitted||'CALL (CE) ONLY';
+   empty.innerHTML='<h3 style="color:#38bdf8;font-size:18px;margin-bottom:8px">⚡ Scanning 10 Strategies for Next Trend-Aligned Entry</h3>'+
+    '<p class="muted" style="font-size:13px;max-width:600px;margin:auto">Currently no active trade position open. The scanner is actively monitoring for setups aligned with <strong>'+allowed+'</strong>.</p>'+
+    '<p style="font-size:12px;color:#94a3b8;margin-top:14px">👉 Click <strong>🎯 RESOLVED TRADES (History)</strong> above to see completed targets and past trade durations.</p>';
+   container.append(empty);
+  }
+
   for(const {key,state,setup} of cards){
    if(currentStratCat!=='ALL'&&strategyCategories[key]!==currentStratCat)continue;
    const card=document.createElement('article');card.className='strategy-card';
@@ -507,13 +591,20 @@ async function pollMultiStrategies(){
     const badge=document.createElement('span');badge.className='direction-pill confluence-pill';
     badge.textContent='High confluence';badgeWrap.append(badge);
    }
+   const mtfBias=data.mtf_trend?.master_bias;
+   const isCounter=(mtfBias==='BULLISH'&&dir==='BEARISH')||(mtfBias==='BEARISH'&&dir==='BULLISH');
+   if(isCounter){
+    const counterBadge=document.createElement('span');counterBadge.className='counter-trend-warning';
+    counterBadge.textContent='⚠️ COUNTER-TREND (High Risk)';badgeWrap.append(counterBadge);
+   }
    if(out&&out.status!=='UNKNOWN'&&out.status!=='PENDING'){
     const outBadge=document.createElement('span');
     const isTgt=out.status==='TARGET_ACHIEVED';
     const isSl=out.status==='SL_HIT';
     const isEod=out.status==='EOD_EXIT';
     outBadge.className='outcome-badge '+(isTgt?'outcome-target':isSl?'outcome-sl':isEod?'outcome-eod':'outcome-active');
-    outBadge.textContent=(isTgt?'🎯 ':isSl?'🛑 ':isEod?'🏁 ':'⚡ ')+out.label;
+    const durText=out.duration_label?' · ⏱️ '+out.duration_label:'';
+    outBadge.textContent=(isTgt?'🎯 ':isSl?'🛑 ':isEod?'🏁 ':'⚡ ')+out.label+durText;
     badgeWrap.append(outBadge);
    }
    card.append(badgeWrap);
