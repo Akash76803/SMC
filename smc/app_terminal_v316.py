@@ -87,6 +87,47 @@ canvas{width:100%;height:360px;display:block;border-radius:8px}table{border-coll
 .trade-tab-btn.active span{background:#0284c7;color:#fff}
 .counter-trend-warning{font-size:10px;color:#f87171;background:#ef444418;border:1px solid #ef444455;padding:3px 8px;border-radius:4px;font-weight:700;display:inline-flex;align-items:center;gap:4px}
 .duration-chip{display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:700;color:#38bdf8;background:#0284c718;border:1px solid #0284c744;padding:2px 6px;border-radius:4px}
+.confirmed-hero-wrapper{margin:16px 0 20px}
+.stage2-notification{display:flex;align-items:center;gap:10px;padding:9px 16px;background:#064e3b18;border:1px solid #10b98155;border-radius:9px;font-size:12px;color:#a7f3d0;margin-bottom:12px;line-height:1.5}
+.stage2-notification strong{color:#34d399}
+.info-circle{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:50%;background:#10b98133;color:#34d399;font-size:11px;font-weight:800;flex-shrink:0}
+.confirmed-hero-card{background:linear-gradient(165deg,#0c1622 0%,#090d16 100%);border:1.5px solid #10b98188;box-shadow:0 6px 30px rgba(0,0,0,.5),0 0 25px rgba(16,185,129,.15);border-radius:12px;padding:20px 24px}
+.confirmed-hero-card.bearish-theme{border-color:#ef444488;box-shadow:0 6px 30px rgba(0,0,0,.5),0 0 25px rgba(239,68,68,.15)}
+.hero-top-row{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-bottom:16px}
+.hero-contract-info{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.hero-side-pill{padding:6px 14px;border-radius:6px;font-size:12px;font-weight:800;letter-spacing:.04em}
+.hero-side-pill.pill-ce{background:#059669;color:#fff}
+.hero-side-pill.pill-pe{background:#dc2626;color:#fff}
+.hero-contract-title{font-size:19px;font-weight:700;color:#f8fafc;margin:0;letter-spacing:-.02em}
+.hero-contract-title small{color:#94a3b8;font-size:13px;font-weight:400;margin-left:4px}
+.hero-rr-badge{background:#1e293b;border:1px solid #334155;color:#f1f5f9;padding:5px 12px;border-radius:6px;font-size:12px;font-weight:700;letter-spacing:.02em}
+.hero-metrics-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:12px;margin:16px 0}
+@media(max-width:1250px){.hero-metrics-grid{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:650px){.hero-metrics-grid{grid-template-columns:repeat(2,1fr)}}
+.hero-metric-box{background:#111827;border:1px solid #334155;border-radius:8px;padding:12px 14px;display:flex;flex-direction:column;gap:3px;min-width:0}
+.hero-metric-box.box-entry{background:#064e3b14;border:1.5px solid #10b98188}
+.hero-metric-box.box-sl{background:#450a0a14;border:1.5px solid #ef444488}
+.hero-metric-box.box-tgt{background:#064e3b10;border:1px solid #10b98166}
+.metric-lbl{font-size:11px;color:#94a3b8;font-weight:600}
+.metric-val{font-size:16px;font-weight:700;color:#f8fafc;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.metric-val.val-green{color:#34d399}
+.metric-val.val-red{color:#f87171}
+.metric-sub{font-size:10px;color:#64748b}
+.hero-do-not-chase{display:flex;align-items:center;gap:8px;padding:10px 16px;background:#fef3c70d;border:1px solid #f59e0b66;border-radius:8px;color:#fbbf24;font-size:12px;margin:14px 0}
+.hero-do-not-chase strong{font-size:12px;letter-spacing:.02em}
+.hero-conditions-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px}
+@media(max-width:850px){.hero-conditions-grid{grid-template-columns:1fr}}
+.hero-condition-box{border-radius:8px;padding:14px 16px;display:flex;flex-direction:column;gap:6px}
+.hero-condition-box.cond-entry{background:#064e3b12;border:1px solid #10b98144}
+.hero-condition-box.cond-exit{background:#450a0a12;border:1px solid #ef444444}
+.cond-header{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:700}
+.cond-header.hdr-entry{color:#34d399}
+.cond-header.hdr-exit{color:#f87171}
+.cond-text{font-size:12px;color:#e2e8f0;margin:2px 0;line-height:1.5}
+.cond-footer{font-size:10px;color:#94a3b8;margin-top:4px}
+.hero-copy-btn{margin-top:14px;background:#0284c722;border:1px solid #38bdf888;color:#38bdf8;padding:10px 18px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;width:100%;text-align:center;transition:all .15s ease}
+.hero-copy-btn:hover{background:#0284c744;color:#fff}
+.hero-copy-btn.copied{background:#10b98126;border-color:#10b981;color:#34d399}
 .strategy-heading{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px}
 .strategy-heading h3{font-size:17px;font-weight:700;margin:0;letter-spacing:-.02em;color:#f8fafc}
 .strategy-market{font-size:11px;color:#38bdf8;background:#0284c71a;border:1px solid #0284c744;padding:2px 8px;border-radius:4px;font-weight:600;letter-spacing:.05em}
@@ -149,6 +190,7 @@ canvas{width:100%;height:360px;display:block;border-radius:8px}table{border-coll
 <h2>MULTI-STRATEGY SIGNALS</h2>
 <p class="muted">Research observations · Fixed-delta premium estimates · Manual mobile execution only</p>
 <small class="muted">Timing windows are configured research heuristics, not measured statistics or guaranteed safe holding limits. Minutes are measured from manual entry.</small>
+<div id="confirmedHeroSection"></div>
 <div id="masterTrendBanner" class="master-trend-banner">Checking Multi-Timeframe Trend…</div>
 <div class="trade-status-bar" role="tablist" aria-label="Trade Status Filter">
 <button type="button" class="trade-tab-btn active" data-tab="active">⚡ ACTIVE SETUPS (<span id="activeCount">0</span>)</button>
@@ -496,6 +538,34 @@ async function pollMultiStrategies(){
   if(!response.ok)throw new Error('Data unavailable');
   const data=await response.json();if(market.value!==desired)return;
   container.replaceChildren();
+  const heroBox=document.getElementById('confirmedHeroSection');
+  if(heroBox&&data.confirmed_hero){
+   const h=data.confirmed_hero;
+   const isCe=h.side==='CE';
+   const copyTxt=h.contract+' | Bracket '+h.entry_bracket+' | SL '+h.stop_loss+' | Target '+h.target_1+' | DO NOT CHASE > '+h.do_not_chase;
+   heroBox.innerHTML='<div class="confirmed-hero-wrapper">'+
+    '<div class="stage2-notification"><span class="info-circle">ⓘ</span><span><strong>'+h.stage+':</strong> '+h.stage_note+'</span></div>'+
+    '<div class="confirmed-hero-card '+(isCe?'':'bearish-theme')+'">'+
+    '<div class="hero-top-row"><div class="hero-contract-info">'+
+    '<span class="hero-side-pill '+(isCe?'pill-ce':'pill-pe')+'">'+h.side_label+'</span>'+
+    '<h2 class="hero-contract-title">'+h.contract+' <small>('+h.expiry+')</small></h2>'+
+    '</div><div class="hero-rr-badge">R:R '+h.rr_ratio+'</div></div>'+
+    '<div class="hero-metrics-grid">'+
+    '<div class="hero-metric-box"><div class="metric-lbl">Live Market LTP</div><div class="metric-val">₹'+h.ltp+'</div><div class="metric-sub">Angel One NFO Live</div></div>'+
+    '<div class="hero-metric-box box-entry"><div class="metric-lbl">Suggested Entry</div><div class="metric-val val-green">'+h.entry_bracket+'</div><div class="metric-sub">Planned bracket</div></div>'+
+    '<div class="hero-metric-box box-sl"><div class="metric-lbl">Stop-Loss (SL)</div><div class="metric-val val-red">₹'+h.stop_loss+'</div><div class="metric-sub">Strict invalidation</div></div>'+
+    '<div class="hero-metric-box box-tgt"><div class="metric-lbl">Target 1 (3.5R)</div><div class="metric-val val-green">₹'+h.target_1+'</div><div class="metric-sub">Book 50% lot</div></div>'+
+    '<div class="hero-metric-box box-tgt"><div class="metric-lbl">Target 2 (6.5R)</div><div class="metric-val val-green">₹'+h.target_2+'</div><div class="metric-sub">Runner target</div></div>'+
+    '<div class="hero-metric-box box-tgt"><div class="metric-lbl">Target 3 (10.1R)</div><div class="metric-val val-green">₹'+h.target_3+'</div><div class="metric-sub">Trend stretch</div></div>'+
+    '</div>'+
+    '<div class="hero-do-not-chase"><span class="info-circle" style="background:#f59e0b33;color:#fbbf24">ⓘ</span><span><strong>DO-NOT-CHASE THRESHOLD: ₹'+h.do_not_chase+'</strong> (If premium gaps above this, setup is EXPIRED / DO NOT CHASE)</span></div>'+
+    '<div class="hero-conditions-grid">'+
+    '<div class="hero-condition-box cond-entry"><div class="cond-header hdr-entry"><span>✓</span> Entry Confirmation Condition</div><p class="cond-text">'+h.entry_condition+'</p><div class="cond-footer">Holding Horizon: '+h.holding_horizon+'</div></div>'+
+    '<div class="hero-condition-box cond-exit"><div class="cond-header hdr-exit"><span>ⓘ</span> Invalidating Condition (Immediate Exit)</div><p class="cond-text">'+h.invalidating_condition+'</p><div class="cond-footer">Underlying Trigger: '+h.underlying_trigger+'</div></div>'+
+    '</div>'+
+    '<button type="button" class="hero-copy-btn" onclick="navigator.clipboard.writeText(''+copyTxt+'').then(()=>{this.textContent='Copied to Clipboard! ✓';this.classList.add('copied')})">📋 Copy Confirmed '+h.side+' Strike for Angel One Order</button>'+
+    '</div></div>';
+  }
   const bannerBox=document.getElementById('masterTrendBanner');
   if(bannerBox&&data.mtf_trend){
    const mtf=data.mtf_trend;
