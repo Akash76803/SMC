@@ -213,11 +213,10 @@ canvas{width:100%;height:360px;display:block;border-radius:8px}table{border-coll
 <div id="paperPortfolioSection" class="paper-portfolio-container" style="display:none"></div>
 <div id="masterTrendBanner" class="master-trend-banner">Checking Multi-Timeframe Trend…</div>
 <div class="trade-status-bar" role="tablist" aria-label="Trade Status Filter">
-<button type="button" class="trade-tab-btn active" data-tab="low_sl" style="border-color:#10b981;color:#34d399">🛡️ LOWEST SL TRADES (<span id="lowSlCount">0</span>)</button>
-<button type="button" class="trade-tab-btn" data-tab="active">⚡ ALL ACTIVE (<span id="activeCount">0</span>)</button>
-<button type="button" class="trade-tab-btn" data-tab="quality">⭐ A+ QUALITY (<span id="qualityCount">0</span>)</button>
-<button type="button" class="trade-tab-btn" data-tab="resolved">🎯 RESOLVED TRADES (<span id="resolvedCount">0</span>)</button>
-<button type="button" class="trade-tab-btn" data-tab="all">📋 ALL STRATEGIES</button>
+<button type="button" class="trade-tab-btn active" data-tab="active" style="border-color:#38bdf8;color:#38bdf8;font-weight:700">⚡ ACTIVE TRADES ONLY (<span id="activeCount">0</span>)</button>
+<button type="button" class="trade-tab-btn" data-tab="low_sl" style="border-color:#10b981;color:#34d399;font-weight:700">🛡️ TOP TARGET-HIT ONLY (<span id="lowSlCount">0</span>)</button>
+<button type="button" class="trade-tab-btn" data-tab="resolved" style="border-color:#f59e0b;color:#fbbf24;font-weight:700">🎯 RESOLVED / HIT HISTORY (<span id="resolvedCount">0</span>)</button>
+<button type="button" class="trade-tab-btn" data-tab="all">📋 ALL ENGINES</button>
 </div>
 <div class="strat-category-bar" role="tablist" aria-label="Strategy Category Filter">
 <button type="button" class="strat-filter-btn active" data-cat="ALL">All Categories</button>
@@ -537,7 +536,7 @@ function appendStrategyTiming(parent,timing){
  note.textContent='⚠️ Time-SL: '+timing.advice;
  parent.append(badge,note);
 }
-let currentStratCat='ALL', currentTradeTab='low_sl';
+let currentStratCat='ALL', currentTradeTab='active';
 document.querySelectorAll('.trade-tab-btn').forEach(btn=>{
  btn.onclick=()=>{
   document.querySelectorAll('.trade-tab-btn').forEach(b=>b.classList.remove('active'));
@@ -574,7 +573,9 @@ async function pollMultiStrategies(){
    const isCe=h.side==='CE';
    const copyTxt=h.contract+' | Bracket '+h.entry_bracket+' | SL '+h.stop_loss+' | Target '+h.target_1+' | DO NOT CHASE > '+h.do_not_chase;
    heroBox.innerHTML='<div class="confirmed-hero-wrapper">'+
-    '<div class="stage2-notification"><span class="info-circle">ⓘ</span><span><strong>'+h.stage+':</strong> '+h.stage_note+'</span></div>'+
+    '<div class="stage2-notification" style="display:flex;align-items:center;justify-content:space-between;background:#0369a122;border:1px solid #0284c7;padding:8px 14px;border-radius:8px;margin-bottom:10px">'+
+    '<div style="display:flex;align-items:center;gap:8px"><span class="info-circle" style="background:#0284c7;color:#fff">🎯</span><span><strong>PRIMARY RECOMMENDATION (हा १ मुख्य ट्रेड घ्या):</strong> '+h.stage_note+'</span></div>'+
+    '<span style="font-size:11px;font-weight:700;color:#34d399;background:#064e3b;padding:3px 8px;border-radius:4px;border:1px solid #059669">'+(h.target_hit_rate||'TOP TARGET HIT')+'</span></div>'+
     '<div class="confirmed-hero-card '+(isCe?'':'bearish-theme')+'">'+
     '<div class="hero-top-row"><div class="hero-contract-info">'+
     '<span class="hero-side-pill '+(isCe?'pill-ce':'pill-pe')+'">'+h.side_label+'</span>'+
@@ -707,23 +708,29 @@ async function pollMultiStrategies(){
    const sig=item.setup?.signal||(item.setup?.entry!=null?item.setup:null)||item.state?.signal;
    const out=sig?.outcome||item.setup?.outcome||{};
    const hasSig=sig?.entry!=null;
+   if(!hasSig) return false;
+
+   const isTrendAligned = !data.mtf_trend?.master_bias || (sig?.direction === data.mtf_trend.master_bias);
+   const isPreCutoff = !sig?.timestamp || sig.timestamp.slice(11, 16) < '15:00';
+   const isAct = out.status === 'ACTIVE';
+
+   if(currentTradeTab==='active'){
+    return isAct && isTrendAligned && isPreCutoff;
+   }
    if(currentTradeTab==='low_sl'){
-    const isTrendAligned = !data.mtf_trend?.master_bias || (sig?.direction === data.mtf_trend.master_bias);
-    const isPreCutoff = !sig?.timestamp || sig.timestamp.slice(11, 16) < '15:00';
-    return hasSig && LOW_SL_KEYS.includes(item.key) && isTrendAligned && isPreCutoff;
+    return isAct && LOW_SL_KEYS.includes(item.key) && isTrendAligned && isPreCutoff;
    }
-   if(currentTradeTab==='active') return hasSig&&out.status==='ACTIVE';
    if(currentTradeTab==='quality'){
-    const isTrendAligned = !data.mtf_trend?.master_bias || (sig?.direction === data.mtf_trend.master_bias);
-    const isPreCutoff = !sig?.timestamp || sig.timestamp.slice(11, 16) < '15:00';
-    const isLowSlEngine = item.key !== 'snr_vwap'; // Suppress high-SL engine (18% win-rate) from Quality tab
-    return hasSig && isTrendAligned && isPreCutoff && isLowSlEngine;
+    const isLowSlEngine = item.key !== 'snr_vwap'; // Suppress high-SL engine
+    return isAct && isTrendAligned && isPreCutoff && isLowSlEngine;
    }
-   if(currentTradeTab==='resolved') return hasSig&&(out.status==='TARGET_ACHIEVED'||out.status==='SL_HIT'||out.status==='EOD_EXIT');
+   if(currentTradeTab==='resolved'){
+    return out.status==='TARGET_ACHIEVED'||out.status==='SL_HIT'||out.status==='EOD_EXIT';
+   }
    return true;
   });
 
-  const stratPriority = { 'pdh_pdl': 1, 'orb': 2, 'smc_sweep': 3, 'candlestick': 4, 'smc_fvg': 5, 'smc_ob': 6, 'smc_mss': 7, 'smc_fib': 8, 'oi_trap': 9, 'snr_vwap': 10 };
+  const stratPriority = { 'pdh_pdl': 1, 'orb': 2, 'candlestick': 3, 'smc_fvg': 4, 'smc_sweep': 5, 'smc_ob': 6, 'smc_mss': 7, 'smc_fib': 8, 'oi_trap': 9, 'snr_vwap': 10 };
   cards.sort((a,b)=>{
    const getSig=x=>x.setup?.signal||(x.setup?.entry!=null?x.setup:null)||x.state?.signal;
    const getOut=x=>getSig(x)?.outcome||x.setup?.outcome||x.state?.signal?.outcome||{};
@@ -734,7 +741,7 @@ async function pollMultiStrategies(){
    const isActB=hasB&&(outB.status==='ACTIVE');
    if(isActA!==isActB) return isActA?-1:1;
    const pA=stratPriority[a.key]||99, pB=stratPriority[b.key]||99;
-   if(pA!==pB) return pA - pB; // Lowest historical SL rate first
+   if(pA!==pB) return pA - pB; // Highest target hit rate first
    const isResA=hasA&&(outA.status==='TARGET_ACHIEVED'||outA.status==='SL_HIT');
    const isResB=hasB&&(outB.status==='TARGET_ACHIEVED'||outB.status==='SL_HIT');
    if(isResA!==isResB) return isResA?-1:1;
@@ -744,25 +751,38 @@ async function pollMultiStrategies(){
    return timeB.localeCompare(timeA);
   });
 
-  if(currentTradeTab==='low_sl'&&cards.length===0){
+  // Keep only the latest 1 active card per strategy so screen stays crystal clean and uncluttered!
+  let displayCards = cards;
+  if(currentTradeTab==='active' || currentTradeTab==='low_sl' || currentTradeTab==='quality'){
+   const seen = new Set();
+   displayCards = [];
+   for(const item of cards){
+    if(!seen.has(item.key)){
+     seen.add(item.key);
+     displayCards.push(item);
+    }
+   }
+  }
+
+  if(currentTradeTab==='low_sl'&&displayCards.length===0){
    const empty=document.createElement('div');empty.className='panel';
    empty.style.gridColumn='1 / -1';empty.style.textAlign='center';empty.style.padding='36px 20px';
    const allowed=data.mtf_trend?.action_permitted||'CALL (CE) ONLY';
-   empty.innerHTML='<h3 style="color:#34d399;font-size:18px;margin-bottom:8px">🛡️ 4 Lowest-SL Strategies Scanner Active</h3>'+
-    '<p class="muted" style="font-size:13px;max-width:650px;margin:auto">फक्त ज्या स्ट्रॅटेजीजचे Stop Loss सर्वात कमी Hit होतात (<strong>PDH/PDL ४३.१% विन-रेट</strong>, <strong>ORB ३८.२%</strong>, <strong>Candlestick PA ३५.०%</strong>, <strong>SMC FVG ३४.७%</strong>) तेच ट्रेड्स स्क्रीनवर येतील. जास्त SL उडणारे इंजिन्स (SNR VWAP १८%, OI Trap, Fib) बाजूला टाकले आहेत.</p>'+
+   empty.innerHTML='<h3 style="color:#34d399;font-size:18px;margin-bottom:8px">🛡️ 4 Top Target-Hit Strategies Active</h3>'+
+    '<p class="muted" style="font-size:13px;max-width:650px;margin:auto">फक्त ज्या स्ट्रॅटेजीजचे Target सर्वात जास्त Hit होतात (<strong>PDH/PDL ४३.१%</strong>, <strong>ORB ३८.२%</strong>, <strong>Candlestick PA ३५.०%</strong>, <strong>SMC FVG ३४.७%</strong>) तेच LIVE ACTIVE ट्रेड्स स्क्रीनवर येतील. पूर्ण झालेले ट्रेड्स पाहण्यासाठी वरती <strong>🎯 RESOLVED / HIT HISTORY</strong> वर क्लिक करा.</p>'+
     '<p style="font-size:12px;color:#94a3b8;margin-top:14px">👉 Direction Filter: <strong>'+allowed+'</strong> · Cut-off: <strong>Strict 15:00 IST</strong></p>';
    container.append(empty);
   }
-  if(currentTradeTab==='active'&&cards.length===0){
+  if(currentTradeTab==='active'&&displayCards.length===0){
    const empty=document.createElement('div');empty.className='panel';
    empty.style.gridColumn='1 / -1';empty.style.textAlign='center';empty.style.padding='36px 20px';
    const allowed=data.mtf_trend?.action_permitted||'CALL (CE) ONLY';
-   empty.innerHTML='<h3 style="color:#38bdf8;font-size:18px;margin-bottom:8px">⚡ Scanning 10 Strategies for Next Trend-Aligned Entry</h3>'+
-    '<p class="muted" style="font-size:13px;max-width:600px;margin:auto">Currently no active trade position open. The scanner is actively monitoring for setups aligned with <strong>'+allowed+'</strong>.</p>'+
-    '<p style="font-size:12px;color:#94a3b8;margin-top:14px">👉 Click <strong>🎯 RESOLVED TRADES (History)</strong> above to see completed targets and past trade durations.</p>';
+   empty.innerHTML='<h3 style="color:#38bdf8;font-size:18px;margin-bottom:8px">⚡ Currently No Active Trade Open</h3>'+
+    '<p class="muted" style="font-size:13px;max-width:600px;margin:auto">सध्या चालू असलेला कोणताही लाइव्ह ट्रेड नाही. सिस्टीम फक्त <strong>'+allowed+'</strong> च्या नियमांनुसार नवीन कँडलवर A+ एन्ट्रीची वाट पाहत आहे.</p>'+
+    '<p style="font-size:12px;color:#94a3b8;margin-top:14px">👉 पूर्ण झालेले आणि टार्गेट हिट झालेले ट्रेड्स पाहण्यासाठी वरती <strong>🎯 RESOLVED / HIT HISTORY</strong> वर क्लिक करा.</p>';
    container.append(empty);
   }
-  if(currentTradeTab==='quality'&&cards.length===0){
+  if(currentTradeTab==='quality'&&displayCards.length===0){
    const empty=document.createElement('div');empty.className='panel';
    empty.style.gridColumn='1 / -1';empty.style.textAlign='center';empty.style.padding='36px 20px';
    empty.innerHTML='<h3 style="color:#fbbf24;font-size:18px;margin-bottom:8px">⭐ A+ Quality Filter Active</h3>'+
@@ -770,7 +790,7 @@ async function pollMultiStrategies(){
    container.append(empty);
   }
 
-  for(const {key,state,setup} of cards){
+  for(const {key,state,setup} of displayCards){
    if(currentStratCat==='LOW_SL'&&!LOW_SL_KEYS.includes(key))continue;
    if(currentStratCat!=='ALL'&&currentStratCat!=='LOW_SL'&&strategyCategories[key]!==currentStratCat)continue;
    const card=document.createElement('article');card.className='strategy-card';
@@ -846,6 +866,17 @@ async function pollMultiStrategies(){
        '<div class="index-summary-item tgt"><span>Target</span><b>'+displayValue(sig.target)+'</b></div>'+
        '<div class="index-summary-item rr"><span>R:R</span><b>1:'+displayValue(rrVal)+'</b></div>';
       card.append(idxBox);
+      const atmRow=strikes['ATM']||strikes['ITM']||strikes['OTM']||{};
+      const pTgt=atmRow.premium_target!=null?'₹'+Number(atmRow.premium_target).toFixed(1):displayValue(sig.target);
+      const pSl=atmRow.premium_sl!=null?'₹'+Number(atmRow.premium_sl).toFixed(1):displayValue(sig.stop_loss);
+      const pTgtPts=atmRow.premium_target_pts!=null?'+'+atmRow.premium_target_pts+' pts':'';
+      const clearTgtBanner=document.createElement('div');
+      clearTgtBanner.style.cssText='background:linear-gradient(90deg,#064e3b 0%,#022c22 100%);border:2px solid #10b981;border-radius:8px;padding:8px 12px;margin:8px 0;display:flex;align-items:center;justify-content:space-between';
+      clearTgtBanner.innerHTML='<div><div style="font-size:10px;text-transform:uppercase;color:#a7f3d0;font-weight:700">🎯 CLEAR PROFIT TARGET 1</div>'+
+        '<div style="font-size:16px;font-weight:800;color:#34d399">'+pTgt+' <small style="font-size:11px;color:#6ee7b7">('+pTgtPts+')</small></div></div>'+
+        '<div style="text-align:right"><div style="font-size:10px;text-transform:uppercase;color:#fca5a5;font-weight:700">🛑 STRICT SL</div>'+
+        '<div style="font-size:15px;font-weight:800;color:#f87171">'+pSl+'</div></div>';
+      card.append(clearTgtBanner);
       const idxLvl=document.createElement('p');idxLvl.className='strategy-context';
       idxLvl.style.display='none';
       idxLvl.textContent='Index: Entry '+displayValue(sig.entry)+' · SL '+displayValue(sig.stop_loss)+' · Target '+displayValue(sig.target)+' · R:R 1:'+displayValue(sig.risk_reward);

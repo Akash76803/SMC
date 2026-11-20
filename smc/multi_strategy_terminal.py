@@ -638,6 +638,8 @@ def build_confirmed_hero_setup(market, bars, quotes, mtf_trend, strategies, *, n
         'target_1': target_1,
         'target_2': target_2,
         'target_3': target_3,
+        'target_pts': round(target_1 - p_entry, 1) if target_1 > p_entry else round(index_reward * 0.5, 1),
+        'target_hit_rate': '43.1% (Rank 1 Highest Target Hit)' if strat_key == 'pdh_pdl' else ('38.2% (Rank 2 High Target Hit)' if strat_key == 'orb' else ('35.0% (Rank 3 Consistent Target Hit)' if strat_key == 'candlestick' else '34.7% (Rank 4 Target Hit)')),
         'do_not_chase': do_not_chase,
         'entry_condition': entry_cond,
         'invalidating_condition': invalid_cond,
