@@ -689,10 +689,10 @@ async function pollMultiStrategies(){
    const sig=item.setup?.signal||(item.setup?.entry!=null?item.setup:null)||item.state?.signal;
    const out=sig?.outcome||item.setup?.outcome||{};
    if(sig?.entry!=null){
-    if(out.status==='ACTIVE') actCount++;
-    else if(out.status==='TARGET_ACHIEVED'||out.status==='SL_HIT'||out.status==='EOD_EXIT') resCount++;
     const isTrendAligned = !data.mtf_trend?.master_bias || (sig.direction === data.mtf_trend.master_bias);
     const isPreCutoff = !sig.timestamp || sig.timestamp.slice(11, 16) < '15:00';
+    if(out.status==='ACTIVE' && isTrendAligned && isPreCutoff) actCount++;
+    else if(out.status==='TARGET_ACHIEVED'||out.status==='SL_HIT'||out.status==='EOD_EXIT') resCount++;
     if(isTrendAligned && isPreCutoff) qualCount++;
     if(LOW_SL_KEYS.includes(item.key) && isTrendAligned && isPreCutoff && (out.status==='ACTIVE')) lowSlCount++;
    }
