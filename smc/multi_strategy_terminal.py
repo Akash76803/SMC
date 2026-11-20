@@ -594,6 +594,10 @@ def build_confirmed_hero_setup(market, bars, quotes, mtf_trend, strategies, *, n
     entry_cond = f"Strategy [{strat_title}] confirmed {pattern_title} at index ₹{index_entry}. Enter {side} contract {contract_symbol} within ₹{entry_low} — ₹{entry_high} bracket."
     invalid_cond = f"Index crosses invalidation level ₹{index_sl} or option premium falls below strict stop-loss of ₹{p_sl}."
     underlying_trig = f"Index spot ₹{curr_index:.1f}. Underlying trigger: {pattern_title} confirmed on candle at {sig.get('timestamp', 'LIVE')}."
+    sig_dt = _parse_dt(sig.get('timestamp'))
+    entry_time_str = sig_dt.astimezone(IST).strftime('%H:%M:%S') if sig_dt else 'LIVE'
+    exit_dt = _parse_dt(out.get('exit_at'))
+    exit_time_str = exit_dt.astimezone(IST).strftime('%H:%M:%S') if exit_dt else ('RUNNING' if status == 'ACTIVE' else 'RESOLVED')
 
     return {
         'stage': stage_title,
@@ -618,6 +622,9 @@ def build_confirmed_hero_setup(market, bars, quotes, mtf_trend, strategies, *, n
         'invalidating_condition': invalid_cond,
         'underlying_trigger': underlying_trig,
         'holding_horizon': horizon,
+        'entry_time': entry_time_str,
+        'exit_time': exit_time_str,
+        'duration': dur_label or ('RUNNING' if status == 'ACTIVE' else 'Resolved'),
         'index_entry': index_entry,
         'index_sl': index_sl,
         'index_target': index_tgt,

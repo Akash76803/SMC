@@ -571,7 +571,10 @@ async function pollMultiStrategies(){
     '<span class="hero-side-pill '+(isCe?'pill-ce':'pill-pe')+'">'+h.side_label+'</span>'+
     (h.strategy?'<span class="hero-strategy-pill" style="margin-left:8px;font-size:11px;font-weight:700;color:#38bdf8;background:#0369a133;padding:4px 8px;border-radius:6px;border:1px solid #0284c7">⚡ '+(h.strategy)+(h.pattern?' · '+h.pattern:'')+'</span>':'')+
     '<h2 class="hero-contract-title">'+h.contract+' <small>('+h.expiry+')</small></h2>'+
-    '</div><div class="hero-rr-badge">R:R '+h.rr_ratio+'</div></div>'+
+    '</div><div style="display:flex;align-items:center;gap:8px">'+
+    '<span style="font-size:11px;color:#cbd5e1;background:#1e293b;border:1px solid #334155;padding:4px 8px;border-radius:6px">⏰ <strong>Entry:</strong> '+(h.entry_time||'—')+'</span>'+
+    '<span style="font-size:11px;color:#cbd5e1;background:#1e293b;border:1px solid #334155;padding:4px 8px;border-radius:6px">🏁 <strong>Exit:</strong> '+(h.exit_time||'RUNNING')+'</span>'+
+    '<div class="hero-rr-badge">R:R '+h.rr_ratio+'</div></div></div>'+
     '<div class="hero-metrics-grid">'+
     '<div class="hero-metric-box"><div class="metric-lbl">Live Market LTP</div><div class="metric-val">₹'+h.ltp+'</div><div class="metric-sub">Angel One NFO Live</div></div>'+
     '<div class="hero-metric-box box-entry"><div class="metric-lbl">Suggested Entry</div><div class="metric-val val-green">'+h.entry_bracket+'</div><div class="metric-sub">Planned bracket</div></div>'+
@@ -611,17 +614,22 @@ async function pollMultiStrategies(){
     const pnlCls=posPnl>0?'val-green':posPnl<0?'val-red':'';
     posHtml='<div class="active-pos-banner '+(posPnl<0?'in-loss':'')+'">'+
      '<div><div style="font-size:11px;font-weight:700;color:#38bdf8;margin-bottom:2px">⚡ ACTIVE VIRTUAL POSITION · '+(pos.strategy||'')+(pos.pattern?' ('+pos.pattern+')':'')+'</div>'+
-     '<div style="font-size:14px;font-weight:700;color:#f8fafc">'+pos.contract+' &nbsp;<span style="font-size:11px;color:#94a3b8">('+pos.lots+' Lot / '+pos.qty+' Qty @ ₹'+pos.entry_price+')</span></div></div>'+
+     '<div style="font-size:14px;font-weight:700;color:#f8fafc">'+pos.contract+' &nbsp;<span style="font-size:11px;color:#94a3b8">('+pos.lots+' Lot / '+pos.qty+' Qty @ ₹'+pos.entry_price+')</span></div>'+
+     '<div style="margin-top:6px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">'+
+     '<span style="font-size:11px;color:#38bdf8;background:#0369a133;padding:2px 8px;border-radius:4px;border:1px solid #0284c7">⏰ <strong>Entry Time:</strong> '+(pos.entry_time_display||pos.entry_time?.substring(11,19)||'—')+'</span>'+
+     '<span style="font-size:11px;color:#a7f3d0;background:#064e3b33;padding:2px 8px;border-radius:4px;border:1px solid #10b981">⏱️ <strong>Holding Duration:</strong> '+(pos.holding_duration||'1m')+'</span>'+
+     '<span style="font-size:11px;color:#fbbf24;background:#f59e0b22;padding:2px 8px;border-radius:4px;border:1px solid #f59e0b">⏳ <strong>Max Exit Horizon:</strong> 10m Rule</span>'+
+     '</div></div>'+
      '<div style="text-align:right"><div style="font-size:11px;color:#94a3b8">Current LTP: <strong>₹'+(pos.current_ltp||pos.entry_price)+'</strong></div>'+
-     '<div style="font-size:16px;font-weight:800" class="'+pnlCls+'">'+(posPnl>=0?'+':'')+'₹'+posPnl.toFixed(2)+' ('+(pos.pnl_percent>=0?'+':'')+pos.pnl_percent+'%)</div></div>'+
-     '<div><span style="font-size:11px;color:#f87171">SL: ₹'+pos.stop_loss+'</span> &nbsp;|&nbsp; <span style="font-size:11px;color:#34d399">T1: ₹'+pos.target_1+'</span></div>'+
+     '<div style="font-size:16px;font-weight:800" class="'+pnlCls+'">'+(posPnl>=0?'+':'')+'₹'+posPnl.toFixed(2)+' ('+(pos.pnl_percent>=0?'+':'')+pos.pnl_percent+'%)</div>'+
+     '<div style="margin-top:6px"><span style="font-size:11px;color:#f87171">SL: ₹'+pos.stop_loss+'</span> &nbsp;|&nbsp; <span style="font-size:11px;color:#34d399">T1: ₹'+pos.target_1+'</span></div></div>'+
      '</div>';
    }
    let histRows='';
    if(p.trade_history&&p.trade_history.length){
     histRows='<details class="passbook-details"><summary>📖 View Completed Paper Trades Passbook ('+p.trade_history.length+' Trades)</summary>'+
-     '<table class="passbook-table"><thead><tr><th>Time</th><th>Contract</th><th>Side</th><th>Entry</th><th>Exit</th><th>P&L (pts)</th><th>Net Cash</th><th>Reason</th></tr></thead><tbody>'+
-     p.trade_history.slice().reverse().map(t=>'<tr><td>'+(t.exit_time?t.exit_time.substring(11,19):'—')+'</td><td>'+t.contract+'</td><td>'+t.side+'</td><td>₹'+t.entry_price+'</td><td>₹'+t.exit_price+'</td><td class="'+(t.pnl_pts>0?'val-green':'val-red')+'">'+(t.pnl_pts>0?'+':'')+t.pnl_pts+'</td><td class="'+(t.realized_pnl>0?'val-green':'val-red')+'" style="font-weight:700">'+(t.realized_pnl>0?'+':'')+'₹'+t.realized_pnl+'</td><td>'+t.exit_reason+'</td></tr>').join('')+
+     '<table class="passbook-table"><thead><tr><th>Trade ID</th><th>Entry Time</th><th>Exit Time</th><th>Holding Duration</th><th>Contract</th><th>Side</th><th>Entry ₹</th><th>Exit ₹</th><th>P&L (pts)</th><th>Net Cash</th><th>Reason</th></tr></thead><tbody>'+
+     p.trade_history.slice().reverse().map(t=>'<tr><td><span style="font-size:10px;color:#94a3b8">'+(t.trade_id||'—')+'</span></td><td><strong>'+(t.entry_time_display||t.entry_time?.substring(11,19)||'—')+'</strong></td><td><strong>'+(t.exit_time_display||t.exit_time?.substring(11,19)||'—')+'</strong></td><td>'+(t.duration_str||'—')+'</td><td>'+t.contract+'</td><td>'+t.side+'</td><td>₹'+t.entry_price+'</td><td>₹'+t.exit_price+'</td><td class="'+(t.pnl_pts>0?'val-green':'val-red')+'">'+(t.pnl_pts>0?'+':'')+t.pnl_pts+'</td><td class="'+(t.realized_pnl>0?'val-green':'val-red')+'" style="font-weight:700">'+(t.realized_pnl>0?'+':'')+'₹'+t.realized_pnl+'</td><td>'+t.exit_reason+'</td></tr>').join('')+
      '</tbody></table></details>';
    }
    portBox.style.display='block';

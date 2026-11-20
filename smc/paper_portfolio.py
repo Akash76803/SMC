@@ -123,6 +123,9 @@ def update_paper_portfolio(root: str | Path, market: str, hero_setup: dict | Non
             if exit_triggered:
                 realized_pts = (exit_price - entry_price) if side == 'CE' else (entry_price - exit_price)
                 realized_cash = round(realized_pts * qty, 2)
+                ent_dt = datetime.fromisoformat(open_pos['entry_time'])
+                dur_secs = max(1, int((local_now - ent_dt).total_seconds()))
+                dur_str = f"{dur_secs // 60}m {dur_secs % 60:02d}s" if dur_secs >= 60 else f"{dur_secs}s"
                 closed_trade = {
                     'trade_id': open_pos.get('trade_id'),
                     'contract': contract,
@@ -132,7 +135,10 @@ def update_paper_portfolio(root: str | Path, market: str, hero_setup: dict | Non
                     'lots': lots,
                     'qty': qty,
                     'entry_time': open_pos.get('entry_time'),
+                    'entry_time_display': ent_dt.strftime('%H:%M:%S'),
                     'exit_time': local_now.isoformat(),
+                    'exit_time_display': local_now.strftime('%H:%M:%S'),
+                    'duration_str': dur_str,
                     'entry_price': entry_price,
                     'exit_price': round(exit_price, 2),
                     'pnl_pts': round(realized_pts, 2),
@@ -179,6 +185,7 @@ def update_paper_portfolio(root: str | Path, market: str, hero_setup: dict | Non
                     'lot_size': lot_size,
                     'qty': 1 * lot_size,
                     'entry_time': local_now.isoformat(),
+                    'entry_time_display': local_now.strftime('%H:%M:%S'),
                     'entry_price': entry_price,
                     'current_ltp': entry_price,
                     'stop_loss': float(hero_setup.get('stop_loss', 0)),
@@ -188,6 +195,17 @@ def update_paper_portfolio(root: str | Path, market: str, hero_setup: dict | Non
                     'pnl_percent': 0.0,
                 }
                 ledger['open_position'] = open_pos
+
+    # 3. Update Open Position holding duration
+    if open_pos:
+        try:
+            ent_dt = datetime.fromisoformat(open_pos['entry_time'])
+            h_secs = max(0, int((local_now - ent_dt).total_seconds()))
+            open_pos['holding_duration'] = f"{h_secs // 60}m {h_secs % 60:02d}s" if h_secs >= 60 else f"{h_secs}s"
+            if not open_pos.get('entry_time_display'):
+                open_pos['entry_time_display'] = ent_dt.strftime('%H:%M:%S')
+        except Exception:
+            pass
 
     # 3. Compute Totals
     unrealized_sum = open_pos.get('unrealized_pnl', 0.0) if open_pos else 0.0
