@@ -151,6 +151,25 @@ canvas{width:100%;height:360px;display:block;border-radius:8px}table{border-coll
 .index-summary-item.sl b{color:#f87171}
 .index-summary-item.tgt b{color:#34d399}
 .index-summary-item.rr b{color:#38bdf8}
+.paper-portfolio-container{background:linear-gradient(135deg,#0c1322 0%,#1e293b 100%);border:1px solid #334155;border-radius:12px;padding:16px 20px;margin-bottom:16px;box-shadow:0 4px 20px rgba(0,0,0,.4)}
+.portfolio-header{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;border-bottom:1px solid #33415580;padding-bottom:10px;margin-bottom:12px}
+.portfolio-title{display:flex;align-items:center;gap:8px}
+.portfolio-title h3{margin:0;font-size:15px;font-weight:700;color:#f8fafc}
+.portfolio-badge{font-size:10px;font-weight:700;color:#38bdf8;background:#0284c722;border:1px solid #0284c766;padding:2px 8px;border-radius:4px;letter-spacing:.05em}
+.portfolio-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:12px}
+@media(max-width:850px){.portfolio-grid{grid-template-columns:repeat(2,1fr)}}
+.port-stat-card{background:#0b1120;border:1px solid #334155;border-radius:8px;padding:10px 14px}
+.port-stat-lbl{font-size:11px;font-weight:600;color:#94a3b8;margin-bottom:3px}
+.port-stat-val{font-size:16px;font-weight:800;color:#f8fafc;font-variant-numeric:tabular-nums}
+.port-stat-val.val-green{color:#34d399}
+.port-stat-val.val-red{color:#f87171}
+.port-stat-sub{font-size:10px;color:#64748b;margin-top:2px}
+.active-pos-banner{background:#064e3b18;border:1.5px solid #10b98166;border-radius:8px;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-bottom:10px}
+.active-pos-banner.in-loss{background:#450a0a18;border-color:#ef444466}
+.passbook-details summary{font-size:12px;font-weight:700;color:#94a3b8;cursor:pointer;padding:6px 0}
+.passbook-table{width:100%;border-collapse:collapse;font-size:11px;margin-top:8px}
+.passbook-table th,.passbook-table td{padding:6px 10px;text-align:left;border-bottom:1px solid #33415566}
+.passbook-table th{color:#94a3b8;font-weight:700}
 .strike-tab-bar{display:flex;gap:6px;margin:12px 0 8px;background:#080c14;padding:4px;border-radius:8px;border:1px solid #1e293b}
 .strike-tab-btn{flex:1;background:transparent;border:1px solid transparent;color:#94a3b8;padding:6px 8px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;text-align:center;transition:all .15s ease}
 .strike-tab-btn:hover{color:#f1f5f9;background:#1e293b66}
@@ -191,6 +210,7 @@ canvas{width:100%;height:360px;display:block;border-radius:8px}table{border-coll
 <p class="muted">Research observations · Fixed-delta premium estimates · Manual mobile execution only</p>
 <small class="muted">Timing windows are configured research heuristics, not measured statistics or guaranteed safe holding limits. Minutes are measured from manual entry.</small>
 <div id="confirmedHeroSection"></div>
+<div id="paperPortfolioSection" class="paper-portfolio-container" style="display:none"></div>
 <div id="masterTrendBanner" class="master-trend-banner">Checking Multi-Timeframe Trend…</div>
 <div class="trade-status-bar" role="tablist" aria-label="Trade Status Filter">
 <button type="button" class="trade-tab-btn active" data-tab="active">⚡ ACTIVE SETUPS (<span id="activeCount">0</span>)</button>
@@ -578,6 +598,41 @@ async function pollMultiStrategies(){
      }
     };
    }
+  }
+  const portBox=document.getElementById('paperPortfolioSection');
+  if(portBox&&data.paper_portfolio){
+   const p=data.paper_portfolio;
+   const real=p.realized_pnl||0;
+   const unrl=p.unrealized_mtm||0;
+   const pos=p.open_position;
+   let posHtml='';
+   if(pos){
+    const posPnl=pos.unrealized_pnl||0;
+    const pnlCls=posPnl>0?'val-green':posPnl<0?'val-red':'';
+    posHtml='<div class="active-pos-banner '+(posPnl<0?'in-loss':'')+'">'+
+     '<div><div style="font-size:11px;font-weight:700;color:#38bdf8;margin-bottom:2px">⚡ ACTIVE VIRTUAL POSITION · '+(pos.strategy||'')+(pos.pattern?' ('+pos.pattern+')':'')+'</div>'+
+     '<div style="font-size:14px;font-weight:700;color:#f8fafc">'+pos.contract+' &nbsp;<span style="font-size:11px;color:#94a3b8">('+pos.lots+' Lot / '+pos.qty+' Qty @ ₹'+pos.entry_price+')</span></div></div>'+
+     '<div style="text-align:right"><div style="font-size:11px;color:#94a3b8">Current LTP: <strong>₹'+(pos.current_ltp||pos.entry_price)+'</strong></div>'+
+     '<div style="font-size:16px;font-weight:800" class="'+pnlCls+'">'+(posPnl>=0?'+':'')+'₹'+posPnl.toFixed(2)+' ('+(pos.pnl_percent>=0?'+':'')+pos.pnl_percent+'%)</div></div>'+
+     '<div><span style="font-size:11px;color:#f87171">SL: ₹'+pos.stop_loss+'</span> &nbsp;|&nbsp; <span style="font-size:11px;color:#34d399">T1: ₹'+pos.target_1+'</span></div>'+
+     '</div>';
+   }
+   let histRows='';
+   if(p.trade_history&&p.trade_history.length){
+    histRows='<details class="passbook-details"><summary>📖 View Completed Paper Trades Passbook ('+p.trade_history.length+' Trades)</summary>'+
+     '<table class="passbook-table"><thead><tr><th>Time</th><th>Contract</th><th>Side</th><th>Entry</th><th>Exit</th><th>P&L (pts)</th><th>Net Cash</th><th>Reason</th></tr></thead><tbody>'+
+     p.trade_history.slice().reverse().map(t=>'<tr><td>'+(t.exit_time?t.exit_time.substring(11,19):'—')+'</td><td>'+t.contract+'</td><td>'+t.side+'</td><td>₹'+t.entry_price+'</td><td>₹'+t.exit_price+'</td><td class="'+(t.pnl_pts>0?'val-green':'val-red')+'">'+(t.pnl_pts>0?'+':'')+t.pnl_pts+'</td><td class="'+(t.realized_pnl>0?'val-green':'val-red')+'" style="font-weight:700">'+(t.realized_pnl>0?'+':'')+'₹'+t.realized_pnl+'</td><td>'+t.exit_reason+'</td></tr>').join('')+
+     '</tbody></table></details>';
+   }
+   portBox.style.display='block';
+   portBox.innerHTML='<div class="portfolio-header"><div class="portfolio-title"><h3>💼 AUTONOMOUS PAPER TRADING ACCOUNT (Virtual Passbook)</h3><span class="portfolio-badge">VIRTUAL SIMULATOR</span></div>'+
+    '<div style="font-size:11px;color:#94a3b8">Initial Capital: <strong>₹'+Number(p.initial_capital||100000).toLocaleString('en-IN')+'</strong></div></div>'+
+    '<div class="portfolio-grid">'+
+    '<div class="port-stat-card"><div class="port-stat-lbl">Virtual Wallet Balance</div><div class="port-stat-val">₹'+Number(p.current_balance||100000).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})+'</div><div class="port-stat-sub">Realized capital</div></div>'+
+    '<div class="port-stat-card"><div class="port-stat-lbl">Today\'s Realized P&L</div><div class="port-stat-val '+(real>0?'val-green':real<0?'val-red':'')+'">'+(real>=0?'+':'')+'₹'+real.toFixed(2)+'</div><div class="port-stat-sub">'+(p.wins||0)+' Wins / '+(p.losses||0)+' Losses</div></div>'+
+    '<div class="port-stat-card"><div class="port-stat-lbl">Live Open MTM</div><div class="port-stat-val '+(unrl>0?'val-green':unrl<0?'val-red':'')+'">'+(unrl>=0?'+':'')+'₹'+unrl.toFixed(2)+'</div><div class="port-stat-sub">'+(pos?'1 Position Active':'No Open Position')+'</div></div>'+
+    '<div class="port-stat-card"><div class="port-stat-lbl">Paper Win Rate</div><div class="port-stat-val val-green">'+(p.win_rate||'0.0%')+'</div><div class="port-stat-sub">Score: '+(p.total_trades||0)+' Closed Trades</div></div>'+
+    '</div>'+posHtml+histRows;
   }
   const bannerBox=document.getElementById('masterTrendBanner');
   if(bannerBox&&data.mtf_trend){

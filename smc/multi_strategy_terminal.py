@@ -865,6 +865,12 @@ def multi_strategy_payload(root, market, *, now=None):
                 engines=list(engines), setup_ids=[setup for ids in engines.values() for setup in ids],
             ))
     # mtf_trend already computed at session analysis start
-    result['confirmed_hero'] = build_confirmed_hero_setup(market, bars, quotes, result['mtf_trend'], result['strategies'],
-                                                          now=evaluation_at, quote_history=[row for _, row in quote_history])
+    hero = build_confirmed_hero_setup(market, bars, quotes, result['mtf_trend'], result['strategies'],
+                                      now=evaluation_at, quote_history=[row for _, row in quote_history])
+    result['confirmed_hero'] = hero
+    try:
+        from .paper_portfolio import update_paper_portfolio
+        result['paper_portfolio'] = update_paper_portfolio(root, market, hero, quotes, now=evaluation_at)
+    except Exception:
+        pass
     return result
