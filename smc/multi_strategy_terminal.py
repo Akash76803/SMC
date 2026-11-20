@@ -21,10 +21,39 @@ from .smc_module_fvg import scan_smc_fvg
 from .smc_module_ob import scan_smc_ob
 from .smc_module_fibonacci import scan_smc_fibonacci
 from .strategy_pdh_pdl import scan_pdh_pdl
+from .trap_detector_v1 import NO_TRADE, scan_traps_and_breakouts
 
 log = logging.getLogger(__name__)
 
 IST = ZoneInfo('Asia/Kolkata')
+LOW_SL_STRATEGIES = {'pdh_pdl', 'orb', 'candlestick', 'smc_fvg'}
+RECOMMENDATION_PRIORITY = ('trap_detector', 'pdh_pdl', 'orb', 'candlestick', 'smc_fvg')
+
+
+def _curate_recommendations(market, strategies):
+    """Replay accepted setups in time order so later bars cannot move a wave lockout."""
+    minimum_target = 40 if market == 'NIFTY' else 130
+    candidates = []
+    for priority, name in enumerate(RECOMMENDATION_PRIORITY):
+        for card in strategies.get(name, {}).get('cards', []):
+            signal = card['signal']
+            at = _parse_dt(signal.get('timestamp'))
+            if (at and at.time() < time(15) and signal['index_target_pts'] >= minimum_target
+                    and signal['index_target_pts'] + 1e-9 >= 2 * signal['index_sl_pts']
+                    and signal['index_sl_pts'] > 0):
+                candidates.append((at, priority, card['setup_id'], signal['direction']))
+
+    accepted = []
+    last_wave = {}
+    for at, _, setup_id, direction in sorted(candidates):
+        previous = last_wave.get(direction)
+        if previous is not None and at - previous < timedelta(minutes=25):
+            continue
+        accepted.append(setup_id)
+        last_wave[direction] = at
+        if len(accepted) == 10:
+            break
+    return accepted
 
 # Configured research heuristics, not fitted target-time distributions or
 # guarantees that an option position is safe to hold for this duration.
@@ -368,6 +397,7 @@ def calculate_multi_timeframe_trend(bars, session_history=None, *, root=None, ma
 
 
 STRATEGY_DISPLAY_NAMES = {
+    'trap_detector': 'Trap Radar',
     'smc_sweep': 'SMC Liquidity Sweep',
     'smc_mss': 'SMC Market Structure Shift',
     'smc_fvg': 'SMC Fair Value Gap',
@@ -381,7 +411,8 @@ STRATEGY_DISPLAY_NAMES = {
 }
 
 
-def build_confirmed_hero_setup(market, bars, quotes, mtf_trend, strategies, *, now=None, quote_history=None):
+def build_confirmed_hero_setup(market, bars, quotes, mtf_trend, strategies, *, now=None,
+                               quote_history=None, allow_active=True):
     """Build a single, unambiguous confirmed hero setup driven directly by live strategy calculations."""
     if not bars:
         return None
@@ -397,9 +428,8 @@ def build_confirmed_hero_setup(market, bars, quotes, mtf_trend, strategies, *, n
     # 5. SMC Liquidity Sweep: 34.7% Win Rate
     # 6. SMC Order Block & MSS: 31-34% Win Rate
     # 7. Low-win-rate engines (snr_vwap: 18.2%, oi_trap: 21%) suppressed to minimize SL hits
-    LOW_SL_STRATEGIES = {'pdh_pdl', 'orb', 'candlestick', 'smc_fvg'}
     priority_order = [
-        'pdh_pdl', 'orb', 'candlestick', 'smc_fvg',
+        *RECOMMENDATION_PRIORITY,
         'smc_sweep', 'smc_ob', 'smc_mss', 'smc_fib', 'oi_trap', 'snr_vwap'
     ]
 
@@ -412,7 +442,7 @@ def build_confirmed_hero_setup(market, bars, quotes, mtf_trend, strategies, *, n
 
     # Pre-15:00 active cards only; no new active entries post 15:00 IST
     active_cards = []
-    if not is_post_cutoff:
+    if not is_post_cutoff and allow_active:
         for item in all_cards:
             if item[3].get('status') == 'ACTIVE':
                 sig_time = item[2].get('timestamp')
@@ -424,6 +454,10 @@ def build_confirmed_hero_setup(market, bars, quotes, mtf_trend, strategies, *, n
                     active_cards.append(item)
 
     # Restrict active execution candidates to lowest historical SL hit rate strategies
+    master_bias = mtf_trend.get('master_bias')
+    trap_active = [item for item in active_cards if item[0] == 'trap_detector'
+                   and (item[2]['direction'] == master_bias
+                        or item[2].get('counter_trend_exhaustion'))]
     low_sl_active = [item for item in active_cards if item[0] in LOW_SL_STRATEGIES]
     if low_sl_active:
         active_cards = low_sl_active
@@ -432,7 +466,6 @@ def build_confirmed_hero_setup(market, bars, quotes, mtf_trend, strategies, *, n
         active_cards = []
 
     # Strict Trend-Alignment Gate: Only accept setups aligned with Master Trend
-    master_bias = mtf_trend.get('master_bias')
     if master_bias in ('BULLISH', 'BEARISH') and active_cards:
         trend_aligned = [item for item in active_cards if item[2].get('direction') == master_bias]
         if trend_aligned:
@@ -442,7 +475,9 @@ def build_confirmed_hero_setup(market, bars, quotes, mtf_trend, strategies, *, n
             active_cards = []
 
     chosen = None
-    if active_cards:
+    if trap_active:
+        chosen = max(trap_active, key=lambda item: item[2]['timestamp'])
+    elif active_cards:
         def active_rank(item):
             s_name, c, sig, out = item
             p_idx = priority_order.index(s_name) if s_name in priority_order else 99
@@ -477,8 +512,6 @@ def build_confirmed_hero_setup(market, bars, quotes, mtf_trend, strategies, *, n
                 chosen = sorted(tgt_achieved, key=lambda x: x[2].get('timestamp', ''), reverse=True)[0]
             else:
                 chosen = sorted(resolved, key=lambda x: x[2].get('timestamp', ''), reverse=True)[0]
-        else:
-            chosen = sorted(all_cards, key=lambda x: x[2].get('timestamp', ''), reverse=True)[0]
 
     if not chosen:
         # Fallback when no strategy cards are found
@@ -492,7 +525,7 @@ def build_confirmed_hero_setup(market, bars, quotes, mtf_trend, strategies, *, n
         base_prem = 120.0 if market == 'NIFTY' else 180.0
         return {
             'stage': 'STAGE 2 (Live Scanning)',
-            'stage_note': f"Actively monitoring 10 strategies for high-confluence {direction} entry setup.",
+            'stage_note': f"Scanning for a high-confluence {direction} setup.",
             'direction': direction,
             'side': side,
             'side_label': f"{side} ({'CALL' if side == 'CE' else 'PUT'})",
@@ -520,7 +553,7 @@ def build_confirmed_hero_setup(market, bars, quotes, mtf_trend, strategies, *, n
 
     strat_key, card, sig, out = chosen
     strat_title = STRATEGY_DISPLAY_NAMES.get(strat_key, strat_key.replace('_', ' ').title())
-    pattern = sig.get('pattern') or sig.get('setup_type') or sig.get('signal_type') or strat_title
+    pattern = sig.get('candidate_type') or sig.get('pattern') or sig.get('setup_type') or sig.get('signal_type') or strat_title
     pattern_title = pattern.replace('_', ' ').title()
 
     direction = sig.get('direction') or 'BULLISH'
@@ -599,7 +632,9 @@ def build_confirmed_hero_setup(market, bars, quotes, mtf_trend, strategies, *, n
         stage_desc = f"Active trading window closed at 03:00 PM IST. Capital Protection Rule: Zero new option entries in final 30 minutes to protect against theta decay and expiry spikes. Showing top resolved setup [{strat_title}]."
     elif status == 'ACTIVE':
         stage_title = "STAGE 2 (Live Confirmation)"
-        stage_desc = f"Active in {horizon}. Strategy [{strat_title}] confirmed {side} setup aligned with {master_bias} trend. Monitored with live VWAP and real-time option spread."
+        confirmation = ('with counter-trend exhaustion' if strat_key == 'trap_detector' and direction != master_bias
+                        else f'with {master_bias} market bias')
+        stage_desc = f"Active in {horizon}. Strategy [{strat_title}] confirmed a {side} setup {confirmation}."
     elif status == 'TARGET_ACHIEVED':
         stage_title = "STAGE 3 (Target Achieved ✓)"
         stage_desc = f"Strategy [{strat_title}] achieved Target ₹{index_tgt} ({dur_label or 'Resolved'}). In-the-money profit secured; awaiting next setup."
@@ -639,7 +674,7 @@ def build_confirmed_hero_setup(market, bars, quotes, mtf_trend, strategies, *, n
         'target_2': target_2,
         'target_3': target_3,
         'target_pts': round(target_1 - p_entry, 1) if target_1 > p_entry else round(index_reward * 0.5, 1),
-        'target_hit_rate': '43.1% (Rank 1 Highest Target Hit)' if strat_key == 'pdh_pdl' else ('38.2% (Rank 2 High Target Hit)' if strat_key == 'orb' else ('35.0% (Rank 3 Consistent Target Hit)' if strat_key == 'candlestick' else '34.7% (Rank 4 Target Hit)')),
+        'target_hit_rate': 'A+ TRAP RETEST' if strat_key == 'trap_detector' else ('43.1% (Rank 1 Highest Target Hit)' if strat_key == 'pdh_pdl' else ('38.2% (Rank 2 High Target Hit)' if strat_key == 'orb' else ('35.0% (Rank 3 Consistent Target Hit)' if strat_key == 'candlestick' else '34.7% (Rank 4 Target Hit)'))),
         'do_not_chase': do_not_chase,
         'entry_condition': entry_cond,
         'invalidating_condition': invalid_cond,
@@ -685,6 +720,7 @@ def multi_strategy_payload(root, market, *, now=None):
         'smc_sweep': scan_smc_sweep, 'smc_mss': scan_smc_mss,
         'smc_fvg': scan_smc_fvg, 'smc_ob': scan_smc_ob,
         'smc_fib': scan_smc_fibonacci, 'pdh_pdl': scan_pdh_pdl,
+        'trap_detector': scan_traps_and_breakouts,
     }
     strategies = {key: dict(status='NEUTRAL' if key == 'oi_trap' else 'WAITING',
                             direction='NEUTRAL', signal=None, strikes={}, reason='NO_CANDLES',
@@ -694,7 +730,9 @@ def multi_strategy_payload(root, market, *, now=None):
     strategies['oi_trap'].update(pcr=None, walls={})
     result = dict(market=market, timestamp=now.isoformat(), strategies=strategies,
                   research_only=True, orders_enabled=False,
-                  signals={name: [] for name in strategies}, confluences=[])
+                  signals={name: [] for name in strategies}, confluences=[],
+                  trap_radar=dict(NO_TRADE), recommendation_ids=[], recommendations_live=False)
+    recommendation_history = {}
     candles, history, quality = {}, {}, {}
     for row in rows:
         if row.get('symbol', row.get('market', market)) != market:
@@ -787,6 +825,8 @@ def multi_strategy_payload(root, market, *, now=None):
         try:
             if name in independent:
                 options = {'trade_plans': trade_plans} if name == 'pdh_pdl' else {}
+                if name == 'trap_detector':
+                    options['radar'] = result['trap_radar']
                 signals = independent[name](session_history, symbol=market, now=evaluation_at,
                                             interval_minutes=interval, **options)
                 reason = 'NO_SETUP'
@@ -918,6 +958,8 @@ def multi_strategy_payload(root, market, *, now=None):
                                        if name == 'oi_trap' else 'ACTIVE_SIGNAL')
                     state['reason'] = 'RESEARCH_OBSERVATION'
                 state['cards'] = cards if not closed else [newest]
+                if name in RECOMMENDATION_PRIORITY:
+                    recommendation_history[name] = {'cards': cards}
             if name == 'oi_trap' and state.get('activity_basis') not in ('OI', 'UNAVAILABLE'):
                 state['reason'] += ' · ' + state['activity_basis']
             return published if not closed else published[-1:]
@@ -941,9 +983,14 @@ def multi_strategy_payload(root, market, *, now=None):
                 timestamp=at, direction=direction, confluence_score='HIGH',
                 engines=list(engines), setup_ids=[setup for ids in engines.values() for setup in ids],
             ))
-    # mtf_trend already computed at session analysis start
-    hero = build_confirmed_hero_setup(market, bars, quotes, result['mtf_trend'], result['strategies'],
-                                      now=evaluation_at, quote_history=[row for _, row in quote_history])
+    result['recommendation_ids'] = _curate_recommendations(market, recommendation_history)
+    result['recommendations_live'] = fresh and not closed and local.time() < time(15)
+    accepted = set(result['recommendation_ids'])
+    curated = {name: {'cards': [card for card in state['cards'] if card['setup_id'] in accepted]}
+               for name, state in recommendation_history.items()}
+    hero = build_confirmed_hero_setup(market, bars, quotes, result['mtf_trend'], curated,
+                                      now=evaluation_at, quote_history=[row for _, row in quote_history],
+                                      allow_active=result['recommendations_live'])
     result['confirmed_hero'] = hero
     try:
         from .paper_portfolio import update_paper_portfolio

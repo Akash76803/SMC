@@ -64,7 +64,7 @@ def test_get_endpoint_missing_files_returns_safe_json(server, market):
     assert data['orders_enabled'] is False
     assert set(data['strategies']) == {
         'snr_vwap', 'orb', 'candlestick', 'oi_trap', 'smc_sweep', 'smc_mss',
-        'smc_fvg', 'smc_ob', 'smc_fib', 'pdh_pdl',
+        'smc_fvg', 'smc_ob', 'smc_fib', 'pdh_pdl', 'trap_detector',
     }
     for state in data['strategies'].values():
         assert state['signal'] is None

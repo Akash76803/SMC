@@ -101,6 +101,8 @@ canvas{width:100%;height:360px;display:block;border-radius:8px}table{border-coll
 .hero-contract-title{font-size:19px;font-weight:700;color:#f8fafc;margin:0;letter-spacing:-.02em}
 .hero-contract-title small{color:#94a3b8;font-size:13px;font-weight:400;margin-left:4px}
 .hero-rr-badge{background:#1e293b;border:1px solid #334155;color:#f1f5f9;padding:5px 12px;border-radius:6px;font-size:12px;font-weight:700;letter-spacing:.02em}
+.trap-radar{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin:10px 0;padding:9px 14px;background:#0f172a;border:1px solid #334155;border-radius:8px;font-size:12px}
+.trap-radar .trap-alert{color:#fbbf24}.trap-radar .breakout-alert{color:#38bdf8}
 .hero-metrics-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:12px;margin:16px 0}
 @media(max-width:1250px){.hero-metrics-grid{grid-template-columns:repeat(3,1fr)}}
 @media(max-width:650px){.hero-metrics-grid{grid-template-columns:repeat(2,1fr)}}
@@ -209,7 +211,10 @@ canvas{width:100%;height:360px;display:block;border-radius:8px}table{border-coll
 <h2>MULTI-STRATEGY SIGNALS</h2>
 <p class="muted">Research observations · Fixed-delta premium estimates · Manual mobile execution only</p>
 <small class="muted">Timing windows are configured research heuristics, not measured statistics or guaranteed safe holding limits. Minutes are measured from manual entry.</small>
-<div id="confirmedHeroSection"></div>
+<div id="confirmedHeroSection">
+ <div class="trap-radar"><strong>Live Trap Radar</strong><span id="trapRadarBadge" role="status">🛡️ NO TRAP / IN RANGE</span></div>
+ <div id="confirmedHeroContent"></div>
+</div>
 <div id="paperPortfolioSection" class="paper-portfolio-container" style="display:none"></div>
 <div id="masterTrendBanner" class="master-trend-banner">Checking Multi-Timeframe Trend…</div>
 <div class="trade-status-bar" role="tablist" aria-label="Trade Status Filter">
@@ -222,7 +227,7 @@ canvas{width:100%;height:360px;display:block;border-radius:8px}table{border-coll
 <button type="button" class="strat-filter-btn active" data-cat="ALL">All Categories</button>
 <button type="button" class="strat-filter-btn" data-cat="LOW_SL" style="color:#34d399;font-weight:700">🛡️ Lowest SL Only (4)</button>
 <button type="button" class="strat-filter-btn" data-cat="PA">Price Action (2)</button>
-<button type="button" class="strat-filter-btn" data-cat="SMC">SMC Institutional (5)</button>
+<button type="button" class="strat-filter-btn" data-cat="SMC">SMC Institutional (6)</button>
 <button type="button" class="strat-filter-btn" data-cat="MOM">Momentum & Flow (3)</button>
 </div>
 <div id="lowSlBanner" style="display:flex;align-items:center;justify-content:space-between;background:rgba(6,78,59,0.35);border:1px solid #10b981;padding:10px 16px;border-radius:8px;margin-bottom:14px">
@@ -546,10 +551,11 @@ document.querySelectorAll('.trade-tab-btn').forEach(btn=>{
 const strategyTitles={
  snr_vwap:'S&R + VWAP',orb:'15m ORB',candlestick:'Candlestick Price Action',oi_trap:'OI Trap',
  smc_sweep:'Liquidity Sweep',smc_mss:'Market Structure Shift',smc_fvg:'Fair Value Gap',
- smc_ob:'Order Block Retest',smc_fib:'Fibonacci OTE Golden Pocket',pdh_pdl:'Previous Day High / Low'
+ smc_ob:'Order Block Retest',smc_fib:'Fibonacci OTE Golden Pocket',pdh_pdl:'Previous Day High / Low',
+ trap_detector:'Trap Radar'
 };
 const strategyCategories={
- smc_sweep:'SMC',smc_mss:'SMC',smc_fvg:'SMC',smc_ob:'SMC',smc_fib:'SMC',
+ smc_sweep:'SMC',smc_mss:'SMC',smc_fvg:'SMC',smc_ob:'SMC',smc_fib:'SMC',trap_detector:'SMC',
  candlestick:'PA',pdh_pdl:'PA',
  snr_vwap:'MOM',orb:'MOM',oi_trap:'MOM'
 };
@@ -567,8 +573,19 @@ async function pollMultiStrategies(){
   if(!response.ok)throw new Error('Data unavailable');
   const data=await response.json();if(market.value!==desired)return;
   container.replaceChildren();
-  const heroBox=document.getElementById('confirmedHeroSection');
-  if(heroBox&&data.confirmed_hero){
+  const radar=data.trap_radar||{};
+  const radarBadge=document.getElementById('trapRadarBadge');
+  const trapLabels={BULL_TRAP:'⚠️ BULL TRAP DETECTED',BEAR_TRAP:'⚠️ BEAR TRAP DETECTED'};
+  const trapLabel=trapLabels[radar.candidate_type];
+  const breakout=radar.candidate_type==='TRUE_UP'||radar.candidate_type==='TRUE_DOWN';
+  radarBadge.className=trapLabel?'trap-alert':breakout?'breakout-alert':'';
+  const radarText=trapLabel?trapLabel+' at '+displayValue(radar.level):breakout?
+   '🚀 GENUINE BREAKOUT ('+radar.candidate_type+')':'🛡️ NO TRAP / IN RANGE';
+  if(radarBadge.textContent!==radarText)radarBadge.textContent=radarText;
+  const heroBox=document.getElementById('confirmedHeroContent');
+  const showHero=data.confirmed_hero&&data.confirmed_hero.status!=='SCANNING';
+  if(heroBox&&!showHero)heroBox.replaceChildren();
+  if(heroBox&&showHero){
    const h=data.confirmed_hero;
    const isCe=h.side==='CE';
    const copyTxt=h.contract+' | Bracket '+h.entry_bracket+' | SL '+h.stop_loss+' | Target '+h.target_1+' | DO NOT CHASE > '+h.do_not_chase;
@@ -684,12 +701,15 @@ async function pollMultiStrategies(){
    (state.cards?.length?state.cards:[state]).map(setup=>({key,state,setup})));
 
   const LOW_SL_KEYS = ['pdh_pdl', 'orb', 'candlestick', 'smc_fvg'];
+  const recommendationIds=new Set(data.recommendation_ids||[]);
+  const isRecommended=(item,sig)=>data.recommendations_live&&recommendationIds.has(item.setup?.setup_id||sig?.setup_id)&&(
+   !data.mtf_trend?.master_bias||sig?.direction===data.mtf_trend.master_bias||sig?.counter_trend_exhaustion);
   let actCount=0, resCount=0, qualCount=0, lowSlCount=0;
   for(const item of allCards){
    const sig=item.setup?.signal||(item.setup?.entry!=null?item.setup:null)||item.state?.signal;
    const out=sig?.outcome||item.setup?.outcome||{};
    if(sig?.entry!=null){
-    const isTrendAligned = !data.mtf_trend?.master_bias || (sig.direction === data.mtf_trend.master_bias);
+    const isTrendAligned = isRecommended(item,sig);
     const isPreCutoff = !sig.timestamp || sig.timestamp.slice(11, 16) < '15:00';
     if(out.status==='ACTIVE' && isTrendAligned && isPreCutoff) actCount++;
     else if(out.status==='TARGET_ACHIEVED'||out.status==='SL_HIT'||out.status==='EOD_EXIT') resCount++;
@@ -710,7 +730,7 @@ async function pollMultiStrategies(){
    const hasSig=sig?.entry!=null;
    if(!hasSig) return false;
 
-   const isTrendAligned = !data.mtf_trend?.master_bias || (sig?.direction === data.mtf_trend.master_bias);
+   const isTrendAligned = isRecommended(item,sig);
    const isPreCutoff = !sig?.timestamp || sig.timestamp.slice(11, 16) < '15:00';
    const isAct = out.status === 'ACTIVE';
 
