@@ -698,12 +698,14 @@ async function pollMultiStrategies(){
    if(currentTradeTab==='quality'){
     const isTrendAligned = !data.mtf_trend?.master_bias || (sig?.direction === data.mtf_trend.master_bias);
     const isPreCutoff = !sig?.timestamp || sig.timestamp.slice(11, 16) < '15:00';
-    return hasSig && isTrendAligned && isPreCutoff;
+    const isLowSlEngine = item.key !== 'snr_vwap'; // Suppress high-SL engine (18% win-rate) from Quality tab
+    return hasSig && isTrendAligned && isPreCutoff && isLowSlEngine;
    }
    if(currentTradeTab==='resolved') return hasSig&&(out.status==='TARGET_ACHIEVED'||out.status==='SL_HIT'||out.status==='EOD_EXIT');
    return true;
   });
 
+  const stratPriority = { 'pdh_pdl': 1, 'orb': 2, 'smc_sweep': 3, 'candlestick': 4, 'smc_fvg': 5, 'smc_ob': 6, 'smc_mss': 7, 'smc_fib': 8, 'oi_trap': 9, 'snr_vwap': 10 };
   cards.sort((a,b)=>{
    const getSig=x=>x.setup?.signal||(x.setup?.entry!=null?x.setup:null)||x.state?.signal;
    const getOut=x=>getSig(x)?.outcome||x.setup?.outcome||x.state?.signal?.outcome||{};
@@ -713,6 +715,8 @@ async function pollMultiStrategies(){
    const isActA=hasA&&(outA.status==='ACTIVE');
    const isActB=hasB&&(outB.status==='ACTIVE');
    if(isActA!==isActB) return isActA?-1:1;
+   const pA=stratPriority[a.key]||99, pB=stratPriority[b.key]||99;
+   if(pA!==pB) return pA - pB; // Lowest historical SL rate first
    const isResA=hasA&&(outA.status==='TARGET_ACHIEVED'||outA.status==='SL_HIT');
    const isResB=hasB&&(outB.status==='TARGET_ACHIEVED'||outB.status==='SL_HIT');
    if(isResA!==isResB) return isResA?-1:1;

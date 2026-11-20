@@ -389,10 +389,17 @@ def build_confirmed_hero_setup(market, bars, quotes, mtf_trend, strategies, *, n
     now_dt = (now or datetime.now(timezone.utc)).astimezone(IST)
     is_post_cutoff = now_dt.time() >= time(15, 0)
 
-    # Priority order favoring institutional structural setups over 1m candle noise
+    # Priority order strictly favoring lowest historical SL hit rate and highest profit factor:
+    # 1. PDH/PDL Masterclass: 43.1% Win Rate, 1.57 Profit Factor (Lowest SL Hit Rate)
+    # 2. Opening Range Breakout (ORB): 38.2% Win Rate, 1.22 Profit Factor
+    # 3. SMC Liquidity Sweep: 34.7% Win Rate, high-confluence institutional turning points
+    # 4. Candlestick Price Action: 35.0% Win Rate, trend-confirmed patterns
+    # 5. SMC Fair Value Gap: 34.5% Win Rate
+    # 6. SMC Order Block & MSS: 31-34% Win Rate
+    # 7. Low-win-rate engines (snr_vwap: 18.2%) ranked at the bottom to minimize SL hits
     priority_order = [
-        'smc_ob', 'smc_fib', 'smc_fvg', 'orb', 'smc_mss',
-        'smc_sweep', 'candlestick', 'pdh_pdl', 'snr_vwap', 'oi_trap'
+        'pdh_pdl', 'orb', 'smc_sweep', 'candlestick',
+        'smc_fvg', 'smc_ob', 'smc_mss', 'smc_fib', 'oi_trap', 'snr_vwap'
     ]
 
     all_cards = []
@@ -437,11 +444,11 @@ def build_confirmed_hero_setup(market, bars, quotes, mtf_trend, strategies, *, n
         bull_active = [x for x in active_sorted if x[2].get('direction') == 'BULLISH']
         bear_active = [x for x in active_sorted if x[2].get('direction') == 'BEARISH']
         
-        # Confluence takes top priority (2+ engines agreeing)
+        # Confluence takes top priority (2+ engines agreeing), picking lowest SL strategy
         if len(bull_active) >= 2 and len(bull_active) >= len(bear_active):
-            chosen = bull_active[0]
+            chosen = sorted(bull_active, key=active_rank)[0]
         elif len(bear_active) >= 2 and len(bear_active) > len(bull_active):
-            chosen = bear_active[0]
+            chosen = sorted(bear_active, key=active_rank)[0]
         else:
             chosen = sorted(active_cards, key=active_rank)[0]
     elif all_cards:
