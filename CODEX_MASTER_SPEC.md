@@ -158,13 +158,120 @@ Every strategy engine module must return a list of dictionaries with this exact 
 
 ---
 
-## 5. CODEX EXECUTION STEPS
+## 5. CODEX EXECUTION STEPS (PHASE 1 - COMPLETED)
 
 To execute this architecture step-by-step with Codex:
-1. **Step 1:** Implement `smc/strategy_pdh_pdl.py` and unit tests in `tests/test_strategy_pdh_pdl.py`.
-2. **Step 2:** Expand `smc/strategy_candlestick.py` to include Morning Star, Evening Star, Piercing Pattern, Dark Cloud Cover, and Tweezer Tops/Bottoms.
-3. **Step 3:** Implement decoupled SMC modules (`smc/smc_module_sweep.py`, `smc/smc_module_mss.py`, `smc/smc_module_fvg.py`, `smc/smc_module_ob.py`).
-4. **Step 4:** Integrate all modules into `smc/multi_strategy_terminal.py` with zero blocking.
-5. **Step 5:** Update UI cards in `smc/app_terminal_v316.py` to render all active strategy cards dynamically.
-6. **Step 6:** Run `pytest tests/` to verify 100% test pass.
+1. **Step 1:** Implement `smc/strategy_pdh_pdl.py` and unit tests in `tests/test_strategy_pdh_pdl.py`. [COMPLETED]
+2. **Step 2:** Expand `smc/strategy_candlestick.py` to include Morning Star, Evening Star, Piercing Pattern, Dark Cloud Cover, and Tweezer Tops/Bottoms. [COMPLETED]
+3. **Step 3:** Implement decoupled SMC modules (`smc/smc_module_sweep.py`, `smc/smc_module_mss.py`, `smc/smc_module_fvg.py`, `smc/smc_module_ob.py`). [COMPLETED]
+4. **Step 4:** Integrate all modules into `smc/multi_strategy_terminal.py` with zero blocking. [COMPLETED]
+5. **Step 5:** Update UI cards in `smc/app_terminal_v316.py` to render all active strategy cards dynamically. [COMPLETED]
+6. **Step 6:** Run `pytest tests/` to verify 100% test pass. [COMPLETED - 675 PASSING]
+
+---
+
+## 6. PHASE 2: FAKE BREAKOUT & TRAP DETECTION SPECIFICATION (EDITION 1.0)
+*Reference: NIFTY & SENSEX Fake Breakout & Trap Detection Playbook (November 2026)*
+
+### 6.1 Goal & Constraints
+1. **Reduce Over-Trading:** Eliminate 1-minute candle scalp clutter (70+ trades/day) down to **8–10 confirmed A+ trades per day**.
+2. **Mathematical Trap Detection:** Identify Bull Traps (buying climax fakeouts) and Bear Traps (selling climax fakeouts) at key levels with strict 5-stage confirmation.
+3. **Zero Regression:** All existing 675 unit tests must remain 100% passing. `research_only: True`, `orders_enabled: False`.
+
+### 6.2 Architecture: Event-Driven Candidate Engine (`smc/trap_detector_v1.py`)
+Instead of scanning every 1-minute candle, candidate events are triggered ONLY when price interacts with a confirmed structural key level:
+* **Key Levels:**
+  - `PDH` / `PDL` (Previous Day High / Low)
+  - `ORB_H` / `ORB_L` (Opening Range 15M High / Low)
+  - `SWING_H` / `SWING_L` (Confirmed 15M Structural Swings)
+* **Candidate Crossing Threshold:**
+  $$\text{buffer} = \max(0.05 \times \text{ATR}_{5m}(14), \, 2 \times \text{tick\_size})$$
+  - Upside Event: $\text{High} > \text{Resistance} + \text{buffer}$
+  - Downside Event: $\text{Low} < \text{Support} - \text{buffer}$
+
+### 6.3 Five-Stage Trap & Breakout Verification
+1. **Stage 1: Level Sweep:** Price penetrates key level beyond buffer.
+2. **Stage 2: Reclaim Window ($K \in \{1, 2, 3\}$ 5-Minute Bars):**
+   - Bull Trap: 5M candle body closes back below resistance.
+   - Bear Trap: 5M candle body closes back above support.
+3. **Stage 3: Market Structure Shift (5M CHOCH with Body Displacement):**
+   - Bull Trap: Prior minor 5M swing low is broken with decisive candle close.
+   - Bear Trap: Prior minor 5M swing high is broken with decisive candle close.
+4. **Stage 4: Retest & Rejection (50% FVG / Order Block):**
+   - Pullback to broken level or 50% FVG equilibrium with rejection candle.
+5. **Stage 5: Final Execution & Invalidation:**
+   - Invalidation SL: Strictly beyond the extreme sweep high/low.
+   - Target: Minimum 1:2 R:R toward opposing liquidity.
+
+### 6.4 Label Taxonomy & Output Schema
+* `0: NO_TRADE` — Range-bound, ambiguous, or no confirmation (Capital Protection).
+* `1: TRUE_UP` — Genuine Bullish Breakout (Consecutive 5M closes above level + hold).
+* `2: TRUE_DOWN` — Genuine Bearish Breakdown (Consecutive 5M closes below level + hold).
+* `3: BULL_TRAP` — Fake Upside Breakout -> Confirmed Bearish Reversal (PE Candidate).
+* `4: BEAR_TRAP` — Fake Downside Breakdown -> Confirmed Bullish Reversal (CE Candidate).
+
+```json
+{
+  "symbol": "NIFTY",
+  "timeframe": "5m",
+  "signal_stage": "CONFIRMED_RETEST",
+  "candidate_type": "BULL_TRAP",
+  "decision_time_ist": "2026-11-20T12:45:00+05:30",
+  "level": 25740.0,
+  "spot_entry": 25725.0,
+  "spot_stop": 25755.0,
+  "spot_target": 25665.0,
+  "planned_rr": 2.0,
+  "model_version": "trap-v1.0",
+  "probability": 0.78,
+  "status": "ACTIVE"
+}
+```
+
+### 6.5 Daily Curated Cap (8–10 A+ Trades Filter)
+* **Minimum Target Filter:**
+  - NIFTY 50: $\ge 40$ index points.
+  - SENSEX: $\ge 130$ index points.
+* **Minimum R:R:** Strict $\ge 1:2.0$.
+* **Wave Cooldown:** 25-minute minimum lockout between trades in the same direction.
+
+---
+
+## 7. CODEX STEP-BY-STEP EXECUTION INSTRUCTIONS FOR PHASE 2
+
+Codex should execute this phase in the following discrete steps:
+
+### Task 1: Core Trap Detector Engine
+* **Create:** `smc/trap_detector_v1.py`
+* **Implement:**
+  - `compute_atr_5m(candles, period=14)`
+  - `detect_candidate_events(candles, levels, atr_buffer)`
+  - `evaluate_reclaim(event, bars, k_bars=3)`
+  - `evaluate_choch(bars, swing_pivots)`
+  - `scan_traps_and_breakouts(candles, symbol, quotes=None, now=None)`
+* **Create Unit Tests:** `tests/test_trap_detector.py` (synthetic Bull Trap, Bear Trap, True Breakout, Invalidation test cases).
+* **Verify:** Run `pytest tests/test_trap_detector.py` -> 100% pass.
+
+### Task 2: Dispatcher & Hero Gate Integration
+* **Update:** `smc/multi_strategy_terminal.py`
+  - Import `scan_traps_and_breakouts` from `smc.trap_detector_v1`.
+  - Add `trap_detector` to independent scanner dictionary.
+  - Wire trap alerts into `build_confirmed_hero_setup` (A+ Trap Reversals take top priority if Master Bias or Counter-Trend Exhaustion confirms).
+  - Apply the 25-minute wave cooldown and minimum target filter ($\ge 40$ Nifty / $\ge 130$ Sensex) to limit daily recommendations to 8–10 trades.
+* **Verify:** Run `pytest tests/test_multi_strategy_terminal.py` -> 100% pass.
+
+### Task 3: Terminal UI Radar & Alert Badges
+* **Update:** `smc/app_terminal_v316.py`
+  - Add Live Trap Radar status box in `confirmedHeroSection`.
+  - Render badges:
+    - `⚠️ BULL TRAP DETECTED at [Level]`
+    - `⚠️ BEAR TRAP DETECTED at [Level]`
+    - `🚀 GENUINE BREAKOUT (TRUE_UP)`
+    - `🛡️ NO TRAP / IN RANGE`
+* **Verify:** Refresh terminal in browser (`http://127.0.0.1:8765`), verify zero visual regressions.
+
+### Task 4: Full System Regression Suite
+* Run `pytest tests/` across all 675+ tests. Ensure 100% pass rate.
+* Verify git status and create clean local commit on `main`.
+
 
