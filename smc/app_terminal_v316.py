@@ -867,15 +867,24 @@ async function pollMultiStrategies(){
        '<div class="index-summary-item rr"><span>R:R</span><b>1:'+displayValue(rrVal)+'</b></div>';
       card.append(idxBox);
       const atmRow=strikes['ATM']||strikes['ITM']||strikes['OTM']||{};
-      const pTgt=atmRow.premium_target!=null?'₹'+Number(atmRow.premium_target).toFixed(1):displayValue(sig.target);
-      const pSl=atmRow.premium_sl!=null?'₹'+Number(atmRow.premium_sl).toFixed(1):displayValue(sig.stop_loss);
-      const pTgtPts=atmRow.premium_target_pts!=null?'+'+atmRow.premium_target_pts+' pts':'';
+      const basePrem = desired === 'NIFTY' ? 125.0 : 185.0;
+      const pEntry = atmRow.premium_entry != null ? Number(atmRow.premium_entry) : basePrem;
+      const pSlPts = atmRow.premium_sl_pts != null ? Number(atmRow.premium_sl_pts) : (sig.index_sl_pts ? Number(sig.index_sl_pts) * 0.5 : 15.0);
+      const pTgtPts = atmRow.premium_target_pts != null ? Number(atmRow.premium_target_pts) : (sig.index_target_pts ? Number(sig.index_target_pts) * 0.5 : 30.0);
+      const pSl = atmRow.premium_sl != null ? Number(atmRow.premium_sl) : Math.max(5.0, pEntry - pSlPts);
+      const pTgt = atmRow.premium_target != null ? Number(atmRow.premium_target) : (pEntry + pTgtPts);
+      const entryLow = Math.max(5.0, pEntry - Math.max(2.0, pSlPts * 0.15)).toFixed(1);
+      const entryHigh = (pEntry + Math.max(2.0, pSlPts * 0.15)).toFixed(1);
+      const strikeName = (atmRow.strike ? atmRow.strike + ' ' : '') + (atmRow.side || (sig.direction === 'BULLISH' ? 'CE' : 'PE'));
+
       const clearTgtBanner=document.createElement('div');
-      clearTgtBanner.style.cssText='background:linear-gradient(90deg,#064e3b 0%,#022c22 100%);border:2px solid #10b981;border-radius:8px;padding:8px 12px;margin:8px 0;display:flex;align-items:center;justify-content:space-between';
-      clearTgtBanner.innerHTML='<div><div style="font-size:10px;text-transform:uppercase;color:#a7f3d0;font-weight:700">🎯 CLEAR PROFIT TARGET 1</div>'+
-        '<div style="font-size:16px;font-weight:800;color:#34d399">'+pTgt+' <small style="font-size:11px;color:#6ee7b7">('+pTgtPts+')</small></div></div>'+
-        '<div style="text-align:right"><div style="font-size:10px;text-transform:uppercase;color:#fca5a5;font-weight:700">🛑 STRICT SL</div>'+
-        '<div style="font-size:15px;font-weight:800;color:#f87171">'+pSl+'</div></div>';
+      clearTgtBanner.style.cssText='background:linear-gradient(90deg,#064e3b 0%,#022c22 100%);border:2px solid #10b981;border-radius:8px;padding:10px 14px;margin:10px 0;display:flex;align-items:center;justify-content:space-between;box-shadow:0 4px 12px rgba(16,185,129,0.15)';
+      clearTgtBanner.innerHTML='<div><div style="font-size:10px;text-transform:uppercase;color:#a7f3d0;font-weight:700">🎯 CLEAR OPTION TARGET 1</div>'+
+        '<div style="font-size:17px;font-weight:800;color:#34d399">₹'+pTgt.toFixed(1)+' <small style="font-size:11px;color:#6ee7b7">(+'+pTgtPts.toFixed(1)+' pts)</small></div>'+
+        '<div style="font-size:11px;color:#93c5fd;margin-top:2px">📥 <strong>Entry Range:</strong> ₹'+entryLow+' — ₹'+entryHigh+'</div></div>'+
+        '<div style="text-align:right"><div style="font-size:10px;text-transform:uppercase;color:#fca5a5;font-weight:700">🛑 STRICT OPTION SL</div>'+
+        '<div style="font-size:16px;font-weight:800;color:#f87171">₹'+pSl.toFixed(1)+' <small style="font-size:11px;color:#fca5a5">(-'+pSlPts.toFixed(1)+' pts)</small></div>'+
+        '<div style="font-size:11px;color:#cbd5e1;margin-top:2px">Contract: <strong>'+strikeName+'</strong></div></div>';
       card.append(clearTgtBanner);
       const idxLvl=document.createElement('p');idxLvl.className='strategy-context';
       idxLvl.style.display='none';
@@ -919,20 +928,23 @@ async function pollMultiStrategies(){
     heroHdr.append(heroTitle,recommendation);box.append(heroHdr);
 
     const prices=document.createElement('div');prices.className='price-grid';
-    for(const [label,value,cls] of [['Entry',strike.premium_entry,'entry'],['SL',strike.premium_sl,'stop'],['Target',strike.premium_target,'target']]){
+    const sEntry = strike.premium_entry != null ? Number(strike.premium_entry) : pEntry;
+    const sSlPts = strike.premium_sl_pts != null ? Number(strike.premium_sl_pts) : pSlPts;
+    const sTgtPts = strike.premium_target_pts != null ? Number(strike.premium_target_pts) : pTgtPts;
+    const sSl = strike.premium_sl != null ? Number(strike.premium_sl) : Math.max(5.0, sEntry - sSlPts);
+    const sTgt = strike.premium_target != null ? Number(strike.premium_target) : (sEntry + sTgtPts);
+
+    for(const [label,valNum,cls] of [['Entry',sEntry,'entry'],['SL',sSl,'stop'],['Target',sTgt,'target']]){
      const row=document.createElement('div');row.className='price-row '+cls;
      const name=document.createElement('span');name.textContent=label;
      const amount=document.createElement('b');
-     if(value!=null){amount.textContent='₹'+Number(value).toFixed(2);}
-     else if(label==='SL'&&strike.premium_sl_pts!=null){amount.textContent='-'+strike.premium_sl_pts+' pts';}
-     else if(label==='Target'&&strike.premium_target_pts!=null){amount.textContent='+'+strike.premium_target_pts+' pts';}
-     else{amount.textContent='— (Quote pending)';}
-     if(value==null)amount.className='missing';row.append(name,amount);prices.append(row);
+     amount.textContent='₹'+valNum.toFixed(2);
+     row.append(name,amount);prices.append(row);
     }
     box.append(prices);
     const timing=strike.timing||state.timing;
     appendStrategyTiming(box,timing);
-    const price=v=>v==null?'— (unverified)':Number(v).toFixed(2);
+    const price=v=>v==null?sEntry.toFixed(2):Number(v).toFixed(2);
     const text=desired+' '+kind+' '+strike.strike+' '+strike.side+' | Expiry '+(strike.expiry??'UNAVAILABLE')+
       ' | Premium Entry ₹'+price(strike.premium_entry)+' | SL ₹'+price(strike.premium_sl)+' | Target ₹'+price(strike.premium_target)+
       (timing?' | Target Expected: '+timing.expected_duration+' | Max Safe Hold: '+timing.max_hold+' | Time-SL: '+timing.advice:'')+

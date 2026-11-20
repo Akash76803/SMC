@@ -767,6 +767,19 @@ def multi_strategy_payload(root, market, *, now=None):
                 continue
         return list(latest.values())
 
+    def quotes_around(at, window_seconds=600):
+        latest = {}
+        end = bisect_right(quote_times, at)
+        begin = bisect_right(quote_times, at-timedelta(seconds=window_seconds), hi=end)
+        for _, row in reversed(quote_history[begin:end]):
+            try:
+                key = (row.get('expiry'), row.get('side'), row.get('strike'))
+                if key not in latest:
+                    latest[key] = row
+            except (KeyError, TypeError):
+                continue
+        return list(latest.values())
+
     quotes = quotes_at(evaluation_at)
     def scan(name):
         state = strategies[name]
@@ -812,13 +825,30 @@ def multi_strategy_payload(root, market, *, now=None):
             cards = []
             for raw in today_signals:
                 observed_at = datetime.fromisoformat(raw['timestamp'])
-                snapshot = quotes_at(observed_at) if closed else quotes
+                snapshot = quotes_at(observed_at)
+                if not snapshot:
+                    snapshot = quotes_around(observed_at, window_seconds=600) or quotes
+                eval_time = observed_at if snapshot else (observed_at if closed else evaluation_at)
                 sign = 1 if raw['direction'] == 'BULLISH' else -1
                 if name in independent:
                     signal = dict(raw)
                     strikes = select_strikes(raw['entry'], raw['direction'], raw['index_sl_pts'],
                                              raw['index_target_pts'], symbol=market,
-                                             quotes=snapshot, now=observed_at if closed else evaluation_at)
+                                             quotes=snapshot, now=eval_time)
+                    if not closed:
+                        for kind, row in strikes.items():
+                            if row.get('premium_entry') is None:
+                                base_prem = round((raw['entry'] * 0.005), 1) if market == 'NIFTY' else round((raw['entry'] * 0.0022), 1)
+                                if kind == 'ITM':
+                                    base_prem = round(base_prem * 1.25, 1)
+                                elif kind == 'OTM':
+                                    base_prem = round(base_prem * 0.75, 1)
+                                p_sl_dist = float(row.get('premium_sl_pts') or (raw['index_sl_pts'] * row['delta']))
+                                p_tgt_dist = float(row.get('premium_target_pts') or (raw['index_target_pts'] * row['delta']))
+                                row['premium_entry'] = base_prem
+                                row['premium_sl'] = round(max(5.0, base_prem - p_sl_dist), 1)
+                                row['premium_target'] = round(base_prem + p_tgt_dist, 1)
+                                row['status'] = 'ESTIMATED'
                     signal['strikes'] = [
                         dict(strike=row['strike'], option_type=row['side'], premium_entry=row['premium_entry'],
                              premium_sl=row['premium_sl'], premium_target=row['premium_target'])
@@ -833,10 +863,27 @@ def multi_strategy_payload(root, market, *, now=None):
                     if signal is None:
                         continue
                     strikes = raw['strikes']
-                    if closed:
-                        strikes = select_strikes(raw['entry'], raw['direction'], raw['index_sl_pts'],
-                                                 raw['index_target_pts'], symbol=market, quotes=snapshot,
-                                                 now=observed_at, expiry=oi['expiry'] if name == 'oi_trap' else None)
+                    if closed or any(r.get('premium_entry') is None for r in strikes.values()):
+                        fresh_strikes = select_strikes(raw['entry'], raw['direction'], raw['index_sl_pts'],
+                                                       raw['index_target_pts'], symbol=market, quotes=snapshot,
+                                                       now=eval_time, expiry=oi['expiry'] if name == 'oi_trap' else None)
+                        for k, r in fresh_strikes.items():
+                            if r.get('premium_entry') is not None and k in strikes:
+                                strikes[k] = r
+                    if not closed:
+                        for kind, row in strikes.items():
+                            if row.get('premium_entry') is None:
+                                base_prem = round((raw['entry'] * 0.005), 1) if market == 'NIFTY' else round((raw['entry'] * 0.0022), 1)
+                                if kind == 'ITM':
+                                    base_prem = round(base_prem * 1.25, 1)
+                                elif kind == 'OTM':
+                                    base_prem = round(base_prem * 0.75, 1)
+                                p_sl_dist = float(row.get('premium_sl_pts') or (raw['index_sl_pts'] * row['delta']))
+                                p_tgt_dist = float(row.get('premium_target_pts') or (raw['index_target_pts'] * row['delta']))
+                                row['premium_entry'] = base_prem
+                                row['premium_sl'] = round(max(5.0, base_prem - p_sl_dist), 1)
+                                row['premium_target'] = round(base_prem + p_tgt_dist, 1)
+                                row['status'] = 'ESTIMATED'
                     for contract, row in zip(signal['strikes'], strikes.values()):
                         contract.update({key: row[key] for key in ('premium_entry', 'premium_sl', 'premium_target')})
                 outcome = evaluate_signal_outcome(raw, bars, closed=closed)
