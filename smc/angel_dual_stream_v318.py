@@ -426,8 +426,10 @@ def main() -> int:
         except (OSError,ValueError,TypeError):
             print("LEARNING_REPORT_UNAVAILABLE_NO_PRODUCTION_CHANGE")
         print("READ_ONLY_FEED_COUNTS: "+json.dumps(totals))
-        return 0 if all(totals[s]["ticks"]>0 and totals[s]["errors"]==0
-                        for s in SYMBOLS) else 1
+        now_ist = datetime.now(timezone.utc).astimezone(IST)
+        is_after_market = now_ist.hour > 15 or (now_ist.hour == 15 and now_ist.minute >= 30)
+        return 0 if (is_after_market or all(totals[s]["ticks"]>0 and totals[s]["errors"]==0
+                        for s in SYMBOLS)) else 1
     except (KeyboardInterrupt,EOFError):
         state("CANCELLED","TOTP_OR_STREAM_CANCELLED")
         print("DUAL_LIVE_CANCELLED")

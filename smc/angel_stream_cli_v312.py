@@ -102,7 +102,7 @@ def write_live_status(path: str | None, status: str, reason: str) -> None:
         return
     if status not in ("AUTHENTICATION_REQUIRED", "AUTHENTICATED",
                       "SUBSCRIBING", "STREAM_STOPPED", "DISCONNECTED",
-                      "ERROR", "CANCELLED"):
+                      "ERROR", "CANCELLED", "SESSION_CLOSED"):
         raise ValueError("INVALID_LIVE_STATE")
     target = Path(path)
     target.parent.mkdir(parents=True, exist_ok=True)
