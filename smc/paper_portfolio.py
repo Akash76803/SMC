@@ -157,10 +157,13 @@ def update_paper_portfolio(root: str | Path, market: str, hero_setup: dict | Non
                 ledger['open_position'] = None
                 open_pos = None
 
-    # 2. Check for New Virtual Position Entry from Active Hero Setup
+    # 2. Check for New Virtual Position Entry from Active Hero Setup (Strictly Lowest-SL Whitelist)
     if not open_pos and hero_setup and hero_setup.get('status') == 'ACTIVE':
-        # Only take trade if before 15:00 IST
-        if local_now.time() < time(15, 0):
+        # Only take trade if before 15:00 IST and belongs to verified Lowest-SL strategies
+        strat_k = hero_setup.get('strategy_key', '')
+        strat_t = hero_setup.get('strategy', '')
+        is_low_sl = (strat_k in ('pdh_pdl', 'orb', 'candlestick', 'smc_fvg')) or any(k in strat_t for k in ('PDH', 'ORB', 'Candlestick', 'Fair Value Gap', 'FVG'))
+        if is_low_sl and local_now.time() < time(15, 0):
             contract = hero_setup.get('contract')
             entry_price = float(hero_setup.get('ltp', 0) or 0)
             # If contract was already traded recently and exited with SL today, avoid immediate re-entry loop

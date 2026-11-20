@@ -392,14 +392,15 @@ def build_confirmed_hero_setup(market, bars, quotes, mtf_trend, strategies, *, n
     # Priority order strictly favoring lowest historical SL hit rate and highest profit factor:
     # 1. PDH/PDL Masterclass: 43.1% Win Rate, 1.57 Profit Factor (Lowest SL Hit Rate)
     # 2. Opening Range Breakout (ORB): 38.2% Win Rate, 1.22 Profit Factor
-    # 3. SMC Liquidity Sweep: 34.7% Win Rate, high-confluence institutional turning points
-    # 4. Candlestick Price Action: 35.0% Win Rate, trend-confirmed patterns
-    # 5. SMC Fair Value Gap: 34.5% Win Rate
+    # 3. Candlestick Price Action: 35.0% Win Rate, trend-confirmed patterns
+    # 4. SMC Fair Value Gap: 34.5% Win Rate
+    # 5. SMC Liquidity Sweep: 34.7% Win Rate
     # 6. SMC Order Block & MSS: 31-34% Win Rate
-    # 7. Low-win-rate engines (snr_vwap: 18.2%) ranked at the bottom to minimize SL hits
+    # 7. Low-win-rate engines (snr_vwap: 18.2%, oi_trap: 21%) suppressed to minimize SL hits
+    LOW_SL_STRATEGIES = {'pdh_pdl', 'orb', 'candlestick', 'smc_fvg'}
     priority_order = [
-        'pdh_pdl', 'orb', 'smc_sweep', 'candlestick',
-        'smc_fvg', 'smc_ob', 'smc_mss', 'smc_fib', 'oi_trap', 'snr_vwap'
+        'pdh_pdl', 'orb', 'candlestick', 'smc_fvg',
+        'smc_sweep', 'smc_ob', 'smc_mss', 'smc_fib', 'oi_trap', 'snr_vwap'
     ]
 
     all_cards = []
@@ -421,6 +422,14 @@ def build_confirmed_hero_setup(market, bars, quotes, mtf_trend, strategies, *, n
                         active_cards.append(item)
                 except Exception:
                     active_cards.append(item)
+
+    # Restrict active execution candidates to lowest historical SL hit rate strategies
+    low_sl_active = [item for item in active_cards if item[0] in LOW_SL_STRATEGIES]
+    if low_sl_active:
+        active_cards = low_sl_active
+    else:
+        # High SL rate strategies (snr_vwap 18% WR, oi_trap 21% WR) discarded from active execution pool
+        active_cards = []
 
     # Strict Trend-Alignment Gate: Only accept setups aligned with Master Trend
     master_bias = mtf_trend.get('master_bias')
@@ -454,6 +463,9 @@ def build_confirmed_hero_setup(market, bars, quotes, mtf_trend, strategies, *, n
     elif all_cards:
         # After 15:00 or when no active setup, pick best resolved trend-aligned setup of the day
         resolved = [item for item in all_cards if item[3].get('status') in ('TARGET_ACHIEVED', 'SL_HIT')]
+        low_sl_res = [item for item in resolved if item[0] in LOW_SL_STRATEGIES]
+        if low_sl_res:
+            resolved = low_sl_res
         if master_bias in ('BULLISH', 'BEARISH'):
             trend_res = [item for item in resolved if item[2].get('direction') == master_bias]
             if trend_res:
@@ -613,6 +625,8 @@ def build_confirmed_hero_setup(market, bars, quotes, mtf_trend, strategies, *, n
         'side': side,
         'side_label': f"{side} ({'CALL' if side == 'CE' else 'PUT'})",
         'strategy': strat_title,
+        'strategy_key': strat_key,
+        'is_low_sl_elite': strat_key in LOW_SL_STRATEGIES,
         'pattern': pattern_title,
         'status': status,
         'contract': contract_symbol,

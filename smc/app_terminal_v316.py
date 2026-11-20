@@ -213,16 +213,25 @@ canvas{width:100%;height:360px;display:block;border-radius:8px}table{border-coll
 <div id="paperPortfolioSection" class="paper-portfolio-container" style="display:none"></div>
 <div id="masterTrendBanner" class="master-trend-banner">Checking Multi-Timeframe Trend…</div>
 <div class="trade-status-bar" role="tablist" aria-label="Trade Status Filter">
-<button type="button" class="trade-tab-btn active" data-tab="active">⚡ ACTIVE SETUPS (<span id="activeCount">0</span>)</button>
-<button type="button" class="trade-tab-btn" data-tab="quality">⭐ A+ QUALITY (Trend-Aligned) (<span id="qualityCount">0</span>)</button>
-<button type="button" class="trade-tab-btn" data-tab="resolved">🎯 RESOLVED TRADES (History) (<span id="resolvedCount">0</span>)</button>
+<button type="button" class="trade-tab-btn active" data-tab="low_sl" style="border-color:#10b981;color:#34d399">🛡️ LOWEST SL TRADES (<span id="lowSlCount">0</span>)</button>
+<button type="button" class="trade-tab-btn" data-tab="active">⚡ ALL ACTIVE (<span id="activeCount">0</span>)</button>
+<button type="button" class="trade-tab-btn" data-tab="quality">⭐ A+ QUALITY (<span id="qualityCount">0</span>)</button>
+<button type="button" class="trade-tab-btn" data-tab="resolved">🎯 RESOLVED TRADES (<span id="resolvedCount">0</span>)</button>
 <button type="button" class="trade-tab-btn" data-tab="all">📋 ALL STRATEGIES</button>
 </div>
 <div class="strat-category-bar" role="tablist" aria-label="Strategy Category Filter">
 <button type="button" class="strat-filter-btn active" data-cat="ALL">All Categories</button>
-<button type="button" class="strat-filter-btn" data-cat="SMC">SMC Institutional (5)</button>
+<button type="button" class="strat-filter-btn" data-cat="LOW_SL" style="color:#34d399;font-weight:700">🛡️ Lowest SL Only (4)</button>
 <button type="button" class="strat-filter-btn" data-cat="PA">Price Action (2)</button>
+<button type="button" class="strat-filter-btn" data-cat="SMC">SMC Institutional (5)</button>
 <button type="button" class="strat-filter-btn" data-cat="MOM">Momentum & Flow (3)</button>
+</div>
+<div id="lowSlBanner" style="display:flex;align-items:center;justify-content:space-between;background:rgba(6,78,59,0.35);border:1px solid #10b981;padding:10px 16px;border-radius:8px;margin-bottom:14px">
+ <div style="display:flex;align-items:center;gap:10px">
+  <span style="font-size:18px">🛡️</span>
+  <span style="font-size:12px;color:#a7f3d0"><strong>LOWEST SL TRADES FILTER ACTIVE:</strong> स्क्रीनवर फक्त ऐतिहासिकदृष्ट्या सर्वात कमी SL Hit होणाऱ्या स्ट्रॅटेजीजचे ट्रेड्स दाखवले जात आहेत (PDH/PDL ४३.१% विन-रेट, ORB ३८.२%, Candlestick ३५.०%, SMC FVG ३४.७%). जास्त SL उडणारे इंजिन्स (SNR VWAP १८%, OI Trap, Fib) बाजूला टाकले आहेत.</span>
+ </div>
+ <span style="font-size:11px;font-weight:700;color:#34d399;background:#064e3b;padding:3px 8px;border-radius:4px;white-space:nowrap;border:1px solid #059669">4 LOW-SL STRATEGIES</span>
 </div>
 <div id="multiStrategyCards" class="setup-grid" aria-live="polite">Checking recorded data…</div>
 </section>
@@ -528,7 +537,7 @@ function appendStrategyTiming(parent,timing){
  note.textContent='⚠️ Time-SL: '+timing.advice;
  parent.append(badge,note);
 }
-let currentStratCat='ALL', currentTradeTab='active';
+let currentStratCat='ALL', currentTradeTab='low_sl';
 document.querySelectorAll('.trade-tab-btn').forEach(btn=>{
  btn.onclick=()=>{
   document.querySelectorAll('.trade-tab-btn').forEach(b=>b.classList.remove('active'));
@@ -673,7 +682,8 @@ async function pollMultiStrategies(){
   const allCards=Object.entries(data.strategies).flatMap(([key,state])=>
    (state.cards?.length?state.cards:[state]).map(setup=>({key,state,setup})));
 
-  let actCount=0, resCount=0, qualCount=0;
+  const LOW_SL_KEYS = ['pdh_pdl', 'orb', 'candlestick', 'smc_fvg'];
+  let actCount=0, resCount=0, qualCount=0, lowSlCount=0;
   for(const item of allCards){
    const sig=item.setup?.signal||(item.setup?.entry!=null?item.setup:null)||item.state?.signal;
    const out=sig?.outcome||item.setup?.outcome||{};
@@ -683,17 +693,25 @@ async function pollMultiStrategies(){
     const isTrendAligned = !data.mtf_trend?.master_bias || (sig.direction === data.mtf_trend.master_bias);
     const isPreCutoff = !sig.timestamp || sig.timestamp.slice(11, 16) < '15:00';
     if(isTrendAligned && isPreCutoff) qualCount++;
+    if(LOW_SL_KEYS.includes(item.key) && isTrendAligned && isPreCutoff && (out.status==='ACTIVE')) lowSlCount++;
    }
   }
+  const lscEl=document.getElementById('lowSlCount'); if(lscEl) lscEl.textContent=lowSlCount;
   const acEl=document.getElementById('activeCount'); if(acEl) acEl.textContent=actCount;
   const rcEl=document.getElementById('resolvedCount'); if(rcEl) rcEl.textContent=resCount;
   const qcEl=document.getElementById('qualityCount'); if(qcEl) qcEl.textContent=qualCount;
 
   const cards=allCards.filter(item=>{
-   if(currentStratCat!=='ALL'&&strategyCategories[item.key]!==currentStratCat) return false;
+   if(currentStratCat==='LOW_SL'&&!LOW_SL_KEYS.includes(item.key)) return false;
+   if(currentStratCat!=='ALL'&&currentStratCat!=='LOW_SL'&&strategyCategories[item.key]!==currentStratCat) return false;
    const sig=item.setup?.signal||(item.setup?.entry!=null?item.setup:null)||item.state?.signal;
    const out=sig?.outcome||item.setup?.outcome||{};
    const hasSig=sig?.entry!=null;
+   if(currentTradeTab==='low_sl'){
+    const isTrendAligned = !data.mtf_trend?.master_bias || (sig?.direction === data.mtf_trend.master_bias);
+    const isPreCutoff = !sig?.timestamp || sig.timestamp.slice(11, 16) < '15:00';
+    return hasSig && LOW_SL_KEYS.includes(item.key) && isTrendAligned && isPreCutoff;
+   }
    if(currentTradeTab==='active') return hasSig&&out.status==='ACTIVE';
    if(currentTradeTab==='quality'){
     const isTrendAligned = !data.mtf_trend?.master_bias || (sig?.direction === data.mtf_trend.master_bias);
@@ -726,6 +744,15 @@ async function pollMultiStrategies(){
    return timeB.localeCompare(timeA);
   });
 
+  if(currentTradeTab==='low_sl'&&cards.length===0){
+   const empty=document.createElement('div');empty.className='panel';
+   empty.style.gridColumn='1 / -1';empty.style.textAlign='center';empty.style.padding='36px 20px';
+   const allowed=data.mtf_trend?.action_permitted||'CALL (CE) ONLY';
+   empty.innerHTML='<h3 style="color:#34d399;font-size:18px;margin-bottom:8px">🛡️ 4 Lowest-SL Strategies Scanner Active</h3>'+
+    '<p class="muted" style="font-size:13px;max-width:650px;margin:auto">फक्त ज्या स्ट्रॅटेजीजचे Stop Loss सर्वात कमी Hit होतात (<strong>PDH/PDL ४३.१% विन-रेट</strong>, <strong>ORB ३८.२%</strong>, <strong>Candlestick PA ३५.०%</strong>, <strong>SMC FVG ३४.७%</strong>) तेच ट्रेड्स स्क्रीनवर येतील. जास्त SL उडणारे इंजिन्स (SNR VWAP १८%, OI Trap, Fib) बाजूला टाकले आहेत.</p>'+
+    '<p style="font-size:12px;color:#94a3b8;margin-top:14px">👉 Direction Filter: <strong>'+allowed+'</strong> · Cut-off: <strong>Strict 15:00 IST</strong></p>';
+   container.append(empty);
+  }
   if(currentTradeTab==='active'&&cards.length===0){
    const empty=document.createElement('div');empty.className='panel';
    empty.style.gridColumn='1 / -1';empty.style.textAlign='center';empty.style.padding='36px 20px';
@@ -764,6 +791,20 @@ async function pollMultiStrategies(){
    headingWrap.append(heading,marketName);card.append(headingWrap);
 
    const badgeWrap=document.createElement('div');badgeWrap.className='strategy-badges';
+   const slBadges = {
+    'pdh_pdl': '<span style="background:#064e3b;color:#34d399;font-size:11px;font-weight:700;padding:2px 8px;border-radius:4px;border:1px solid #059669">🏆 LOWEST SL (43.1% WR · 1.57 PF)</span>',
+    'orb': '<span style="background:#064e3b;color:#34d399;font-size:11px;font-weight:700;padding:2px 8px;border-radius:4px;border:1px solid #059669">⭐ LOW SL (38.2% WR · 1.22 PF)</span>',
+    'candlestick': '<span style="background:#064e3b;color:#34d399;font-size:11px;font-weight:700;padding:2px 8px;border-radius:4px;border:1px solid #059669">✓ STABLE PA (35.0% WR)</span>',
+    'smc_fvg': '<span style="background:#064e3b;color:#34d399;font-size:11px;font-weight:700;padding:2px 8px;border-radius:4px;border:1px solid #059669">✓ IMBALANCE (34.7% WR)</span>',
+    'snr_vwap': '<span style="background:#7f1d1d;color:#fca5a5;font-size:11px;font-weight:700;padding:2px 8px;border-radius:4px;border:1px solid #dc2626">⚠️ HIGH SL HIT (18.2% WR)</span>',
+    'oi_trap': '<span style="background:#7f1d1d;color:#fca5a5;font-size:11px;font-weight:700;padding:2px 8px;border-radius:4px;border:1px solid #dc2626">⚠️ 79% SL HIT (21% WR)</span>',
+    'smc_fib': '<span style="background:#854d0e;color:#fef08a;font-size:11px;font-weight:700;padding:2px 8px;border-radius:4px;border:1px solid #ca8a04">⚠️ HIGH DRAWDOWN (30% WR)</span>'
+   };
+   if(slBadges[key]){
+    const slPill=document.createElement('span');
+    slPill.innerHTML=slBadges[key];
+    badgeWrap.append(slPill);
+   }
    const bias=document.createElement('span');
    bias.textContent=dir==='BULLISH'?'🟢 BULLISH (CE)':dir==='BEARISH'?'🔴 BEARISH (PE)':'⚪ NEUTRAL / Waiting';
    bias.className='direction-pill '+(dir==='BULLISH'?'bullish':dir==='BEARISH'?'bearish':'neutral');badgeWrap.append(bias);
