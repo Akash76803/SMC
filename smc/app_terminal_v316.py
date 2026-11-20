@@ -771,7 +771,8 @@ async function pollMultiStrategies(){
   }
 
   for(const {key,state,setup} of cards){
-   if(currentStratCat!=='ALL'&&strategyCategories[key]!==currentStratCat)continue;
+   if(currentStratCat==='LOW_SL'&&!LOW_SL_KEYS.includes(key))continue;
+   if(currentStratCat!=='ALL'&&currentStratCat!=='LOW_SL'&&strategyCategories[key]!==currentStratCat)continue;
    const card=document.createElement('article');card.className='strategy-card';
    const title=strategyTitles[key]||key.replaceAll('_',' ');
    const {signal:sig,strikes}=setup;
