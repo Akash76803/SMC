@@ -28,6 +28,8 @@ def market_paths(root: str | Path, symbol: str) -> dict[str, Path]:
         "options": root / "results" / f"live_{low}_options.json",
         "option_tape": root / "results" / f"live_{low}_option_quotes.jsonl",
         "learning": root / "results" / f"strategy_learning_{low}.json",
+        "range_forecast": root / "results" / "range_forecast" / f"{low}_latest.json",
+        "range_reconciled": root / "results" / "range_forecast" / f"{low}_latest_reconciled.json",
     }
 
 

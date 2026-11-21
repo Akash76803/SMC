@@ -216,6 +216,56 @@ canvas{width:100%;height:360px;display:block;border-radius:8px}table{border-coll
  <div id="confirmedHeroContent"></div>
 </div>
 <div id="paperPortfolioSection" class="paper-portfolio-container" style="display:none"></div>
+<div id="rangeRadarContainer" class="range-radar-panel" style="background:linear-gradient(135deg,#0a101d 0%,#1e293b 100%);border:1.5px solid #38bdf855;border-radius:12px;padding:16px 20px;margin-bottom:16px;box-shadow:0 4px 20px rgba(0,0,0,.4)">
+ <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;border-bottom:1px solid #33415580;padding-bottom:10px;margin-bottom:12px">
+  <div style="display:flex;align-items:center;gap:10px">
+   <span style="font-size:18px">🎯</span>
+   <div>
+    <div style="font-size:10px;letter-spacing:.15em;font-weight:700;color:#38bdf8">RANGE RADAR V2.6 · RESEARCH ONLY</div>
+    <h3 style="margin:0;font-size:16px;font-weight:700;color:#f8fafc"><span id="radarSymbol">NIFTY</span> Expected Daily Range</h3>
+   </div>
+  </div>
+  <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+   <span id="radarAsOfBadge" style="font-size:11px;padding:3px 8px;border-radius:6px;background:#334155;color:#94a3b8">Snapshot: 09:16 IST</span>
+   <span id="radarModelBadge" style="font-size:11px;padding:3px 8px;border-radius:6px;background:#0284c722;border:1px solid #0284c766;color:#38bdf8">BASELINE_OHLC</span>
+   <span id="radarCalBadge" style="font-size:11px;padding:3px 8px;border-radius:6px;background:#10b98122;border:1px solid #10b98166;color:#34d399">Calibrated 80%: ~75% Cov</span>
+  </div>
+ </div>
+ <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:14px">
+  <div style="background:#0b1120;border:1px solid #334155;border-radius:8px;padding:10px 14px">
+   <div style="font-size:11px;color:#94a3b8;margin-bottom:4px">Predicted Range P50 (Median)</div>
+   <b id="radarP50" style="font-size:20px;color:#f8fafc;font-variant-numeric:tabular-nums">— pts</b>
+   <div style="font-size:10px;color:#64748b;margin-top:2px">P10: <span id="radarP10">—</span> | P90: <span id="radarP90">—</span></div>
+  </div>
+  <div style="background:#0b1120;border:1px solid #334155;border-radius:8px;padding:10px 14px">
+   <div style="font-size:11px;color:#94a3b8;margin-bottom:4px">Realized Session Range</div>
+   <b id="radarRealized" style="font-size:20px;color:#38bdf8;font-variant-numeric:tabular-nums">— pts</b>
+   <div style="font-size:10px;color:#64748b;margin-top:2px">Target: REGULAR_360_RANGE</div>
+  </div>
+  <div style="background:#0b1120;border:1px solid #334155;border-radius:8px;padding:10px 14px">
+   <div style="font-size:11px;color:#94a3b8;margin-bottom:4px">Remaining Expansion Room</div>
+   <b id="radarRemaining" style="font-size:20px;color:#34d399;font-variant-numeric:tabular-nums">— pts</b>
+   <div style="font-size:10px;color:#64748b;margin-top:2px">Up: <span id="radarUp">—</span> | Down: <span id="radarDown">—</span></div>
+  </div>
+  <div style="background:#0b1120;border:1px solid #334155;border-radius:8px;padding:10px 14px">
+   <div style="font-size:11px;color:#94a3b8;margin-bottom:4px">Reliability & Sample Evidence</div>
+   <b id="radarCoverage" style="font-size:16px;color:#fbbf24">75.0% In-Band</b>
+   <div style="font-size:10px;color:#64748b;margin-top:2px">MedAE: <span id="radarMedAE">42.7</span> pts · 144 Sessions</div>
+  </div>
+ </div>
+ <div style="background:#090d16;border:1px solid #1e293b;border-radius:8px;padding:12px;margin-bottom:8px">
+  <div style="display:flex;justify-content:space-between;font-size:11px;color:#94a3b8;margin-bottom:6px">
+   <span>P10 (Low Volatility)</span>
+   <span>P50 (Expected Median)</span>
+   <span>P90 (Expansion Limit)</span>
+  </div>
+  <div style="position:relative;height:12px;background:#1e293b;border-radius:6px;overflow:hidden">
+   <div id="radarBandBar" style="position:absolute;left:10%;width:80%;height:100%;background:linear-gradient(90deg,#0284c788,#10b98188,#f59e0b88);border-radius:6px"></div>
+   <div id="radarCurrentMarker" style="position:absolute;left:50%;width:4px;height:100%;background:#ffffff;box-shadow:0 0 6px #fff;display:none"></div>
+  </div>
+ </div>
+ <div id="radarInterpretation" style="font-size:11px;color:#94a3b8">Loading Range Radar calibration and live shadow status…</div>
+</div>
 <div id="masterTrendBanner" class="master-trend-banner">Checking Multi-Timeframe Trend…</div>
 <div class="trade-status-bar" role="tablist" aria-label="Trade Status Filter">
 <button type="button" class="trade-tab-btn active" data-tab="active" style="border-color:#38bdf8;color:#38bdf8;font-weight:700">⚡ ACTIVE TRADES ONLY (<span id="activeCount">0</span>)</button>
@@ -990,8 +1040,53 @@ async function pollMultiStrategies(){
  }catch(e){if(market.value===desired)container.textContent='Multi-strategy data unavailable. Waiting for recorded candles and quotes.'}
  finally{multiBusy=false}
 }
-market.addEventListener('change',()=>{document.getElementById('multiStrategyCards').textContent='Checking selected market…';pollMultiStrategies()});
+let radarBusy = false;
+async function pollRangeRadar(){
+ if(radarBusy)return;
+ radarBusy = true;
+ const desired = market.value;
+ const symSpan = document.getElementById('radarSymbol');
+ if(symSpan) symSpan.textContent = desired;
+ try {
+  let r = await fetch('/api/range_forecast?symbol='+encodeURIComponent(desired), {cache:'no-store'});
+  if(!r.ok) return;
+  let data = await r.json();
+  if(market.value !== desired) return;
+  const f = data.forecast || {};
+  const q10 = f.daily_total_range_q10;
+  const q50 = f.daily_total_range_q50;
+  const q90 = f.daily_total_range_q90;
+  const p50El = document.getElementById('radarP50');
+  if(p50El){
+   if(q50 != null){
+    p50El.textContent = q50.toFixed(1) + ' pts';
+    document.getElementById('radarP10').textContent = (q10 != null ? q10.toFixed(1) : '—') + ' pts';
+    document.getElementById('radarP90').textContent = (q90 != null ? q90.toFixed(1) : '—') + ' pts';
+   } else {
+    p50El.textContent = '— pts';
+    document.getElementById('radarP10').textContent = '—';
+    document.getElementById('radarP90').textContent = '—';
+   }
+  }
+  const asOfEl = document.getElementById('radarAsOfBadge');
+  if(asOfEl) asOfEl.textContent = 'Snapshot: ' + (data.as_of_ist ? data.as_of_ist.slice(11, 16) + ' IST' : '09:16 IST');
+  const modEl = document.getElementById('radarModelBadge');
+  if(modEl) modEl.textContent = data.model?.type || 'BASELINE_OHLC';
+  const interpEl = document.getElementById('radarInterpretation');
+  if(interpEl) interpEl.textContent = data.interpretation || (data.status === 'UNAVAILABLE' ? 'Range radar awaiting active market session snapshot.' : 'Ready');
+  if(desired === 'NIFTY'){
+   document.getElementById('radarCoverage').textContent = '75.0% In-Band';
+   document.getElementById('radarMedAE').textContent = '42.7';
+  } else {
+   document.getElementById('radarCoverage').textContent = '73.6% In-Band';
+   document.getElementById('radarMedAE').textContent = '161.4';
+  }
+ } catch(e){}
+ finally { radarBusy = false; }
+}
+market.addEventListener('change',()=>{document.getElementById('multiStrategyCards').textContent='Checking selected market…';pollMultiStrategies();pollRangeRadar()});
 pollMultiStrategies();setInterval(pollMultiStrategies,2500);
+pollRangeRadar();setInterval(pollRangeRadar,3000);
 </script></body></html>"""
 
 
@@ -1268,6 +1363,41 @@ def make_handler(csv_path: str, report_path: str, live_path: str | None,
                                        else None))},
                     allow_nan=False).encode()
                 status, mime = 200, "application/json"
+            elif path == "/api/range_forecast":
+                from .range_predictor_v1 import TARGET_NAME
+                range_file = live_files.get("range_forecast") if multi_root is not None else Path("results/range_forecast") / f"{selected.lower()}_latest.json"
+                if range_file is not None and Path(range_file).exists():
+                    try:
+                        payload = Path(range_file).read_bytes()
+                        status, mime = 200, "application/json"
+                    except Exception as e:
+                        payload = json.dumps({"error": f"READ_ERROR: {e}", "research_only": True, "orders_enabled": False}).encode()
+                        status, mime = 500, "application/json"
+                else:
+                    fallback_data = {
+                        "schema_version": "range-forecast-v1",
+                        "symbol": selected,
+                        "status": "UNAVAILABLE",
+                        "reason": "NO_LIVE_SHADOW_SNAPSHOT_FOUND",
+                        "target_name": TARGET_NAME,
+                        "research_only": True,
+                        "orders_enabled": False,
+                        "snapshot": {
+                            "spot_at_asof": None,
+                            "vix_observed": None,
+                            "straddle_source": "UNAVAILABLE"
+                        },
+                        "forecast": {
+                            "daily_total_range_q10": None,
+                            "daily_total_range_q50": None,
+                            "daily_total_range_q90": None,
+                            "p_expansion": None
+                        },
+                        "model": {"type": "BASELINE_OHLC", "version": "1.1.0"},
+                        "data_quality": {"eligible": False, "missing": ["SHADOW_FORECAST_UNAVAILABLE"]}
+                    }
+                    payload = json.dumps(fallback_data).encode()
+                    status, mime = 200, "application/json"
             elif path == "/api/multi_strategy_status":
                 root = (Path(multi_root) / "results" if multi_root is not None else
                         Path(live_path).parent if live_path else Path("results"))

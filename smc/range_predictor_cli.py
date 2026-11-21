@@ -17,8 +17,10 @@ from zoneinfo import ZoneInfo
 
 from .angelfolder_backtest_runner import audit_market_data
 from .range_backtest_v1 import run_walk_forward_backtest, save_backtest_artifacts
+from .range_calibration_v1 import run_full_calibration_experiment
 from .range_live_v1 import reconcile_shadow_outcomes
 from .range_ml_v1 import evaluate_ml_vs_baseline_walk_forward
+from .range_opening_model_v1 import run_full_opening_experiment
 from .range_predictor_v1 import TARGET_NAME
 
 IST = ZoneInfo("Asia/Kolkata")
@@ -250,6 +252,42 @@ def handle_train_ml(args: argparse.Namespace) -> int:
     return 0
 
 
+def handle_calibrate(args: argparse.Namespace) -> int:
+    root_dir = Path(args.root).resolve()
+    data_dir = Path(args.data_dir).resolve() if Path(args.data_dir).is_absolute() else (root_dir / args.data_dir)
+    out_dir = Path(args.out).resolve() if Path(args.out).is_absolute() else (root_dir / args.out)
+    
+    print("=" * 70)
+    print(" SMC RANGE PREDICTOR V2.6: CONFORMAL CALIBRATION EXPERIMENT (P2.6)")
+    print("=" * 70)
+    print(f"Target: {TARGET_NAME}")
+    
+    _, usable_nifty = audit_market_data("NIFTY", data_dir)
+    _, usable_sensex = audit_market_data("SENSEX", data_dir)
+    
+    res = run_full_calibration_experiment(usable_nifty, usable_sensex, out_dir)
+    print(f"\n[OK] Calibration experiment completed. Reports saved in: {out_dir / 'calibration'}")
+    return 0
+
+
+def handle_experiment_opening(args: argparse.Namespace) -> int:
+    root_dir = Path(args.root).resolve()
+    data_dir = Path(args.data_dir).resolve() if Path(args.data_dir).is_absolute() else (root_dir / args.data_dir)
+    out_dir = Path(args.out).resolve() if Path(args.out).is_absolute() else (root_dir / args.out)
+    
+    print("=" * 70)
+    print(" SMC RANGE PREDICTOR V2.6: 09:30 OPENING MODEL EXPERIMENT (P3.1)")
+    print("=" * 70)
+    print(f"Target: {TARGET_NAME}")
+    
+    _, usable_nifty = audit_market_data("NIFTY", data_dir)
+    _, usable_sensex = audit_market_data("SENSEX", data_dir)
+    
+    res = run_full_opening_experiment(usable_nifty, usable_sensex, out_dir)
+    print(f"\n[OK] Opening model experiment completed. Reports saved in: {out_dir / 'opening_model'}")
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         prog="smc.range_predictor_cli",
@@ -280,6 +318,20 @@ def main(argv: list[str] | None = None) -> int:
     ml_parser.add_argument("--symbol", required=True, choices=["NIFTY", "SENSEX", "nifty", "sensex"], help="Index symbol")
     ml_parser.add_argument("--out", default="results/range_forecast", help="Output directory for model artifacts")
     ml_parser.set_defaults(func=handle_train_ml)
+    
+    # calibrate
+    cal_parser = subparsers.add_parser("calibrate", help="Run Phase P2.6 Conformal Calibration experiment")
+    cal_parser.add_argument("--root", default=".", help="Project repository root path")
+    cal_parser.add_argument("--data-dir", default="angelfolder", help="Historical 1m CSV data directory")
+    cal_parser.add_argument("--out", default="results/range_forecast", help="Output directory for calibration artifacts")
+    cal_parser.set_defaults(func=handle_calibrate)
+    
+    # experiment-opening
+    open_parser = subparsers.add_parser("experiment-opening", help="Run Phase P3.1 09:30 Opening Model experiment")
+    open_parser.add_argument("--root", default=".", help="Project repository root path")
+    open_parser.add_argument("--data-dir", default="angelfolder", help="Historical 1m CSV data directory")
+    open_parser.add_argument("--out", default="results/range_forecast", help="Output directory for opening artifacts")
+    open_parser.set_defaults(func=handle_experiment_opening)
     
     args = parser.parse_args(argv)
     return args.func(args)
