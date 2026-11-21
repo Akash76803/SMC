@@ -1,0 +1,117 @@
+{
+  "timestamp": "2026-11-21T17:08:08.618666+05:30",
+  "audit_version": "5.1.0",
+  "sources": {
+    "historical_ohlc_files": [
+      {
+        "file": "nifty_25350_ce_1m.csv",
+        "row_count": 376,
+        "start_time": "2026-11-11T09:16:00+05:30",
+        "end_time": "2026-11-11T15:31:00+05:30",
+        "contract": "NIFTY17NOV2625350CE",
+        "data_type": "1_MINUTE_OHLC_CANDLES",
+        "has_bid_ask_quotes": false,
+        "has_greeks": false,
+        "limitation": "Single-day (2026-11-11) OHLC bars only; lacks bid/ask order book depth"
+      },
+      {
+        "file": "nifty_25400_ce_1m.csv",
+        "row_count": 376,
+        "start_time": "2026-11-11T09:16:00+05:30",
+        "end_time": "2026-11-11T15:31:00+05:30",
+        "contract": "NIFTY17NOV2625400CE",
+        "data_type": "1_MINUTE_OHLC_CANDLES",
+        "has_bid_ask_quotes": false,
+        "has_greeks": false,
+        "limitation": "Single-day (2026-11-11) OHLC bars only; lacks bid/ask order book depth"
+      }
+    ],
+    "live_quote_tapes": {
+      "NIFTY": {
+        "status": "RECORDING_ACTIVE",
+        "file": "results\\live_nifty_option_quotes.jsonl",
+        "total_records": 28808,
+        "corrupt_lines": 0,
+        "first_quote": "2026-11-17T11:47:03+05:30",
+        "last_quote": "2026-11-20T15:15:43+05:30",
+        "sessions_recorded": {
+          "2026-11-17": 6073,
+          "2026-11-18": 2775,
+          "2026-11-19": 4644,
+          "2026-11-20": 15316
+        },
+        "sessions_count": 4,
+        "distinct_contracts": 67,
+        "top_contracts": {
+          "NIFTY23NOV2625350PE": 995,
+          "NIFTY23NOV2625700CE": 992,
+          "NIFTY23NOV2625750CE": 978,
+          "NIFTY23NOV2625400PE": 968,
+          "NIFTY23NOV2625650CE": 890
+        },
+        "quote_feed_nature": "PERIODIC_POLL_SNAPSHOTS (~15-20s)",
+        "is_tick_by_tick": false,
+        "median_spread_pct": 0.27,
+        "pct_spread_under_3pct": 100.0,
+        "inverted_quotes_count": 0,
+        "zero_bids_count": 0,
+        "greeks_delta_coverage_pct": 100.0,
+        "greeks_iv_coverage_pct": 100.0,
+        "greeks_endpoint_supported": true,
+        "greeks_note": "NSE optionGreek API supported for NIFTY; BFO optionGreek unsupported by Angel One"
+      },
+      "SENSEX": {
+        "status": "RECORDING_ACTIVE",
+        "file": "results\\live_sensex_option_quotes.jsonl",
+        "total_records": 32104,
+        "corrupt_lines": 0,
+        "first_quote": "2026-11-17T11:47:06+05:30",
+        "last_quote": "2026-11-20T15:15:46+05:30",
+        "sessions_recorded": {
+          "2026-11-17": 8948,
+          "2026-11-18": 2898,
+          "2026-11-19": 4574,
+          "2026-11-20": 15684
+        },
+        "sessions_count": 4,
+        "distinct_contracts": 89,
+        "top_contracts": {
+          "SENSEX26N1982800CE": 798,
+          "SENSEX26N1982100PE": 786,
+          "SENSEX26N1982900CE": 781,
+          "SENSEX26N1982000PE": 755,
+          "SENSEX26N1982700CE": 749
+        },
+        "quote_feed_nature": "PERIODIC_POLL_SNAPSHOTS (~15-20s)",
+        "is_tick_by_tick": false,
+        "median_spread_pct": 0.27,
+        "pct_spread_under_3pct": 100.0,
+        "inverted_quotes_count": 0,
+        "zero_bids_count": 0,
+        "greeks_delta_coverage_pct": 0.0,
+        "greeks_iv_coverage_pct": 0.0,
+        "greeks_endpoint_supported": false,
+        "greeks_note": "NSE optionGreek API supported for NIFTY; BFO optionGreek unsupported by Angel One"
+      }
+    }
+  },
+  "summary": {
+    "historical_backtest_coverage": {
+      "march_to_november_2026": "UNAVAILABLE_NO_HISTORICAL_QUOTE_TAPES",
+      "historical_option_ohlc": "LIMITED_SINGLE_DAY_2026_11_11_2_STRIKES"
+    },
+    "live_quote_tape_coverage": {
+      "dates": [
+        "2026-11-17",
+        "2026-11-18",
+        "2026-11-19",
+        "2026-11-20"
+      ],
+      "total_quote_records": 60912,
+      "data_quality": "HIGH_LIQUIDITY_BID_ASK_VERIFIED"
+    },
+    "data_classification": "PERIODIC_POLL_SNAPSHOTS_NOT_TICK_LEVEL",
+    "orders_enabled": false,
+    "research_only": true
+  }
+}

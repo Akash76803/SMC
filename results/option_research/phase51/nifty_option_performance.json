@@ -1,0 +1,45 @@
+{
+  "market": "NIFTY",
+  "evaluation_timestamp": "2026-11-21T17:08:11.233967+05:30",
+  "total_candidate_signals_evaluated": 41,
+  "total_simulated_trade_events": 25,
+  "total_moneyness_cards": 75,
+  "verified_observed_fills": 0,
+  "unverifiable_trades_count": 75,
+  "data_coverage_percentage": 0.0,
+  "performance_metrics": {
+    "win_rate_pct": 0.0,
+    "wins_count": 0,
+    "losses_count": 0,
+    "net_option_premium_points": 0,
+    "friction_cost_points": 0,
+    "profit_factor": 0.0,
+    "strike_wise_performance": {
+      "ATM": {
+        "verified_trades": 0,
+        "wins": 0,
+        "net_points": 0,
+        "mean_r_multiple": 0.0
+      },
+      "ITM": {
+        "verified_trades": 0,
+        "wins": 0,
+        "net_points": 0,
+        "mean_r_multiple": 0.0
+      },
+      "OTM": {
+        "verified_trades": 0,
+        "wins": 0,
+        "net_points": 0,
+        "mean_r_multiple": 0.0
+      }
+    }
+  },
+  "advisory_constraints": {
+    "RANGE_SMC_CONFLUENCE_ENABLED": false,
+    "orders_enabled": false,
+    "research_only": true
+  },
+  "status": "READY_WITH_DATA_LIMITATIONS",
+  "evidence_note": "Verified option fills are restricted strictly to recorded live tape sessions (2026-11-17 to 2026-11-20). All prior backtest sessions (March-November 16) lack tick/quote depth and are marked UNVERIFIABLE without assumptions."
+}
