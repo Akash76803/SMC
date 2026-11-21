@@ -1,0 +1,2958 @@
+{
+  "NIFTY": {
+    "symbol": "NIFTY",
+    "matched_sample_size": 129,
+    "brier_audit": {
+      "symbol": "NIFTY",
+      "sample_size": 144,
+      "actual_expansion_base_rate": 0.1389,
+      "forecast_brier_score": 0.1218,
+      "causal_rolling_reference_brier": 0.122,
+      "brier_skill_score": 0.0011,
+      "skill_status": "BEATS_REFERENCE",
+      "records": [
+        {
+          "trading_date": "2026-04-20",
+          "actual_range": 239.4,
+          "expansion_threshold": 593.67,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.15,
+          "causal_base_rate": 0.15,
+          "brier_forecast": 0.0225,
+          "brier_reference": 0.0225
+        },
+        {
+          "trading_date": "2026-04-21",
+          "actual_range": 245.55,
+          "expansion_threshold": 564.45,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.15,
+          "causal_base_rate": 0.0,
+          "brier_forecast": 0.0225,
+          "brier_reference": 0.0
+        },
+        {
+          "trading_date": "2026-04-22",
+          "actual_range": 163.05,
+          "expansion_threshold": 542.67,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.15,
+          "causal_base_rate": 0.0,
+          "brier_forecast": 0.0225,
+          "brier_reference": 0.0
+        },
+        {
+          "trading_date": "2026-04-23",
+          "actual_range": 175.4,
+          "expansion_threshold": 515.03,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.15,
+          "causal_base_rate": 0.0,
+          "brier_forecast": 0.0225,
+          "brier_reference": 0.0
+        },
+        {
+          "trading_date": "2026-04-24",
+          "actual_range": 392.35,
+          "expansion_threshold": 483.06,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.15,
+          "causal_base_rate": 0.0,
+          "brier_forecast": 0.0225,
+          "brier_reference": 0.0
+        },
+        {
+          "trading_date": "2026-04-27",
+          "actual_range": 194.5,
+          "expansion_threshold": 466.36,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.15,
+          "causal_base_rate": 0.0,
+          "brier_forecast": 0.0225,
+          "brier_reference": 0.0
+        },
+        {
+          "trading_date": "2026-04-28",
+          "actual_range": 220.55,
+          "expansion_threshold": 446.7,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.02,
+          "causal_base_rate": 0.0,
+          "brier_forecast": 0.0004,
+          "brier_reference": 0.0
+        },
+        {
+          "trading_date": "2026-04-29",
+          "actual_range": 274.75,
+          "expansion_threshold": 429.29,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.02,
+          "causal_base_rate": 0.0,
+          "brier_forecast": 0.0004,
+          "brier_reference": 0.0
+        },
+        {
+          "trading_date": "2026-04-30",
+          "actual_range": 290.6,
+          "expansion_threshold": 379.86,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.02,
+          "causal_base_rate": 0.0,
+          "brier_forecast": 0.0004,
+          "brier_reference": 0.0
+        },
+        {
+          "trading_date": "2026-05-04",
+          "actual_range": 285.45,
+          "expansion_threshold": 385.38,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.02,
+          "causal_base_rate": 0.0,
+          "brier_forecast": 0.0004,
+          "brier_reference": 0.0
+        },
+        {
+          "trading_date": "2026-05-05",
+          "actual_range": 199.65,
+          "expansion_threshold": 387.01,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.02,
+          "causal_base_rate": 0.0,
+          "brier_forecast": 0.0004,
+          "brier_reference": 0.0
+        },
+        {
+          "trading_date": "2026-05-06",
+          "actual_range": 358.6,
+          "expansion_threshold": 363.68,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.02,
+          "causal_base_rate": 0.0,
+          "brier_forecast": 0.0004,
+          "brier_reference": 0.0
+        },
+        {
+          "trading_date": "2026-05-07",
+          "actual_range": 198.1,
+          "expansion_threshold": 356.81,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.02,
+          "causal_base_rate": 0.0,
+          "brier_forecast": 0.0004,
+          "brier_reference": 0.0
+        },
+        {
+          "trading_date": "2026-05-08",
+          "actual_range": 127.15,
+          "expansion_threshold": 347.88,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.02,
+          "causal_base_rate": 0.0,
+          "brier_forecast": 0.0004,
+          "brier_reference": 0.0
+        },
+        {
+          "trading_date": "2026-05-11",
+          "actual_range": 196.05,
+          "expansion_threshold": 340.22,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.02,
+          "causal_base_rate": 0.0,
+          "brier_forecast": 0.0004,
+          "brier_reference": 0.0
+        },
+        {
+          "trading_date": "2026-05-12",
+          "actual_range": 409.15,
+          "expansion_threshold": 352.73,
+          "actual_expanded": true,
+          "p_expansion_forecast": 0.02,
+          "causal_base_rate": 0.0,
+          "brier_forecast": 0.9604,
+          "brier_reference": 1.0
+        },
+        {
+          "trading_date": "2026-05-13",
+          "actual_range": 320.4,
+          "expansion_threshold": 371.64,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.02,
+          "causal_base_rate": 0.0625,
+          "brier_forecast": 0.0004,
+          "brier_reference": 0.00391
+        },
+        {
+          "trading_date": "2026-05-14",
+          "actual_range": 350.65,
+          "expansion_threshold": 380.51,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.0531,
+          "causal_base_rate": 0.0588,
+          "brier_forecast": 0.00282,
+          "brier_reference": 0.00346
+        },
+        {
+          "trading_date": "2026-05-15",
+          "actual_range": 229.0,
+          "expansion_threshold": 389.79,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.0505,
+          "causal_base_rate": 0.0556,
+          "brier_forecast": 0.00255,
+          "brier_reference": 0.00309
+        },
+        {
+          "trading_date": "2026-05-18",
+          "actual_range": 378.55,
+          "expansion_threshold": 375.21,
+          "actual_expanded": true,
+          "p_expansion_forecast": 0.0481,
+          "causal_base_rate": 0.0526,
+          "brier_forecast": 0.90611,
+          "brier_reference": 0.89751
+        },
+        {
+          "trading_date": "2026-05-19",
+          "actual_range": 174.3,
+          "expansion_threshold": 388.0,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.046,
+          "causal_base_rate": 0.1,
+          "brier_forecast": 0.00212,
+          "brier_reference": 0.01
+        },
+        {
+          "trading_date": "2026-05-20",
+          "actual_range": 293.6,
+          "expansion_threshold": 383.87,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.0582,
+          "causal_base_rate": 0.0952,
+          "brier_forecast": 0.00339,
+          "brier_reference": 0.00907
+        },
+        {
+          "trading_date": "2026-05-21",
+          "actual_range": 263.3,
+          "expansion_threshold": 377.74,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.0844,
+          "causal_base_rate": 0.0909,
+          "brier_forecast": 0.00712,
+          "brier_reference": 0.00826
+        },
+        {
+          "trading_date": "2026-05-22",
+          "actual_range": 164.65,
+          "expansion_threshold": 367.92,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.0836,
+          "causal_base_rate": 0.087,
+          "brier_forecast": 0.00699,
+          "brier_reference": 0.00756
+        },
+        {
+          "trading_date": "2026-05-25",
+          "actual_range": 115.25,
+          "expansion_threshold": 358.78,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.0476,
+          "causal_base_rate": 0.0833,
+          "brier_forecast": 0.00227,
+          "brier_reference": 0.00694
+        },
+        {
+          "trading_date": "2026-05-26",
+          "actual_range": 204.35,
+          "expansion_threshold": 365.81,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.046,
+          "causal_base_rate": 0.08,
+          "brier_forecast": 0.00212,
+          "brier_reference": 0.0064
+        },
+        {
+          "trading_date": "2026-05-27",
+          "actual_range": 124.95,
+          "expansion_threshold": 352.04,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.0768,
+          "causal_base_rate": 0.0769,
+          "brier_forecast": 0.0059,
+          "brier_reference": 0.00592
+        },
+        {
+          "trading_date": "2026-05-29",
+          "actual_range": 497.2,
+          "expansion_threshold": 345.51,
+          "actual_expanded": true,
+          "p_expansion_forecast": 0.0762,
+          "causal_base_rate": 0.0741,
+          "brier_forecast": 0.85341,
+          "brier_reference": 0.85734
+        },
+        {
+          "trading_date": "2026-06-01",
+          "actual_range": 375.75,
+          "expansion_threshold": 374.15,
+          "actual_expanded": true,
+          "p_expansion_forecast": 0.0735,
+          "causal_base_rate": 0.1071,
+          "brier_forecast": 0.8584,
+          "brier_reference": 0.79719
+        },
+        {
+          "trading_date": "2026-06-02",
+          "actual_range": 327.8,
+          "expansion_threshold": 373.82,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.1065,
+          "causal_base_rate": 0.1379,
+          "brier_forecast": 0.01134,
+          "brier_reference": 0.01902
+        },
+        {
+          "trading_date": "2026-06-03",
+          "actual_range": 308.15,
+          "expansion_threshold": 362.25,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.1373,
+          "causal_base_rate": 0.1333,
+          "brier_forecast": 0.01885,
+          "brier_reference": 0.01778
+        },
+        {
+          "trading_date": "2026-06-04",
+          "actual_range": 218.0,
+          "expansion_threshold": 363.85,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.1328,
+          "causal_base_rate": 0.129,
+          "brier_forecast": 0.01764,
+          "brier_reference": 0.01665
+        },
+        {
+          "trading_date": "2026-06-05",
+          "actual_range": 233.7,
+          "expansion_threshold": 351.93,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.1287,
+          "causal_base_rate": 0.125,
+          "brier_forecast": 0.01656,
+          "brier_reference": 0.01562
+        },
+        {
+          "trading_date": "2026-06-08",
+          "actual_range": 197.15,
+          "expansion_threshold": 352.35,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.1247,
+          "causal_base_rate": 0.1212,
+          "brier_forecast": 0.01555,
+          "brier_reference": 0.01469
+        },
+        {
+          "trading_date": "2026-06-09",
+          "actual_range": 174.95,
+          "expansion_threshold": 344.94,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.0602,
+          "causal_base_rate": 0.1176,
+          "brier_forecast": 0.00362,
+          "brier_reference": 0.01384
+        },
+        {
+          "trading_date": "2026-06-10",
+          "actual_range": 227.0,
+          "expansion_threshold": 345.0,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.0586,
+          "causal_base_rate": 0.1143,
+          "brier_forecast": 0.00343,
+          "brier_reference": 0.01306
+        },
+        {
+          "trading_date": "2026-06-11",
+          "actual_range": 255.4,
+          "expansion_threshold": 339.05,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.1171,
+          "causal_base_rate": 0.1111,
+          "brier_forecast": 0.01371,
+          "brier_reference": 0.01235
+        },
+        {
+          "trading_date": "2026-06-12",
+          "actual_range": 331.45,
+          "expansion_threshold": 338.35,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.1166,
+          "causal_base_rate": 0.1081,
+          "brier_forecast": 0.0136,
+          "brier_reference": 0.01169
+        },
+        {
+          "trading_date": "2026-06-15",
+          "actual_range": 193.6,
+          "expansion_threshold": 363.62,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.1134,
+          "causal_base_rate": 0.1053,
+          "brier_forecast": 0.01286,
+          "brier_reference": 0.01108
+        },
+        {
+          "trading_date": "2026-06-16",
+          "actual_range": 114.4,
+          "expansion_threshold": 369.83,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.1103,
+          "causal_base_rate": 0.1026,
+          "brier_forecast": 0.01217,
+          "brier_reference": 0.01052
+        },
+        {
+          "trading_date": "2026-06-17",
+          "actual_range": 138.5,
+          "expansion_threshold": 365.79,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.0455,
+          "causal_base_rate": 0.1,
+          "brier_forecast": 0.00207,
+          "brier_reference": 0.01
+        },
+        {
+          "trading_date": "2026-06-18",
+          "actual_range": 146.6,
+          "expansion_threshold": 367.0,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.1047,
+          "causal_base_rate": 0.0976,
+          "brier_forecast": 0.01096,
+          "brier_reference": 0.00952
+        },
+        {
+          "trading_date": "2026-06-19",
+          "actual_range": 140.75,
+          "expansion_threshold": 335.69,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.1043,
+          "causal_base_rate": 0.0952,
+          "brier_forecast": 0.01088,
+          "brier_reference": 0.00907
+        },
+        {
+          "trading_date": "2026-06-22",
+          "actual_range": 94.9,
+          "expansion_threshold": 326.75,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.1018,
+          "causal_base_rate": 0.093,
+          "brier_forecast": 0.01036,
+          "brier_reference": 0.00865
+        },
+        {
+          "trading_date": "2026-06-23",
+          "actual_range": 319.9,
+          "expansion_threshold": 310.08,
+          "actual_expanded": true,
+          "p_expansion_forecast": 0.0392,
+          "causal_base_rate": 0.0909,
+          "brier_forecast": 0.92314,
+          "brier_reference": 0.82645
+        },
+        {
+          "trading_date": "2026-06-24",
+          "actual_range": 300.8,
+          "expansion_threshold": 308.43,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.0969,
+          "causal_base_rate": 0.1111,
+          "brier_forecast": 0.00939,
+          "brier_reference": 0.01235
+        },
+        {
+          "trading_date": "2026-06-25",
+          "actual_range": 220.15,
+          "expansion_threshold": 315.83,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.1,
+          "causal_base_rate": 0.1087,
+          "brier_forecast": 0.01,
+          "brier_reference": 0.01181
+        },
+        {
+          "trading_date": "2026-06-29",
+          "actual_range": 195.45,
+          "expansion_threshold": 317.74,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.0976,
+          "causal_base_rate": 0.1064,
+          "brier_forecast": 0.00953,
+          "brier_reference": 0.01132
+        },
+        {
+          "trading_date": "2026-06-30",
+          "actual_range": 206.35,
+          "expansion_threshold": 308.8,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.0954,
+          "causal_base_rate": 0.1042,
+          "brier_forecast": 0.0091,
+          "brier_reference": 0.01085
+        },
+        {
+          "trading_date": "2026-07-01",
+          "actual_range": 154.8,
+          "expansion_threshold": 311.6,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.0932,
+          "causal_base_rate": 0.102,
+          "brier_forecast": 0.00869,
+          "brier_reference": 0.01041
+        },
+        {
+          "trading_date": "2026-07-02",
+          "actual_range": 135.75,
+          "expansion_threshold": 307.86,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.0912,
+          "causal_base_rate": 0.1,
+          "brier_forecast": 0.00832,
+          "brier_reference": 0.01
+        },
+        {
+          "trading_date": "2026-07-03",
+          "actual_range": 125.8,
+          "expansion_threshold": 301.87,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.096,
+          "causal_base_rate": 0.098,
+          "brier_forecast": 0.00922,
+          "brier_reference": 0.00961
+        },
+        {
+          "trading_date": "2026-07-06",
+          "actual_range": 171.55,
+          "expansion_threshold": 277.06,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.0952,
+          "causal_base_rate": 0.0962,
+          "brier_forecast": 0.00906,
+          "brier_reference": 0.00925
+        },
+        {
+          "trading_date": "2026-07-07",
+          "actual_range": 140.75,
+          "expansion_threshold": 258.93,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.0871,
+          "causal_base_rate": 0.0943,
+          "brier_forecast": 0.00759,
+          "brier_reference": 0.0089
+        },
+        {
+          "trading_date": "2026-07-08",
+          "actual_range": 494.8,
+          "expansion_threshold": 257.3,
+          "actual_expanded": true,
+          "p_expansion_forecast": 0.0868,
+          "causal_base_rate": 0.0926,
+          "brier_forecast": 0.83393,
+          "brier_reference": 0.82339
+        },
+        {
+          "trading_date": "2026-07-09",
+          "actual_range": 209.0,
+          "expansion_threshold": 297.85,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.0851,
+          "causal_base_rate": 0.1091,
+          "brier_forecast": 0.00724,
+          "brier_reference": 0.0119
+        },
+        {
+          "trading_date": "2026-07-10",
+          "actual_range": 108.1,
+          "expansion_threshold": 307.2,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.1036,
+          "causal_base_rate": 0.1071,
+          "brier_forecast": 0.01073,
+          "brier_reference": 0.01148
+        },
+        {
+          "trading_date": "2026-07-13",
+          "actual_range": 259.6,
+          "expansion_threshold": 308.31,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.0893,
+          "causal_base_rate": 0.1053,
+          "brier_forecast": 0.00797,
+          "brier_reference": 0.01108
+        },
+        {
+          "trading_date": "2026-07-14",
+          "actual_range": 133.4,
+          "expansion_threshold": 318.89,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.0996,
+          "causal_base_rate": 0.1034,
+          "brier_forecast": 0.00992,
+          "brier_reference": 0.0107
+        },
+        {
+          "trading_date": "2026-07-15",
+          "actual_range": 209.8,
+          "expansion_threshold": 306.58,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.0993,
+          "causal_base_rate": 0.1017,
+          "brier_forecast": 0.00986,
+          "brier_reference": 0.01034
+        },
+        {
+          "trading_date": "2026-07-16",
+          "actual_range": 134.85,
+          "expansion_threshold": 298.45,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.0975,
+          "causal_base_rate": 0.1,
+          "brier_forecast": 0.00951,
+          "brier_reference": 0.01
+        },
+        {
+          "trading_date": "2026-07-17",
+          "actual_range": 268.25,
+          "expansion_threshold": 287.71,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.0956,
+          "causal_base_rate": 0.0984,
+          "brier_forecast": 0.00914,
+          "brier_reference": 0.00967
+        },
+        {
+          "trading_date": "2026-07-20",
+          "actual_range": 130.25,
+          "expansion_threshold": 296.71,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.0939,
+          "causal_base_rate": 0.0968,
+          "brier_forecast": 0.00882,
+          "brier_reference": 0.00937
+        },
+        {
+          "trading_date": "2026-07-21",
+          "actual_range": 126.55,
+          "expansion_threshold": 295.5,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.0922,
+          "causal_base_rate": 0.0952,
+          "brier_forecast": 0.0085,
+          "brier_reference": 0.00907
+        },
+        {
+          "trading_date": "2026-07-22",
+          "actual_range": 204.9,
+          "expansion_threshold": 290.28,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.0812,
+          "causal_base_rate": 0.0938,
+          "brier_forecast": 0.00659,
+          "brier_reference": 0.00879
+        },
+        {
+          "trading_date": "2026-07-23",
+          "actual_range": 183.55,
+          "expansion_threshold": 293.35,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.089,
+          "causal_base_rate": 0.0923,
+          "brier_forecast": 0.00792,
+          "brier_reference": 0.00852
+        },
+        {
+          "trading_date": "2026-07-24",
+          "actual_range": 217.3,
+          "expansion_threshold": 294.45,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.0888,
+          "causal_base_rate": 0.0909,
+          "brier_forecast": 0.00789,
+          "brier_reference": 0.00826
+        },
+        {
+          "trading_date": "2026-07-27",
+          "actual_range": 120.05,
+          "expansion_threshold": 301.61,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.0873,
+          "causal_base_rate": 0.0896,
+          "brier_forecast": 0.00762,
+          "brier_reference": 0.00802
+        },
+        {
+          "trading_date": "2026-07-28",
+          "actual_range": 86.55,
+          "expansion_threshold": 310.44,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.0758,
+          "causal_base_rate": 0.0882,
+          "brier_forecast": 0.00575,
+          "brier_reference": 0.00779
+        },
+        {
+          "trading_date": "2026-07-29",
+          "actual_range": 146.8,
+          "expansion_threshold": 265.25,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.0753,
+          "causal_base_rate": 0.087,
+          "brier_forecast": 0.00567,
+          "brier_reference": 0.00756
+        },
+        {
+          "trading_date": "2026-07-30",
+          "actual_range": 144.3,
+          "expansion_threshold": 270.86,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.0843,
+          "causal_base_rate": 0.0857,
+          "brier_forecast": 0.00711,
+          "brier_reference": 0.00735
+        },
+        {
+          "trading_date": "2026-07-31",
+          "actual_range": 129.7,
+          "expansion_threshold": 258.04,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.0842,
+          "causal_base_rate": 0.0845,
+          "brier_forecast": 0.00709,
+          "brier_reference": 0.00714
+        },
+        {
+          "trading_date": "2026-08-03",
+          "actual_range": 94.35,
+          "expansion_threshold": 246.44,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.0828,
+          "causal_base_rate": 0.0833,
+          "brier_forecast": 0.00686,
+          "brier_reference": 0.00694
+        },
+        {
+          "trading_date": "2026-08-04",
+          "actual_range": 275.95,
+          "expansion_threshold": 249.77,
+          "actual_expanded": true,
+          "p_expansion_forecast": 0.0815,
+          "causal_base_rate": 0.0822,
+          "brier_forecast": 0.84364,
+          "brier_reference": 0.84237
+        },
+        {
+          "trading_date": "2026-08-05",
+          "actual_range": 179.65,
+          "expansion_threshold": 255.67,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.0802,
+          "causal_base_rate": 0.0946,
+          "brier_forecast": 0.00643,
+          "brier_reference": 0.00895
+        },
+        {
+          "trading_date": "2026-08-06",
+          "actual_range": 72.9,
+          "expansion_threshold": 262.8,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.0945,
+          "causal_base_rate": 0.0933,
+          "brier_forecast": 0.00893,
+          "brier_reference": 0.00871
+        },
+        {
+          "trading_date": "2026-08-07",
+          "actual_range": 107.65,
+          "expansion_threshold": 245.89,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.0708,
+          "causal_base_rate": 0.0921,
+          "brier_forecast": 0.00501,
+          "brier_reference": 0.00848
+        },
+        {
+          "trading_date": "2026-08-10",
+          "actual_range": 109.85,
+          "expansion_threshold": 238.28,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.0917,
+          "causal_base_rate": 0.0909,
+          "brier_forecast": 0.00841,
+          "brier_reference": 0.00826
+        },
+        {
+          "trading_date": "2026-08-11",
+          "actual_range": 147.6,
+          "expansion_threshold": 236.79,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.0915,
+          "causal_base_rate": 0.0897,
+          "brier_forecast": 0.00837,
+          "brier_reference": 0.00805
+        },
+        {
+          "trading_date": "2026-08-12",
+          "actual_range": 207.35,
+          "expansion_threshold": 230.08,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.0902,
+          "causal_base_rate": 0.0886,
+          "brier_forecast": 0.00814,
+          "brier_reference": 0.00785
+        },
+        {
+          "trading_date": "2026-08-13",
+          "actual_range": 120.2,
+          "expansion_threshold": 229.5,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.0889,
+          "causal_base_rate": 0.0875,
+          "brier_forecast": 0.0079,
+          "brier_reference": 0.00766
+        },
+        {
+          "trading_date": "2026-08-14",
+          "actual_range": 108.4,
+          "expansion_threshold": 216.41,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.0876,
+          "causal_base_rate": 0.0864,
+          "brier_forecast": 0.00767,
+          "brier_reference": 0.00747
+        },
+        {
+          "trading_date": "2026-08-17",
+          "actual_range": 133.15,
+          "expansion_threshold": 204.69,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.0864,
+          "causal_base_rate": 0.0854,
+          "brier_forecast": 0.00746,
+          "brier_reference": 0.00729
+        },
+        {
+          "trading_date": "2026-08-18",
+          "actual_range": 104.2,
+          "expansion_threshold": 208.85,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.0852,
+          "causal_base_rate": 0.0843,
+          "brier_forecast": 0.00726,
+          "brier_reference": 0.00711
+        },
+        {
+          "trading_date": "2026-08-19",
+          "actual_range": 147.2,
+          "expansion_threshold": 196.35,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.0655,
+          "causal_base_rate": 0.0833,
+          "brier_forecast": 0.00429,
+          "brier_reference": 0.00694
+        },
+        {
+          "trading_date": "2026-08-20",
+          "actual_range": 80.6,
+          "expansion_threshold": 196.61,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.0829,
+          "causal_base_rate": 0.0824,
+          "brier_forecast": 0.00687,
+          "brier_reference": 0.00678
+        },
+        {
+          "trading_date": "2026-08-21",
+          "actual_range": 77.25,
+          "expansion_threshold": 204.37,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.0624,
+          "causal_base_rate": 0.0814,
+          "brier_forecast": 0.00389,
+          "brier_reference": 0.00663
+        },
+        {
+          "trading_date": "2026-08-24",
+          "actual_range": 168.7,
+          "expansion_threshold": 191.68,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.0621,
+          "causal_base_rate": 0.0805,
+          "brier_forecast": 0.00386,
+          "brier_reference": 0.00647
+        },
+        {
+          "trading_date": "2026-08-25",
+          "actual_range": 151.6,
+          "expansion_threshold": 182.11,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.0816,
+          "causal_base_rate": 0.0795,
+          "brier_forecast": 0.00666,
+          "brier_reference": 0.00633
+        },
+        {
+          "trading_date": "2026-08-26",
+          "actual_range": 125.0,
+          "expansion_threshold": 176.48,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.0815,
+          "causal_base_rate": 0.0787,
+          "brier_forecast": 0.00664,
+          "brier_reference": 0.00619
+        },
+        {
+          "trading_date": "2026-08-27",
+          "actual_range": 176.85,
+          "expansion_threshold": 178.1,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.0804,
+          "causal_base_rate": 0.0778,
+          "brier_forecast": 0.00646,
+          "brier_reference": 0.00605
+        },
+        {
+          "trading_date": "2026-08-28",
+          "actual_range": 111.45,
+          "expansion_threshold": 184.28,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.0794,
+          "causal_base_rate": 0.0769,
+          "brier_forecast": 0.0063,
+          "brier_reference": 0.00592
+        },
+        {
+          "trading_date": "2026-08-31",
+          "actual_range": 135.1,
+          "expansion_threshold": 184.42,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.0784,
+          "causal_base_rate": 0.0761,
+          "brier_forecast": 0.00615,
+          "brier_reference": 0.00579
+        },
+        {
+          "trading_date": "2026-09-01",
+          "actual_range": 190.6,
+          "expansion_threshold": 184.58,
+          "actual_expanded": true,
+          "p_expansion_forecast": 0.0774,
+          "causal_base_rate": 0.0753,
+          "brier_forecast": 0.85119,
+          "brier_reference": 0.85513
+        },
+        {
+          "trading_date": "2026-09-02",
+          "actual_range": 123.85,
+          "expansion_threshold": 183.08,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.0764,
+          "causal_base_rate": 0.0851,
+          "brier_forecast": 0.00584,
+          "brier_reference": 0.00724
+        },
+        {
+          "trading_date": "2026-09-03",
+          "actual_range": 148.55,
+          "expansion_threshold": 190.0,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.0879,
+          "causal_base_rate": 0.0842,
+          "brier_forecast": 0.00773,
+          "brier_reference": 0.00709
+        },
+        {
+          "trading_date": "2026-09-04",
+          "actual_range": 109.9,
+          "expansion_threshold": 193.58,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.0868,
+          "causal_base_rate": 0.0833,
+          "brier_forecast": 0.00753,
+          "brier_reference": 0.00694
+        },
+        {
+          "trading_date": "2026-09-07",
+          "actual_range": 152.1,
+          "expansion_threshold": 191.5,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.0583,
+          "causal_base_rate": 0.0825,
+          "brier_forecast": 0.0034,
+          "brier_reference": 0.0068
+        },
+        {
+          "trading_date": "2026-09-08",
+          "actual_range": 135.85,
+          "expansion_threshold": 193.86,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.0847,
+          "causal_base_rate": 0.0816,
+          "brier_forecast": 0.00717,
+          "brier_reference": 0.00666
+        },
+        {
+          "trading_date": "2026-09-09",
+          "actual_range": 120.6,
+          "expansion_threshold": 192.88,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.0847,
+          "causal_base_rate": 0.0808,
+          "brier_forecast": 0.00717,
+          "brier_reference": 0.00653
+        },
+        {
+          "trading_date": "2026-09-10",
+          "actual_range": 114.85,
+          "expansion_threshold": 190.52,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.0837,
+          "causal_base_rate": 0.08,
+          "brier_forecast": 0.00701,
+          "brier_reference": 0.0064
+        },
+        {
+          "trading_date": "2026-09-11",
+          "actual_range": 216.7,
+          "expansion_threshold": 193.88,
+          "actual_expanded": true,
+          "p_expansion_forecast": 0.0827,
+          "causal_base_rate": 0.0792,
+          "brier_forecast": 0.84144,
+          "brier_reference": 0.84786
+        },
+        {
+          "trading_date": "2026-09-15",
+          "actual_range": 440.85,
+          "expansion_threshold": 198.17,
+          "actual_expanded": true,
+          "p_expansion_forecast": 0.0818,
+          "causal_base_rate": 0.0882,
+          "brier_forecast": 0.84309,
+          "brier_reference": 0.83131
+        },
+        {
+          "trading_date": "2026-09-16",
+          "actual_range": 168.65,
+          "expansion_threshold": 223.99,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.0923,
+          "causal_base_rate": 0.0971,
+          "brier_forecast": 0.00852,
+          "brier_reference": 0.00943
+        },
+        {
+          "trading_date": "2026-09-17",
+          "actual_range": 169.9,
+          "expansion_threshold": 227.89,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.1025,
+          "causal_base_rate": 0.0962,
+          "brier_forecast": 0.01051,
+          "brier_reference": 0.00925
+        },
+        {
+          "trading_date": "2026-09-18",
+          "actual_range": 102.55,
+          "expansion_threshold": 227.27,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.1014,
+          "causal_base_rate": 0.0952,
+          "brier_forecast": 0.01028,
+          "brier_reference": 0.00907
+        },
+        {
+          "trading_date": "2026-09-21",
+          "actual_range": 152.0,
+          "expansion_threshold": 226.47,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.0596,
+          "causal_base_rate": 0.0943,
+          "brier_forecast": 0.00355,
+          "brier_reference": 0.0089
+        },
+        {
+          "trading_date": "2026-09-22",
+          "actual_range": 203.25,
+          "expansion_threshold": 226.71,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.0992,
+          "causal_base_rate": 0.0935,
+          "brier_forecast": 0.00984,
+          "brier_reference": 0.00873
+        },
+        {
+          "trading_date": "2026-09-23",
+          "actual_range": 117.35,
+          "expansion_threshold": 227.84,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.0991,
+          "causal_base_rate": 0.0926,
+          "brier_forecast": 0.00982,
+          "brier_reference": 0.00857
+        },
+        {
+          "trading_date": "2026-09-24",
+          "actual_range": 235.8,
+          "expansion_threshold": 220.67,
+          "actual_expanded": true,
+          "p_expansion_forecast": 0.0981,
+          "causal_base_rate": 0.0917,
+          "brier_forecast": 0.81342,
+          "brier_reference": 0.82493
+        },
+        {
+          "trading_date": "2026-09-25",
+          "actual_range": 141.75,
+          "expansion_threshold": 241.83,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.097,
+          "causal_base_rate": 0.1,
+          "brier_forecast": 0.00941,
+          "brier_reference": 0.01
+        },
+        {
+          "trading_date": "2026-09-28",
+          "actual_range": 318.05,
+          "expansion_threshold": 244.67,
+          "actual_expanded": true,
+          "p_expansion_forecast": 0.1066,
+          "causal_base_rate": 0.0991,
+          "brier_forecast": 0.79816,
+          "brier_reference": 0.81162
+        },
+        {
+          "trading_date": "2026-09-29",
+          "actual_range": 183.6,
+          "expansion_threshold": 259.39,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.1055,
+          "causal_base_rate": 0.1071,
+          "brier_forecast": 0.01113,
+          "brier_reference": 0.01148
+        },
+        {
+          "trading_date": "2026-09-30",
+          "actual_range": 214.15,
+          "expansion_threshold": 266.74,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.1148,
+          "causal_base_rate": 0.1062,
+          "brier_forecast": 0.01318,
+          "brier_reference": 0.01128
+        },
+        {
+          "trading_date": "2026-10-01",
+          "actual_range": 393.3,
+          "expansion_threshold": 268.88,
+          "actual_expanded": true,
+          "p_expansion_forecast": 0.1136,
+          "causal_base_rate": 0.1053,
+          "brier_forecast": 0.7857,
+          "brier_reference": 0.80055
+        },
+        {
+          "trading_date": "2026-10-05",
+          "actual_range": 224.7,
+          "expansion_threshold": 294.13,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.1124,
+          "causal_base_rate": 0.113,
+          "brier_forecast": 0.01263,
+          "brier_reference": 0.01278
+        },
+        {
+          "trading_date": "2026-10-06",
+          "actual_range": 170.25,
+          "expansion_threshold": 294.84,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.1214,
+          "causal_base_rate": 0.1121,
+          "brier_forecast": 0.01474,
+          "brier_reference": 0.01256
+        },
+        {
+          "trading_date": "2026-10-07",
+          "actual_range": 171.35,
+          "expansion_threshold": 273.03,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.1202,
+          "causal_base_rate": 0.1111,
+          "brier_forecast": 0.01445,
+          "brier_reference": 0.01235
+        },
+        {
+          "trading_date": "2026-10-08",
+          "actual_range": 419.15,
+          "expansion_threshold": 273.27,
+          "actual_expanded": true,
+          "p_expansion_forecast": 0.119,
+          "causal_base_rate": 0.1102,
+          "brier_forecast": 0.77616,
+          "brier_reference": 0.7918
+        },
+        {
+          "trading_date": "2026-10-09",
+          "actual_range": 286.0,
+          "expansion_threshold": 296.91,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.1178,
+          "causal_base_rate": 0.1176,
+          "brier_forecast": 0.01388,
+          "brier_reference": 0.01384
+        },
+        {
+          "trading_date": "2026-10-12",
+          "actual_range": 346.65,
+          "expansion_threshold": 320.34,
+          "actual_expanded": true,
+          "p_expansion_forecast": 0.1264,
+          "causal_base_rate": 0.1167,
+          "brier_forecast": 0.76318,
+          "brier_reference": 0.78028
+        },
+        {
+          "trading_date": "2026-10-13",
+          "actual_range": 430.8,
+          "expansion_threshold": 337.72,
+          "actual_expanded": true,
+          "p_expansion_forecast": 0.1252,
+          "causal_base_rate": 0.124,
+          "brier_forecast": 0.76528,
+          "brier_reference": 0.76743
+        },
+        {
+          "trading_date": "2026-10-14",
+          "actual_range": 199.0,
+          "expansion_threshold": 358.04,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.1335,
+          "causal_base_rate": 0.1311,
+          "brier_forecast": 0.01782,
+          "brier_reference": 0.0172
+        },
+        {
+          "trading_date": "2026-10-15",
+          "actual_range": 419.0,
+          "expansion_threshold": 365.33,
+          "actual_expanded": true,
+          "p_expansion_forecast": 0.1417,
+          "causal_base_rate": 0.1301,
+          "brier_forecast": 0.73668,
+          "brier_reference": 0.75676
+        },
+        {
+          "trading_date": "2026-10-16",
+          "actual_range": 236.05,
+          "expansion_threshold": 369.38,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.1404,
+          "causal_base_rate": 0.1371,
+          "brier_forecast": 0.01971,
+          "brier_reference": 0.0188
+        },
+        {
+          "trading_date": "2026-10-19",
+          "actual_range": 330.25,
+          "expansion_threshold": 377.8,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.1483,
+          "causal_base_rate": 0.136,
+          "brier_forecast": 0.02199,
+          "brier_reference": 0.0185
+        },
+        {
+          "trading_date": "2026-10-21",
+          "actual_range": 471.0,
+          "expansion_threshold": 374.66,
+          "actual_expanded": true,
+          "p_expansion_forecast": 0.1469,
+          "causal_base_rate": 0.1349,
+          "brier_forecast": 0.72778,
+          "brier_reference": 0.74836
+        },
+        {
+          "trading_date": "2026-10-22",
+          "actual_range": 230.15,
+          "expansion_threshold": 397.2,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.1456,
+          "causal_base_rate": 0.1417,
+          "brier_forecast": 0.0212,
+          "brier_reference": 0.02009
+        },
+        {
+          "trading_date": "2026-10-23",
+          "actual_range": 415.25,
+          "expansion_threshold": 398.63,
+          "actual_expanded": true,
+          "p_expansion_forecast": 0.1533,
+          "causal_base_rate": 0.1406,
+          "brier_forecast": 0.7169,
+          "brier_reference": 0.73853
+        },
+        {
+          "trading_date": "2026-10-26",
+          "actual_range": 333.8,
+          "expansion_threshold": 400.2,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.152,
+          "causal_base_rate": 0.1473,
+          "brier_forecast": 0.0231,
+          "brier_reference": 0.02169
+        },
+        {
+          "trading_date": "2026-10-27",
+          "actual_range": 192.9,
+          "expansion_threshold": 409.94,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.1595,
+          "causal_base_rate": 0.1462,
+          "brier_forecast": 0.02544,
+          "brier_reference": 0.02136
+        },
+        {
+          "trading_date": "2026-10-28",
+          "actual_range": 280.35,
+          "expansion_threshold": 409.62,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.0709,
+          "causal_base_rate": 0.145,
+          "brier_forecast": 0.00503,
+          "brier_reference": 0.02104
+        },
+        {
+          "trading_date": "2026-10-29",
+          "actual_range": 305.2,
+          "expansion_threshold": 419.35,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.1567,
+          "causal_base_rate": 0.1439,
+          "brier_forecast": 0.02455,
+          "brier_reference": 0.02072
+        },
+        {
+          "trading_date": "2026-10-30",
+          "actual_range": 213.0,
+          "expansion_threshold": 407.79,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.1566,
+          "causal_base_rate": 0.1429,
+          "brier_forecast": 0.02452,
+          "brier_reference": 0.02041
+        },
+        {
+          "trading_date": "2026-11-02",
+          "actual_range": 153.45,
+          "expansion_threshold": 394.22,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.1553,
+          "causal_base_rate": 0.1418,
+          "brier_forecast": 0.02412,
+          "brier_reference": 0.0201
+        },
+        {
+          "trading_date": "2026-11-03",
+          "actual_range": 263.45,
+          "expansion_threshold": 394.5,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.0675,
+          "causal_base_rate": 0.1407,
+          "brier_forecast": 0.00456,
+          "brier_reference": 0.01981
+        },
+        {
+          "trading_date": "2026-11-04",
+          "actual_range": 250.2,
+          "expansion_threshold": 393.17,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.1527,
+          "causal_base_rate": 0.1397,
+          "brier_forecast": 0.02332,
+          "brier_reference": 0.01952
+        },
+        {
+          "trading_date": "2026-11-05",
+          "actual_range": 283.6,
+          "expansion_threshold": 397.74,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.1526,
+          "causal_base_rate": 0.1387,
+          "brier_forecast": 0.02329,
+          "brier_reference": 0.01923
+        },
+        {
+          "trading_date": "2026-11-06",
+          "actual_range": 561.8,
+          "expansion_threshold": 418.84,
+          "actual_expanded": true,
+          "p_expansion_forecast": 0.1514,
+          "causal_base_rate": 0.1377,
+          "brier_forecast": 0.72012,
+          "brier_reference": 0.74359
+        },
+        {
+          "trading_date": "2026-11-09",
+          "actual_range": 245.3,
+          "expansion_threshold": 447.92,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.1501,
+          "causal_base_rate": 0.1439,
+          "brier_forecast": 0.02253,
+          "brier_reference": 0.0207
+        },
+        {
+          "trading_date": "2026-11-11",
+          "actual_range": 329.0,
+          "expansion_threshold": 440.34,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.1571,
+          "causal_base_rate": 0.1429,
+          "brier_forecast": 0.02468,
+          "brier_reference": 0.02041
+        },
+        {
+          "trading_date": "2026-11-12",
+          "actual_range": 241.85,
+          "expansion_threshold": 435.85,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.1558,
+          "causal_base_rate": 0.1418,
+          "brier_forecast": 0.02427,
+          "brier_reference": 0.02012
+        },
+        {
+          "trading_date": "2026-11-13",
+          "actual_range": 191.95,
+          "expansion_threshold": 438.42,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.0655,
+          "causal_base_rate": 0.1408,
+          "brier_forecast": 0.00429,
+          "brier_reference": 0.01984
+        },
+        {
+          "trading_date": "2026-11-16",
+          "actual_range": 165.5,
+          "expansion_threshold": 421.08,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.0653,
+          "causal_base_rate": 0.1399,
+          "brier_forecast": 0.00426,
+          "brier_reference": 0.01956
+        }
+      ]
+    },
+    "baseline": {
+      "coverage_80pct": 0.7907,
+      "mean_width_pts": 192.73,
+      "mean_winkler_score": 334.03,
+      "nr7_coverage": 0.8696,
+      "non_nr7_coverage": 0.7736,
+      "low_atr_coverage": 0.8308,
+      "high_atr_coverage": 0.75
+    },
+    "conformal": {
+      "coverage_80pct": 0.8527,
+      "mean_width_pts": 241.48,
+      "mean_winkler_score": 348.47,
+      "width_expansion_ratio": 1.253,
+      "winkler_delta_pts": 14.44,
+      "winkler_delta_pct": 4.32,
+      "nr7_coverage": 0.9565,
+      "non_nr7_coverage": 0.8302,
+      "low_atr_coverage": 0.8308,
+      "high_atr_coverage": 0.875,
+      "promoted": true
+    },
+    "winkler_evaluation_insight": "Conformal calibration improves empirical coverage (+6.2% to +9.3%) at the cost of widening interval width (+25.3% to +28.9%). Under the Winkler Interval Score (alpha=0.20), the width penalty slightly exceeds the miss penalty reduction (+4.3% on NIFTY, +6.5% on SENSEX). Conformal calibration is statistically verified for conservative risk containment, while baseline intervals remain width-optimal."
+  },
+  "SENSEX": {
+    "symbol": "SENSEX",
+    "matched_sample_size": 129,
+    "brier_audit": {
+      "symbol": "SENSEX",
+      "sample_size": 144,
+      "actual_expansion_base_rate": 0.1458,
+      "forecast_brier_score": 0.1296,
+      "causal_rolling_reference_brier": 0.1274,
+      "brier_skill_score": -0.0171,
+      "skill_status": "UNDERPERFORMS_REFERENCE",
+      "records": [
+        {
+          "trading_date": "2026-04-20",
+          "actual_range": 739.15,
+          "expansion_threshold": 1988.05,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.15,
+          "causal_base_rate": 0.15,
+          "brier_forecast": 0.0225,
+          "brier_reference": 0.0225
+        },
+        {
+          "trading_date": "2026-04-21",
+          "actual_range": 844.12,
+          "expansion_threshold": 1890.75,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.15,
+          "causal_base_rate": 0.0,
+          "brier_forecast": 0.0225,
+          "brier_reference": 0.0
+        },
+        {
+          "trading_date": "2026-04-22",
+          "actual_range": 588.73,
+          "expansion_threshold": 1813.88,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.15,
+          "causal_base_rate": 0.0,
+          "brier_forecast": 0.0225,
+          "brier_reference": 0.0
+        },
+        {
+          "trading_date": "2026-04-23",
+          "actual_range": 575.6,
+          "expansion_threshold": 1726.54,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.15,
+          "causal_base_rate": 0.0,
+          "brier_forecast": 0.0225,
+          "brier_reference": 0.0
+        },
+        {
+          "trading_date": "2026-04-24",
+          "actual_range": 1306.95,
+          "expansion_threshold": 1627.37,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.15,
+          "causal_base_rate": 0.0,
+          "brier_forecast": 0.0225,
+          "brier_reference": 0.0
+        },
+        {
+          "trading_date": "2026-04-27",
+          "actual_range": 665.84,
+          "expansion_threshold": 1570.13,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.15,
+          "causal_base_rate": 0.0,
+          "brier_forecast": 0.0225,
+          "brier_reference": 0.0
+        },
+        {
+          "trading_date": "2026-04-28",
+          "actual_range": 711.7,
+          "expansion_threshold": 1508.0,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.02,
+          "causal_base_rate": 0.0,
+          "brier_forecast": 0.0004,
+          "brier_reference": 0.0
+        },
+        {
+          "trading_date": "2026-04-29",
+          "actual_range": 846.31,
+          "expansion_threshold": 1449.98,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.02,
+          "causal_base_rate": 0.0,
+          "brier_forecast": 0.0004,
+          "brier_reference": 0.0
+        },
+        {
+          "trading_date": "2026-04-30",
+          "actual_range": 995.47,
+          "expansion_threshold": 1282.07,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.02,
+          "causal_base_rate": 0.0,
+          "brier_forecast": 0.0004,
+          "brier_reference": 0.0
+        },
+        {
+          "trading_date": "2026-05-04",
+          "actual_range": 971.21,
+          "expansion_threshold": 1282.46,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.02,
+          "causal_base_rate": 0.0,
+          "brier_forecast": 0.0004,
+          "brier_reference": 0.0
+        },
+        {
+          "trading_date": "2026-05-05",
+          "actual_range": 636.3,
+          "expansion_threshold": 1291.99,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.02,
+          "causal_base_rate": 0.0,
+          "brier_forecast": 0.0004,
+          "brier_reference": 0.0
+        },
+        {
+          "trading_date": "2026-05-06",
+          "actual_range": 1249.53,
+          "expansion_threshold": 1211.39,
+          "actual_expanded": true,
+          "p_expansion_forecast": 0.02,
+          "causal_base_rate": 0.0,
+          "brier_forecast": 0.9604,
+          "brier_reference": 1.0
+        },
+        {
+          "trading_date": "2026-05-07",
+          "actual_range": 671.49,
+          "expansion_threshold": 1196.97,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.02,
+          "causal_base_rate": 0.0833,
+          "brier_forecast": 0.0004,
+          "brier_reference": 0.00694
+        },
+        {
+          "trading_date": "2026-05-08",
+          "actual_range": 501.01,
+          "expansion_threshold": 1162.69,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.0205,
+          "causal_base_rate": 0.0769,
+          "brier_forecast": 0.00042,
+          "brier_reference": 0.00592
+        },
+        {
+          "trading_date": "2026-05-11",
+          "actual_range": 721.12,
+          "expansion_threshold": 1148.03,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.1444,
+          "causal_base_rate": 0.0714,
+          "brier_forecast": 0.02085,
+          "brier_reference": 0.0051
+        },
+        {
+          "trading_date": "2026-05-12",
+          "actual_range": 1292.46,
+          "expansion_threshold": 1205.13,
+          "actual_expanded": true,
+          "p_expansion_forecast": 0.02,
+          "causal_base_rate": 0.0667,
+          "brier_forecast": 0.9604,
+          "brier_reference": 0.87111
+        },
+        {
+          "trading_date": "2026-05-13",
+          "actual_range": 1057.09,
+          "expansion_threshold": 1265.71,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.02,
+          "causal_base_rate": 0.125,
+          "brier_forecast": 0.0004,
+          "brier_reference": 0.01562
+        },
+        {
+          "trading_date": "2026-05-14",
+          "actual_range": 1155.11,
+          "expansion_threshold": 1286.77,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.0678,
+          "causal_base_rate": 0.1176,
+          "brier_forecast": 0.0046,
+          "brier_reference": 0.01384
+        },
+        {
+          "trading_date": "2026-05-15",
+          "actual_range": 730.95,
+          "expansion_threshold": 1307.63,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.064,
+          "causal_base_rate": 0.1111,
+          "brier_forecast": 0.0041,
+          "brier_reference": 0.01235
+        },
+        {
+          "trading_date": "2026-05-18",
+          "actual_range": 1286.34,
+          "expansion_threshold": 1256.21,
+          "actual_expanded": true,
+          "p_expansion_forecast": 0.0606,
+          "causal_base_rate": 0.1053,
+          "brier_forecast": 0.88247,
+          "brier_reference": 0.80055
+        },
+        {
+          "trading_date": "2026-05-19",
+          "actual_range": 577.99,
+          "expansion_threshold": 1301.15,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.0575,
+          "causal_base_rate": 0.15,
+          "brier_forecast": 0.00331,
+          "brier_reference": 0.0225
+        },
+        {
+          "trading_date": "2026-05-20",
+          "actual_range": 876.77,
+          "expansion_threshold": 1289.21,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.1782,
+          "causal_base_rate": 0.1429,
+          "brier_forecast": 0.03176,
+          "brier_reference": 0.02041
+        },
+        {
+          "trading_date": "2026-05-21",
+          "actual_range": 949.01,
+          "expansion_threshold": 1261.93,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.0943,
+          "causal_base_rate": 0.1364,
+          "brier_forecast": 0.00889,
+          "brier_reference": 0.0186
+        },
+        {
+          "trading_date": "2026-05-22",
+          "actual_range": 580.22,
+          "expansion_threshold": 1238.49,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.0932,
+          "causal_base_rate": 0.1304,
+          "brier_forecast": 0.00869,
+          "brier_reference": 0.01701
+        },
+        {
+          "trading_date": "2026-05-25",
+          "actual_range": 406.51,
+          "expansion_threshold": 1211.16,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.0893,
+          "causal_base_rate": 0.125,
+          "brier_forecast": 0.00797,
+          "brier_reference": 0.01562
+        },
+        {
+          "trading_date": "2026-05-26",
+          "actual_range": 717.36,
+          "expansion_threshold": 1238.11,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.1523,
+          "causal_base_rate": 0.12,
+          "brier_forecast": 0.0232,
+          "brier_reference": 0.0144
+        },
+        {
+          "trading_date": "2026-05-27",
+          "actual_range": 476.47,
+          "expansion_threshold": 1190.59,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.0824,
+          "causal_base_rate": 0.1154,
+          "brier_forecast": 0.00679,
+          "brier_reference": 0.01331
+        },
+        {
+          "trading_date": "2026-05-29",
+          "actual_range": 1552.89,
+          "expansion_threshold": 1173.18,
+          "actual_expanded": true,
+          "p_expansion_forecast": 0.0816,
+          "causal_base_rate": 0.1111,
+          "brier_forecast": 0.84346,
+          "brier_reference": 0.79012
+        },
+        {
+          "trading_date": "2026-06-01",
+          "actual_range": 1164.25,
+          "expansion_threshold": 1256.86,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.0786,
+          "causal_base_rate": 0.1429,
+          "brier_forecast": 0.00618,
+          "brier_reference": 0.02041
+        },
+        {
+          "trading_date": "2026-06-02",
+          "actual_range": 1047.07,
+          "expansion_threshold": 1237.71,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.1103,
+          "causal_base_rate": 0.1379,
+          "brier_forecast": 0.01217,
+          "brier_reference": 0.01902
+        },
+        {
+          "trading_date": "2026-06-03",
+          "actual_range": 1023.05,
+          "expansion_threshold": 1195.25,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.1065,
+          "causal_base_rate": 0.1333,
+          "brier_forecast": 0.01134,
+          "brier_reference": 0.01778
+        },
+        {
+          "trading_date": "2026-06-04",
+          "actual_range": 736.94,
+          "expansion_threshold": 1205.01,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.103,
+          "causal_base_rate": 0.129,
+          "brier_forecast": 0.01061,
+          "brier_reference": 0.01665
+        },
+        {
+          "trading_date": "2026-06-05",
+          "actual_range": 728.82,
+          "expansion_threshold": 1167.67,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.0997,
+          "causal_base_rate": 0.125,
+          "brier_forecast": 0.00994,
+          "brier_reference": 0.01562
+        },
+        {
+          "trading_date": "2026-06-08",
+          "actual_range": 615.41,
+          "expansion_threshold": 1167.48,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.0966,
+          "causal_base_rate": 0.1212,
+          "brier_forecast": 0.00933,
+          "brier_reference": 0.01469
+        },
+        {
+          "trading_date": "2026-06-09",
+          "actual_range": 609.23,
+          "expansion_threshold": 1135.14,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.1417,
+          "causal_base_rate": 0.1176,
+          "brier_forecast": 0.02008,
+          "brier_reference": 0.01384
+        },
+        {
+          "trading_date": "2026-06-10",
+          "actual_range": 715.18,
+          "expansion_threshold": 1137.93,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.14,
+          "causal_base_rate": 0.1143,
+          "brier_forecast": 0.0196,
+          "brier_reference": 0.01306
+        },
+        {
+          "trading_date": "2026-06-11",
+          "actual_range": 875.59,
+          "expansion_threshold": 1123.51,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.0905,
+          "causal_base_rate": 0.1111,
+          "brier_forecast": 0.00819,
+          "brier_reference": 0.01235
+        },
+        {
+          "trading_date": "2026-06-12",
+          "actual_range": 1154.63,
+          "expansion_threshold": 1116.95,
+          "actual_expanded": true,
+          "p_expansion_forecast": 0.09,
+          "causal_base_rate": 0.1081,
+          "brier_forecast": 0.8281,
+          "brier_reference": 0.79547
+        },
+        {
+          "trading_date": "2026-06-15",
+          "actual_range": 680.63,
+          "expansion_threshold": 1212.06,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.0875,
+          "causal_base_rate": 0.1316,
+          "brier_forecast": 0.00766,
+          "brier_reference": 0.01731
+        },
+        {
+          "trading_date": "2026-06-16",
+          "actual_range": 403.4,
+          "expansion_threshold": 1229.23,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.1121,
+          "causal_base_rate": 0.1282,
+          "brier_forecast": 0.01257,
+          "brier_reference": 0.01644
+        },
+        {
+          "trading_date": "2026-06-17",
+          "actual_range": 450.5,
+          "expansion_threshold": 1219.94,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.1273,
+          "causal_base_rate": 0.125,
+          "brier_forecast": 0.01621,
+          "brier_reference": 0.01562
+        },
+        {
+          "trading_date": "2026-06-18",
+          "actual_range": 539.33,
+          "expansion_threshold": 1217.62,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.1063,
+          "causal_base_rate": 0.122,
+          "brier_forecast": 0.0113,
+          "brier_reference": 0.01487
+        },
+        {
+          "trading_date": "2026-06-19",
+          "actual_range": 431.93,
+          "expansion_threshold": 1127.13,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.1059,
+          "causal_base_rate": 0.119,
+          "brier_forecast": 0.01121,
+          "brier_reference": 0.01417
+        },
+        {
+          "trading_date": "2026-06-22",
+          "actual_range": 317.54,
+          "expansion_threshold": 1111.25,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.1032,
+          "causal_base_rate": 0.1163,
+          "brier_forecast": 0.01065,
+          "brier_reference": 0.01352
+        },
+        {
+          "trading_date": "2026-06-23",
+          "actual_range": 1007.0,
+          "expansion_threshold": 1061.36,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.1146,
+          "causal_base_rate": 0.1136,
+          "brier_forecast": 0.01313,
+          "brier_reference": 0.01291
+        },
+        {
+          "trading_date": "2026-06-24",
+          "actual_range": 1068.78,
+          "expansion_threshold": 1047.13,
+          "actual_expanded": true,
+          "p_expansion_forecast": 0.0983,
+          "causal_base_rate": 0.1111,
+          "brier_forecast": 0.81306,
+          "brier_reference": 0.79012
+        },
+        {
+          "trading_date": "2026-06-25",
+          "actual_range": 810.02,
+          "expansion_threshold": 1076.76,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.098,
+          "causal_base_rate": 0.1304,
+          "brier_forecast": 0.0096,
+          "brier_reference": 0.01701
+        },
+        {
+          "trading_date": "2026-06-29",
+          "actual_range": 631.03,
+          "expansion_threshold": 1088.98,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.1188,
+          "causal_base_rate": 0.1277,
+          "brier_forecast": 0.01411,
+          "brier_reference": 0.0163
+        },
+        {
+          "trading_date": "2026-06-30",
+          "actual_range": 707.97,
+          "expansion_threshold": 1062.81,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.1161,
+          "causal_base_rate": 0.125,
+          "brier_forecast": 0.01348,
+          "brier_reference": 0.01562
+        },
+        {
+          "trading_date": "2026-07-01",
+          "actual_range": 571.71,
+          "expansion_threshold": 1071.62,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.1136,
+          "causal_base_rate": 0.1224,
+          "brier_forecast": 0.0129,
+          "brier_reference": 0.01499
+        },
+        {
+          "trading_date": "2026-07-02",
+          "actual_range": 514.98,
+          "expansion_threshold": 1066.9,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.1111,
+          "causal_base_rate": 0.12,
+          "brier_forecast": 0.01234,
+          "brier_reference": 0.0144
+        },
+        {
+          "trading_date": "2026-07-03",
+          "actual_range": 447.51,
+          "expansion_threshold": 1048.37,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.1102,
+          "causal_base_rate": 0.1176,
+          "brier_forecast": 0.01214,
+          "brier_reference": 0.01384
+        },
+        {
+          "trading_date": "2026-07-06",
+          "actual_range": 518.36,
+          "expansion_threshold": 951.54,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.1092,
+          "causal_base_rate": 0.1154,
+          "brier_forecast": 0.01192,
+          "brier_reference": 0.01331
+        },
+        {
+          "trading_date": "2026-07-07",
+          "actual_range": 494.98,
+          "expansion_threshold": 892.67,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.1062,
+          "causal_base_rate": 0.1132,
+          "brier_forecast": 0.01128,
+          "brier_reference": 0.01282
+        },
+        {
+          "trading_date": "2026-07-08",
+          "actual_range": 1592.15,
+          "expansion_threshold": 882.09,
+          "actual_expanded": true,
+          "p_expansion_forecast": 0.106,
+          "causal_base_rate": 0.1111,
+          "brier_forecast": 0.79924,
+          "brier_reference": 0.79012
+        },
+        {
+          "trading_date": "2026-07-09",
+          "actual_range": 750.51,
+          "expansion_threshold": 1014.84,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.1038,
+          "causal_base_rate": 0.1273,
+          "brier_forecast": 0.01077,
+          "brier_reference": 0.0162
+        },
+        {
+          "trading_date": "2026-07-10",
+          "actual_range": 321.67,
+          "expansion_threshold": 1040.68,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.1216,
+          "causal_base_rate": 0.125,
+          "brier_forecast": 0.01479,
+          "brier_reference": 0.01562
+        },
+        {
+          "trading_date": "2026-07-13",
+          "actual_range": 931.86,
+          "expansion_threshold": 1039.99,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.1009,
+          "causal_base_rate": 0.1228,
+          "brier_forecast": 0.01018,
+          "brier_reference": 0.01508
+        },
+        {
+          "trading_date": "2026-07-14",
+          "actual_range": 401.31,
+          "expansion_threshold": 1079.6,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.117,
+          "causal_base_rate": 0.1207,
+          "brier_forecast": 0.01369,
+          "brier_reference": 0.01457
+        },
+        {
+          "trading_date": "2026-07-15",
+          "actual_range": 663.45,
+          "expansion_threshold": 1042.12,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.1168,
+          "causal_base_rate": 0.1186,
+          "brier_forecast": 0.01364,
+          "brier_reference": 0.01408
+        },
+        {
+          "trading_date": "2026-07-16",
+          "actual_range": 428.38,
+          "expansion_threshold": 1005.93,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.1146,
+          "causal_base_rate": 0.1167,
+          "brier_forecast": 0.01313,
+          "brier_reference": 0.01361
+        },
+        {
+          "trading_date": "2026-07-17",
+          "actual_range": 974.55,
+          "expansion_threshold": 966.88,
+          "actual_expanded": true,
+          "p_expansion_forecast": 0.1125,
+          "causal_base_rate": 0.1148,
+          "brier_forecast": 0.78766,
+          "brier_reference": 0.78366
+        },
+        {
+          "trading_date": "2026-07-20",
+          "actual_range": 783.16,
+          "expansion_threshold": 1007.15,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.1105,
+          "causal_base_rate": 0.129,
+          "brier_forecast": 0.01221,
+          "brier_reference": 0.01665
+        },
+        {
+          "trading_date": "2026-07-21",
+          "actual_range": 415.85,
+          "expansion_threshold": 1013.86,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.1263,
+          "causal_base_rate": 0.127,
+          "brier_forecast": 0.01595,
+          "brier_reference": 0.01612
+        },
+        {
+          "trading_date": "2026-07-22",
+          "actual_range": 743.76,
+          "expansion_threshold": 991.86,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.1241,
+          "causal_base_rate": 0.125,
+          "brier_forecast": 0.0154,
+          "brier_reference": 0.01562
+        },
+        {
+          "trading_date": "2026-07-23",
+          "actual_range": 574.68,
+          "expansion_threshold": 1005.88,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.122,
+          "causal_base_rate": 0.1231,
+          "brier_forecast": 0.01488,
+          "brier_reference": 0.01515
+        },
+        {
+          "trading_date": "2026-07-24",
+          "actual_range": 736.52,
+          "expansion_threshold": 1006.24,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.1199,
+          "causal_base_rate": 0.1212,
+          "brier_forecast": 0.01438,
+          "brier_reference": 0.01469
+        },
+        {
+          "trading_date": "2026-07-27",
+          "actual_range": 383.66,
+          "expansion_threshold": 1028.78,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.1179,
+          "causal_base_rate": 0.1194,
+          "brier_forecast": 0.0139,
+          "brier_reference": 0.01426
+        },
+        {
+          "trading_date": "2026-07-28",
+          "actual_range": 315.71,
+          "expansion_threshold": 1059.03,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.0944,
+          "causal_base_rate": 0.1176,
+          "brier_forecast": 0.00891,
+          "brier_reference": 0.01384
+        },
+        {
+          "trading_date": "2026-07-29",
+          "actual_range": 432.25,
+          "expansion_threshold": 914.25,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.0938,
+          "causal_base_rate": 0.1159,
+          "brier_forecast": 0.0088,
+          "brier_reference": 0.01344
+        },
+        {
+          "trading_date": "2026-07-30",
+          "actual_range": 471.4,
+          "expansion_threshold": 932.92,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.114,
+          "causal_base_rate": 0.1143,
+          "brier_forecast": 0.013,
+          "brier_reference": 0.01306
+        },
+        {
+          "trading_date": "2026-07-31",
+          "actual_range": 462.32,
+          "expansion_threshold": 887.62,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.1138,
+          "causal_base_rate": 0.1127,
+          "brier_forecast": 0.01295,
+          "brier_reference": 0.0127
+        },
+        {
+          "trading_date": "2026-08-03",
+          "actual_range": 397.76,
+          "expansion_threshold": 845.7,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.112,
+          "causal_base_rate": 0.1111,
+          "brier_forecast": 0.01254,
+          "brier_reference": 0.01235
+        },
+        {
+          "trading_date": "2026-08-04",
+          "actual_range": 931.28,
+          "expansion_threshold": 861.2,
+          "actual_expanded": true,
+          "p_expansion_forecast": 0.1103,
+          "causal_base_rate": 0.1096,
+          "brier_forecast": 0.79157,
+          "brier_reference": 0.79283
+        },
+        {
+          "trading_date": "2026-08-05",
+          "actual_range": 769.64,
+          "expansion_threshold": 885.11,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.1086,
+          "causal_base_rate": 0.1216,
+          "brier_forecast": 0.01179,
+          "brier_reference": 0.01479
+        },
+        {
+          "trading_date": "2026-08-06",
+          "actual_range": 292.38,
+          "expansion_threshold": 915.58,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.1221,
+          "causal_base_rate": 0.12,
+          "brier_forecast": 0.01491,
+          "brier_reference": 0.0144
+        },
+        {
+          "trading_date": "2026-08-07",
+          "actual_range": 380.33,
+          "expansion_threshold": 856.19,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.0864,
+          "causal_base_rate": 0.1184,
+          "brier_forecast": 0.00746,
+          "brier_reference": 0.01402
+        },
+        {
+          "trading_date": "2026-08-10",
+          "actual_range": 378.06,
+          "expansion_threshold": 822.51,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.1185,
+          "causal_base_rate": 0.1169,
+          "brier_forecast": 0.01404,
+          "brier_reference": 0.01366
+        },
+        {
+          "trading_date": "2026-08-11",
+          "actual_range": 461.51,
+          "expansion_threshold": 819.14,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.1184,
+          "causal_base_rate": 0.1154,
+          "brier_forecast": 0.01402,
+          "brier_reference": 0.01331
+        },
+        {
+          "trading_date": "2026-08-12",
+          "actual_range": 765.4,
+          "expansion_threshold": 786.68,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.1167,
+          "causal_base_rate": 0.1139,
+          "brier_forecast": 0.01362,
+          "brier_reference": 0.01298
+        },
+        {
+          "trading_date": "2026-08-13",
+          "actual_range": 453.5,
+          "expansion_threshold": 793.83,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.115,
+          "causal_base_rate": 0.1125,
+          "brier_forecast": 0.01323,
+          "brier_reference": 0.01266
+        },
+        {
+          "trading_date": "2026-08-14",
+          "actual_range": 364.54,
+          "expansion_threshold": 755.73,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.1134,
+          "causal_base_rate": 0.1111,
+          "brier_forecast": 0.01286,
+          "brier_reference": 0.01235
+        },
+        {
+          "trading_date": "2026-08-17",
+          "actual_range": 474.93,
+          "expansion_threshold": 713.83,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.1119,
+          "causal_base_rate": 0.1098,
+          "brier_forecast": 0.01252,
+          "brier_reference": 0.01205
+        },
+        {
+          "trading_date": "2026-08-18",
+          "actual_range": 299.25,
+          "expansion_threshold": 728.05,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.1103,
+          "causal_base_rate": 0.1084,
+          "brier_forecast": 0.01217,
+          "brier_reference": 0.01176
+        },
+        {
+          "trading_date": "2026-08-19",
+          "actual_range": 524.92,
+          "expansion_threshold": 686.13,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.0791,
+          "causal_base_rate": 0.1071,
+          "brier_forecast": 0.00626,
+          "brier_reference": 0.01148
+        },
+        {
+          "trading_date": "2026-08-20",
+          "actual_range": 240.11,
+          "expansion_threshold": 690.91,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.1074,
+          "causal_base_rate": 0.1059,
+          "brier_forecast": 0.01153,
+          "brier_reference": 0.01121
+        },
+        {
+          "trading_date": "2026-08-21",
+          "actual_range": 279.81,
+          "expansion_threshold": 712.35,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.075,
+          "causal_base_rate": 0.1047,
+          "brier_forecast": 0.00562,
+          "brier_reference": 0.01095
+        },
+        {
+          "trading_date": "2026-08-24",
+          "actual_range": 587.74,
+          "expansion_threshold": 669.4,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.1059,
+          "causal_base_rate": 0.1034,
+          "brier_forecast": 0.01121,
+          "brier_reference": 0.0107
+        },
+        {
+          "trading_date": "2026-08-25",
+          "actual_range": 461.65,
+          "expansion_threshold": 638.73,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.1058,
+          "causal_base_rate": 0.1023,
+          "brier_forecast": 0.01119,
+          "brier_reference": 0.01046
+        },
+        {
+          "trading_date": "2026-08-26",
+          "actual_range": 441.77,
+          "expansion_threshold": 611.23,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.1045,
+          "causal_base_rate": 0.1011,
+          "brier_forecast": 0.01092,
+          "brier_reference": 0.01023
+        },
+        {
+          "trading_date": "2026-08-27",
+          "actual_range": 606.23,
+          "expansion_threshold": 615.09,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.1031,
+          "causal_base_rate": 0.1,
+          "brier_forecast": 0.01063,
+          "brier_reference": 0.01
+        },
+        {
+          "trading_date": "2026-08-28",
+          "actual_range": 369.75,
+          "expansion_threshold": 632.97,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.1018,
+          "causal_base_rate": 0.0989,
+          "brier_forecast": 0.01036,
+          "brier_reference": 0.00978
+        },
+        {
+          "trading_date": "2026-08-31",
+          "actual_range": 425.95,
+          "expansion_threshold": 632.23,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.1006,
+          "causal_base_rate": 0.0978,
+          "brier_forecast": 0.01012,
+          "brier_reference": 0.00957
+        },
+        {
+          "trading_date": "2026-09-01",
+          "actual_range": 575.75,
+          "expansion_threshold": 630.6,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.0993,
+          "causal_base_rate": 0.0968,
+          "brier_forecast": 0.00986,
+          "brier_reference": 0.00937
+        },
+        {
+          "trading_date": "2026-09-02",
+          "actual_range": 431.83,
+          "expansion_threshold": 613.67,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.0981,
+          "causal_base_rate": 0.0957,
+          "brier_forecast": 0.00962,
+          "brier_reference": 0.00917
+        },
+        {
+          "trading_date": "2026-09-03",
+          "actual_range": 461.56,
+          "expansion_threshold": 625.23,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.097,
+          "causal_base_rate": 0.0947,
+          "brier_forecast": 0.00941,
+          "brier_reference": 0.00898
+        },
+        {
+          "trading_date": "2026-09-04",
+          "actual_range": 353.64,
+          "expansion_threshold": 633.89,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.0958,
+          "causal_base_rate": 0.0938,
+          "brier_forecast": 0.00918,
+          "brier_reference": 0.00879
+        },
+        {
+          "trading_date": "2026-09-07",
+          "actual_range": 506.67,
+          "expansion_threshold": 623.06,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.0685,
+          "causal_base_rate": 0.0928,
+          "brier_forecast": 0.00469,
+          "brier_reference": 0.00861
+        },
+        {
+          "trading_date": "2026-09-08",
+          "actual_range": 458.76,
+          "expansion_threshold": 632.78,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.0936,
+          "causal_base_rate": 0.0918,
+          "brier_forecast": 0.00876,
+          "brier_reference": 0.00843
+        },
+        {
+          "trading_date": "2026-09-09",
+          "actual_range": 422.25,
+          "expansion_threshold": 629.56,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.0935,
+          "causal_base_rate": 0.0909,
+          "brier_forecast": 0.00874,
+          "brier_reference": 0.00826
+        },
+        {
+          "trading_date": "2026-09-10",
+          "actual_range": 312.49,
+          "expansion_threshold": 635.14,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.0925,
+          "causal_base_rate": 0.09,
+          "brier_forecast": 0.00856,
+          "brier_reference": 0.0081
+        },
+        {
+          "trading_date": "2026-09-11",
+          "actual_range": 756.15,
+          "expansion_threshold": 638.06,
+          "actual_expanded": true,
+          "p_expansion_forecast": 0.0648,
+          "causal_base_rate": 0.0891,
+          "brier_forecast": 0.8746,
+          "brier_reference": 0.82972
+        },
+        {
+          "trading_date": "2026-09-15",
+          "actual_range": 1355.97,
+          "expansion_threshold": 653.1,
+          "actual_expanded": true,
+          "p_expansion_forecast": 0.0904,
+          "causal_base_rate": 0.098,
+          "brier_forecast": 0.82737,
+          "brier_reference": 0.81353
+        },
+        {
+          "trading_date": "2026-09-16",
+          "actual_range": 524.53,
+          "expansion_threshold": 732.95,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.0911,
+          "causal_base_rate": 0.1068,
+          "brier_forecast": 0.0083,
+          "brier_reference": 0.01141
+        },
+        {
+          "trading_date": "2026-09-17",
+          "actual_range": 513.61,
+          "expansion_threshold": 738.7,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.1012,
+          "causal_base_rate": 0.1058,
+          "brier_forecast": 0.01024,
+          "brier_reference": 0.01119
+        },
+        {
+          "trading_date": "2026-09-18",
+          "actual_range": 353.37,
+          "expansion_threshold": 730.43,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.1001,
+          "causal_base_rate": 0.1048,
+          "brier_forecast": 0.01002,
+          "brier_reference": 0.01098
+        },
+        {
+          "trading_date": "2026-09-21",
+          "actual_range": 533.22,
+          "expansion_threshold": 728.97,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.099,
+          "causal_base_rate": 0.1038,
+          "brier_forecast": 0.0098,
+          "brier_reference": 0.01077
+        },
+        {
+          "trading_date": "2026-09-22",
+          "actual_range": 615.22,
+          "expansion_threshold": 737.0,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.0979,
+          "causal_base_rate": 0.1028,
+          "brier_forecast": 0.00958,
+          "brier_reference": 0.01057
+        },
+        {
+          "trading_date": "2026-09-23",
+          "actual_range": 373.86,
+          "expansion_threshold": 740.52,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.0969,
+          "causal_base_rate": 0.1019,
+          "brier_forecast": 0.00939,
+          "brier_reference": 0.01037
+        },
+        {
+          "trading_date": "2026-09-24",
+          "actual_range": 798.37,
+          "expansion_threshold": 721.85,
+          "actual_expanded": true,
+          "p_expansion_forecast": 0.0959,
+          "causal_base_rate": 0.1009,
+          "brier_forecast": 0.8174,
+          "brier_reference": 0.80835
+        },
+        {
+          "trading_date": "2026-09-25",
+          "actual_range": 490.28,
+          "expansion_threshold": 791.1,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.0949,
+          "causal_base_rate": 0.1091,
+          "brier_forecast": 0.00901,
+          "brier_reference": 0.0119
+        },
+        {
+          "trading_date": "2026-09-28",
+          "actual_range": 1024.62,
+          "expansion_threshold": 803.3,
+          "actual_expanded": true,
+          "p_expansion_forecast": 0.1042,
+          "causal_base_rate": 0.1081,
+          "brier_forecast": 0.80246,
+          "brier_reference": 0.79547
+        },
+        {
+          "trading_date": "2026-09-29",
+          "actual_range": 620.9,
+          "expansion_threshold": 846.86,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.1031,
+          "causal_base_rate": 0.1161,
+          "brier_forecast": 0.01063,
+          "brier_reference": 0.01347
+        },
+        {
+          "trading_date": "2026-09-30",
+          "actual_range": 695.79,
+          "expansion_threshold": 869.65,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.1122,
+          "causal_base_rate": 0.115,
+          "brier_forecast": 0.01259,
+          "brier_reference": 0.01324
+        },
+        {
+          "trading_date": "2026-10-01",
+          "actual_range": 1280.02,
+          "expansion_threshold": 863.48,
+          "actual_expanded": true,
+          "p_expansion_forecast": 0.111,
+          "causal_base_rate": 0.114,
+          "brier_forecast": 0.79032,
+          "brier_reference": 0.78493
+        },
+        {
+          "trading_date": "2026-10-05",
+          "actual_range": 791.75,
+          "expansion_threshold": 949.87,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.1099,
+          "causal_base_rate": 0.1217,
+          "brier_forecast": 0.01208,
+          "brier_reference": 0.01482
+        },
+        {
+          "trading_date": "2026-10-06",
+          "actual_range": 598.86,
+          "expansion_threshold": 953.04,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.1187,
+          "causal_base_rate": 0.1207,
+          "brier_forecast": 0.01409,
+          "brier_reference": 0.01457
+        },
+        {
+          "trading_date": "2026-10-07",
+          "actual_range": 550.1,
+          "expansion_threshold": 891.9,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.1175,
+          "causal_base_rate": 0.1197,
+          "brier_forecast": 0.01381,
+          "brier_reference": 0.01432
+        },
+        {
+          "trading_date": "2026-10-08",
+          "actual_range": 1366.22,
+          "expansion_threshold": 894.19,
+          "actual_expanded": true,
+          "p_expansion_forecast": 0.1081,
+          "causal_base_rate": 0.1186,
+          "brier_forecast": 0.79549,
+          "brier_reference": 0.77679
+        },
+        {
+          "trading_date": "2026-10-09",
+          "actual_range": 929.71,
+          "expansion_threshold": 970.31,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.1153,
+          "causal_base_rate": 0.1261,
+          "brier_forecast": 0.01329,
+          "brier_reference": 0.01589
+        },
+        {
+          "trading_date": "2026-10-12",
+          "actual_range": 1208.15,
+          "expansion_threshold": 1046.32,
+          "actual_expanded": true,
+          "p_expansion_forecast": 0.1158,
+          "causal_base_rate": 0.125,
+          "brier_forecast": 0.78181,
+          "brier_reference": 0.76562
+        },
+        {
+          "trading_date": "2026-10-13",
+          "actual_range": 1342.11,
+          "expansion_threshold": 1106.58,
+          "actual_expanded": true,
+          "p_expansion_forecast": 0.1147,
+          "causal_base_rate": 0.1322,
+          "brier_forecast": 0.78376,
+          "brier_reference": 0.75302
+        },
+        {
+          "trading_date": "2026-10-14",
+          "actual_range": 616.51,
+          "expansion_threshold": 1171.48,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.1229,
+          "causal_base_rate": 0.1393,
+          "brier_forecast": 0.0151,
+          "brier_reference": 0.01942
+        },
+        {
+          "trading_date": "2026-10-15",
+          "actual_range": 1433.91,
+          "expansion_threshold": 1193.14,
+          "actual_expanded": true,
+          "p_expansion_forecast": 0.1311,
+          "causal_base_rate": 0.1382,
+          "brier_forecast": 0.75499,
+          "brier_reference": 0.74268
+        },
+        {
+          "trading_date": "2026-10-16",
+          "actual_range": 765.79,
+          "expansion_threshold": 1219.01,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.1298,
+          "causal_base_rate": 0.1452,
+          "brier_forecast": 0.01685,
+          "brier_reference": 0.02107
+        },
+        {
+          "trading_date": "2026-10-19",
+          "actual_range": 1141.21,
+          "expansion_threshold": 1248.39,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.1377,
+          "causal_base_rate": 0.144,
+          "brier_forecast": 0.01896,
+          "brier_reference": 0.02074
+        },
+        {
+          "trading_date": "2026-10-21",
+          "actual_range": 1452.74,
+          "expansion_threshold": 1246.25,
+          "actual_expanded": true,
+          "p_expansion_forecast": 0.1365,
+          "causal_base_rate": 0.1429,
+          "brier_forecast": 0.74563,
+          "brier_reference": 0.73469
+        },
+        {
+          "trading_date": "2026-10-22",
+          "actual_range": 715.72,
+          "expansion_threshold": 1309.52,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.1353,
+          "causal_base_rate": 0.1496,
+          "brier_forecast": 0.01831,
+          "brier_reference": 0.02238
+        },
+        {
+          "trading_date": "2026-10-23",
+          "actual_range": 1314.14,
+          "expansion_threshold": 1311.3,
+          "actual_expanded": true,
+          "p_expansion_forecast": 0.1429,
+          "causal_base_rate": 0.1484,
+          "brier_forecast": 0.73462,
+          "brier_reference": 0.72516
+        },
+        {
+          "trading_date": "2026-10-26",
+          "actual_range": 1001.87,
+          "expansion_threshold": 1314.35,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.1417,
+          "causal_base_rate": 0.155,
+          "brier_forecast": 0.02008,
+          "brier_reference": 0.02404
+        },
+        {
+          "trading_date": "2026-10-27",
+          "actual_range": 583.57,
+          "expansion_threshold": 1333.11,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.1491,
+          "causal_base_rate": 0.1538,
+          "brier_forecast": 0.02223,
+          "brier_reference": 0.02367
+        },
+        {
+          "trading_date": "2026-10-28",
+          "actual_range": 921.87,
+          "expansion_threshold": 1325.28,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.1495,
+          "causal_base_rate": 0.1527,
+          "brier_forecast": 0.02235,
+          "brier_reference": 0.02331
+        },
+        {
+          "trading_date": "2026-10-29",
+          "actual_range": 984.26,
+          "expansion_threshold": 1361.27,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.1466,
+          "causal_base_rate": 0.1515,
+          "brier_forecast": 0.02149,
+          "brier_reference": 0.02296
+        },
+        {
+          "trading_date": "2026-10-30",
+          "actual_range": 660.56,
+          "expansion_threshold": 1327.16,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.1465,
+          "causal_base_rate": 0.1504,
+          "brier_forecast": 0.02146,
+          "brier_reference": 0.02261
+        },
+        {
+          "trading_date": "2026-11-02",
+          "actual_range": 578.94,
+          "expansion_threshold": 1278.59,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.1453,
+          "causal_base_rate": 0.1493,
+          "brier_forecast": 0.02111,
+          "brier_reference": 0.02228
+        },
+        {
+          "trading_date": "2026-11-03",
+          "actual_range": 745.92,
+          "expansion_threshold": 1276.24,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.1431,
+          "causal_base_rate": 0.1481,
+          "brier_forecast": 0.02048,
+          "brier_reference": 0.02195
+        },
+        {
+          "trading_date": "2026-11-04",
+          "actual_range": 791.19,
+          "expansion_threshold": 1278.82,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.1429,
+          "causal_base_rate": 0.1471,
+          "brier_forecast": 0.02042,
+          "brier_reference": 0.02163
+        },
+        {
+          "trading_date": "2026-11-05",
+          "actual_range": 949.47,
+          "expansion_threshold": 1294.41,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.1428,
+          "causal_base_rate": 0.146,
+          "brier_forecast": 0.02039,
+          "brier_reference": 0.02131
+        },
+        {
+          "trading_date": "2026-11-06",
+          "actual_range": 1858.27,
+          "expansion_threshold": 1359.28,
+          "actual_expanded": true,
+          "p_expansion_forecast": 0.1416,
+          "causal_base_rate": 0.1449,
+          "brier_forecast": 0.73685,
+          "brier_reference": 0.73115
+        },
+        {
+          "trading_date": "2026-11-09",
+          "actual_range": 820.1,
+          "expansion_threshold": 1452.04,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.1405,
+          "causal_base_rate": 0.1511,
+          "brier_forecast": 0.01974,
+          "brier_reference": 0.02282
+        },
+        {
+          "trading_date": "2026-11-11",
+          "actual_range": 1103.01,
+          "expansion_threshold": 1423.37,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.1474,
+          "causal_base_rate": 0.15,
+          "brier_forecast": 0.02173,
+          "brier_reference": 0.0225
+        },
+        {
+          "trading_date": "2026-11-12",
+          "actual_range": 749.46,
+          "expansion_threshold": 1423.99,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.1462,
+          "causal_base_rate": 0.1489,
+          "brier_forecast": 0.02137,
+          "brier_reference": 0.02218
+        },
+        {
+          "trading_date": "2026-11-13",
+          "actual_range": 590.76,
+          "expansion_threshold": 1433.46,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.1451,
+          "causal_base_rate": 0.1479,
+          "brier_forecast": 0.02105,
+          "brier_reference": 0.02187
+        },
+        {
+          "trading_date": "2026-11-16",
+          "actual_range": 548.83,
+          "expansion_threshold": 1376.73,
+          "actual_expanded": false,
+          "p_expansion_forecast": 0.1381,
+          "causal_base_rate": 0.1469,
+          "brier_forecast": 0.01907,
+          "brier_reference": 0.02157
+        }
+      ]
+    },
+    "baseline": {
+      "coverage_80pct": 0.7752,
+      "mean_width_pts": 647.57,
+      "mean_winkler_score": 1082.38,
+      "nr7_coverage": 0.85,
+      "non_nr7_coverage": 0.7615,
+      "low_atr_coverage": 0.8154,
+      "high_atr_coverage": 0.7344
+    },
+    "conformal": {
+      "coverage_80pct": 0.8682,
+      "mean_width_pts": 834.72,
+      "mean_winkler_score": 1152.18,
+      "width_expansion_ratio": 1.289,
+      "winkler_delta_pts": 69.8,
+      "winkler_delta_pct": 6.45,
+      "nr7_coverage": 0.85,
+      "non_nr7_coverage": 0.8716,
+      "low_atr_coverage": 0.8615,
+      "high_atr_coverage": 0.875,
+      "promoted": true
+    },
+    "winkler_evaluation_insight": "Conformal calibration improves empirical coverage (+6.2% to +9.3%) at the cost of widening interval width (+25.3% to +28.9%). Under the Winkler Interval Score (alpha=0.20), the width penalty slightly exceeds the miss penalty reduction (+4.3% on NIFTY, +6.5% on SENSEX). Conformal calibration is statistically verified for conservative risk containment, while baseline intervals remain width-optimal."
+  }
+}

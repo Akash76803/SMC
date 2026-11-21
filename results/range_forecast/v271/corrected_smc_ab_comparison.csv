@@ -1,0 +1,9 @@
+market,split,strat_a_trades,strat_a_winrate,strat_a_gross_points,strat_a_net_points,strat_a_exp_r_gross,strat_a_exp_r_net,strat_b_trades,strat_b_winrate,strat_b_gross_points,strat_b_net_points,strat_b_exp_r_gross,strat_b_exp_r_net,rejected_trades_count,avoided_losses_count,missed_winners_count,rejection_net_gross_points
+NIFTY,Overall,25,28.0%,144.1,94.1,0.24,0.069,21,23.8%,91.7,49.7,0.101,-0.075,4,2,2,52.4
+NIFTY,Train,16,18.8%,-8.25,-40.25,0.197,0.019,13,15.4%,-36.35,-62.35,0.044,-0.139,3,2,1,28.1
+NIFTY,Validation,2,50.0%,-3.8,-7.8,-0.455,-0.73,2,50.0%,-3.8,-7.8,-0.455,-0.73,0,0,0,0.0
+NIFTY,Holdout,7,42.9%,156.15,142.15,0.536,0.413,6,33.3%,131.85,119.85,0.41,0.284,1,0,1,24.3
+SENSEX,Overall,74,17.6%,-93.32,-537.32,-0.26,-0.438,54,14.8%,-270.31,-594.31,-0.294,-0.471,20,15,5,176.99
+SENSEX,Train,42,14.3%,-461.04,-713.04,-0.38,-0.564,26,11.5%,-487.7,-643.7,-0.419,-0.598,16,13,3,26.66
+SENSEX,Validation,7,28.6%,121.41,79.41,0.216,0.009,5,40.0%,190.81,160.81,0.702,0.484,2,2,0,-69.4
+SENSEX,Holdout,25,20.0%,246.31,96.31,-0.191,-0.352,23,13.0%,26.58,-111.42,-0.369,-0.536,2,0,2,219.73
