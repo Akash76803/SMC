@@ -1,0 +1,16 @@
+{
+  "total_quotes_sampled": 100,
+  "latency_computable": 0,
+  "latency_ms_mean": null,
+  "latency_ms_min": null,
+  "latency_ms_max": null,
+  "timestamp_layer_status": {
+    "exchange_timestamp_ms": "PARTIAL \u2014 present in some quote tape records",
+    "broker_quote_at": "PRESENT as quote_at in tape",
+    "local_recv_at": "PARTIAL \u2014 not always captured separately",
+    "signal_at": "NOT_IN_TAPE \u2014 requires SMC signal event correlation",
+    "sim_exec_at": "NOT_IN_TAPE \u2014 computed as signal_at + 60s"
+  },
+  "recommendation": "Phase 5.1.2 live collection should emit all 5 timestamp fields per record. Current tape has exchange_timestamp_ms in some records but not all. Full 5-layer timestamps require the upgraded angel_dual_stream_v318.py.",
+  "generated_at": "2026-11-21T17:50:48.211926+05:30"
+}

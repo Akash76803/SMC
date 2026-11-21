@@ -1,0 +1,62 @@
+{
+  "timestamp": "2026-11-21T17:50:48.214451+05:30",
+  "release_version": "Phase 5.1.2",
+  "final_decision": "CONDITIONAL_READY_FOR_FORWARD_SHADOW",
+  "summary": "Core correctness items (WebSocket mode, session calendar, fee schedule, lot sizes, timestamp layering, quote quality gates) are verified and implemented. Three non-blocking items deferred: automated holiday detection, automated EOD reconciliation, and cross-restart deduplication checkpoint. Proceed with manual checks for deferred items until automation is added.",
+  "websocket_mode_verified": {
+    "SNAP_QUOTE": 3,
+    "DEPTH": 4,
+    "source": "SmartApi/smartWebSocketV2.py class constants"
+  },
+  "session_calendar_corrected": {
+    "research_entry_window": "09:16\u201315:15 IST",
+    "mis_squareoff_window": "15:15\u201315:20 IST",
+    "closing_auction_window": "15:20\u201315:30 IST",
+    "exchange_close": "15:30 IST"
+  },
+  "timestamp_layers_implemented": [
+    "exchange_timestamp_ms",
+    "broker_quote_at",
+    "local_recv_at",
+    "signal_at",
+    "sim_exec_at"
+  ],
+  "quote_quality_gates": {
+    "stale_quote_max_seconds": 60.0,
+    "spread_max_pct": 0.03,
+    "min_qty_per_side": 1
+  },
+  "fee_schedule_verified": {
+    "stt_sell_rate_from_2026_04_01": 0.0015,
+    "stt_sell_rate_prior": 0.001,
+    "nse_nfo_exchange_txn": 0.000505,
+    "bse_bfo_exchange_txn": 0.0005
+  },
+  "lot_sizes_verified": {
+    "NIFTY": 65,
+    "SENSEX": 20
+  },
+  "deferred_items": [
+    "Automated holiday calendar integration",
+    "Automated EOD reconciliation at 15:15",
+    "Cross-restart quote deduplication checkpoint"
+  ],
+  "safety_constraints": {
+    "orders_enabled": false,
+    "research_only": true,
+    "RANGE_SMC_CONFLUENCE_ENABLED": false,
+    "broker_automatic_execution": "DISABLED"
+  },
+  "deliverables_generated": [
+    "fee_reconciliation.csv",
+    "fee_calculation_example.json",
+    "session_calendar_audit.md",
+    "websocket_mode_verification.md",
+    "quote_latency_report.csv",
+    "latency_analysis_summary.json",
+    "paper_fill_quality_report.md",
+    "forward_shadow_checklist.md",
+    "regression_test_report.md",
+    "final_gate_decision.json"
+  ]
+}

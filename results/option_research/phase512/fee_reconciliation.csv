@@ -1,0 +1,10 @@
+exchange,instrument_type,charge_name,effective_date,rate_pct,rate_description,source,applied_in_code
+NSE-NFO,Options,STT (sell side),2026-04-01,0.15,0.15% on sell turnover,Finance Act 2024-25; NSE circular applicable from 1 Apr 2026,get_stt_rate(); option_research_phase511.py STT_SELL_RATE_POST_APR2026
+NSE-NFO,Options,STT (sell side),2024-10-01 to 2026-03-31,0.1,0.10% on sell turnover (prior rate),Finance Act 2024; NSE circular,get_stt_rate(); option_research_phase511.py STT_SELL_RATE_PRE_APR2026
+NSE-NFO,Options,Exchange Transaction Charge,2024-01-01,0.0505,0.0505% = ₹5.05 per lakh on total turnover,NSE NFO fee schedule (options segment); verified against NSE India website,EXCHANGE_TXN_RATES['NIFTY']=0.000505 in phase511.py
+BSE-BFO,Options,Exchange Transaction Charge,2024-01-01,0.05,0.0500% = ₹5.00 per lakh on total turnover,BSE BFO fee schedule (equity derivatives); BSE India website,EXCHANGE_TXN_RATES['SENSEX']=0.000500 in phase511.py
+ALL,Options,SEBI Turnover Fee,2023-10-01,0.0001,₹10 per crore = 0.0001% on total turnover,SEBI circular SEBI/HO/MRD/DRMNP/CIR/2023/0167; ₹10/crore,SEBI_RATE=0.000001 in phase511.py
+ALL,Options,GST,2017-07-01,18.0,18% on (Brokerage + Exchange Txn Charge + SEBI Fee),GST Act; standard financial services rate,GST_RATE=0.18 in phase511.py
+ALL,Options,Stamp Duty (buy side),2020-07-01,0.003,0.003% on buy turnover,Stamp Duty Act 2020; unified rate across states,STAMP_DUTY_BUY_RATE=0.00003 in phase511.py
+ALL,Options,Brokerage,2024-01-01,0.0,₹20 flat per executed order (₹40 round-trip); not percentage,Angel One flat-fee plan (confirmed),BROKERAGE_FLAT=20.0 per order in phase511.py
+ALL,Options,Slippage (simulation assumption),2026-11-17,0.0,"0.5 premium points per side (buy: +0.5, sell: -0.5); NOT statutory",Conservative research assumption; not an exchange charge,SLIPPAGE_POINTS=0.5 in phase511.py and phase512.py

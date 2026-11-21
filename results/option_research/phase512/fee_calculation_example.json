@@ -1,0 +1,18 @@
+{
+  "market": "SENSEX",
+  "trade_date": "2026-11-17",
+  "num_lots": 1,
+  "lot_size": 20,
+  "qty": 20,
+  "buy_price": 112.5,
+  "sell_price": 110.0,
+  "stt_sell": 3.3,
+  "exchange_txn": 2.225,
+  "sebi_fee": 0.0044,
+  "brokerage": 40.0,
+  "gst": 7.6013,
+  "stamp_duty": 0.0675,
+  "total_cost_inr": 53.1983,
+  "pnl_premium_inr": -50.0,
+  "net_pnl_inr": -103.1983
+}
