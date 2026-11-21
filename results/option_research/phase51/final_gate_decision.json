@@ -1,0 +1,21 @@
+{
+  "timestamp": "2026-11-21T17:29:26.664062+05:30",
+  "release_version": "Phase 5.1.1",
+  "final_gate_decision": "READY_WITH_DATA_LIMITATIONS",
+  "statutory_charges_hardened": true,
+  "stt_rate_post_april_2026": 0.0015,
+  "lot_sizes": {
+    "NIFTY": 65,
+    "SENSEX": 20
+  },
+  "timestamp_causality_verified": true,
+  "future_leakage_prevented": true,
+  "ambiguous_exits_resolved": "UNVERIFIABLE_SAME_BAR_AMBIGUOUS",
+  "session_cutoff_enforced": "EXCLUDED_POST_1515_SESSION_CUTOFF",
+  "safety_constraints": {
+    "orders_enabled": false,
+    "research_only": true,
+    "RANGE_SMC_CONFLUENCE_ENABLED": false,
+    "broker_automatic_execution": "DISABLED"
+  }
+}
