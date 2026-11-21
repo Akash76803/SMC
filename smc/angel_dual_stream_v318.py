@@ -362,6 +362,7 @@ def main() -> int:
         poller.start()
         for s in SYMBOLS:
             paths[s]["live"].parent.mkdir(parents=True,exist_ok=True)
+        totals = {s: {"ticks": 0, "errors": 0} for s in SYMBOLS}
         with paths["NIFTY"]["live"].open("a",encoding="utf-8") as n, \
              paths["SENSEX"]["live"].open("a",encoding="utf-8") as b:
             elapsed = 0
@@ -369,9 +370,9 @@ def main() -> int:
             retry_count = 0
             while not option_stop.is_set() and elapsed < a.seconds:
                 now_ist = datetime.now(timezone.utc).astimezone(IST)
-                is_after_market = (now_ist.hour > 15 or (now_ist.hour == 15 and now_ist.minute >= 30)) and now_ist.hour < 18
+                is_after_market = now_ist.weekday() >= 5 or (now_ist.hour > 15 or (now_ist.hour == 15 and now_ist.minute >= 30))
                 if is_after_market:
-                    print("[DUAL_STREAM] Market hours ended (15:30 IST). Completing session.")
+                    print("[DUAL_STREAM] Market is closed (weekend or after 15:30 IST). Completing session.")
                     break
                 try:
                     remaining = max(10, int(a.seconds - elapsed))
@@ -404,7 +405,7 @@ def main() -> int:
         option_stop.set()
         poller.join(timeout=3)
         now_ist = datetime.now(timezone.utc).astimezone(IST)
-        if now_ist.hour > 15 or (now_ist.hour == 15 and now_ist.minute >= 30):
+        if now_ist.weekday() >= 5 or now_ist.hour > 15 or (now_ist.hour == 15 and now_ist.minute >= 30):
             state("SESSION_CLOSED", "MARKET_HOURS_ENDED_330PM")
         else:
             state("STREAM_STOPPED", "DUAL_STREAM_SESSION_ENDED")
@@ -427,7 +428,7 @@ def main() -> int:
             print("LEARNING_REPORT_UNAVAILABLE_NO_PRODUCTION_CHANGE")
         print("READ_ONLY_FEED_COUNTS: "+json.dumps(totals))
         now_ist = datetime.now(timezone.utc).astimezone(IST)
-        is_after_market = now_ist.hour > 15 or (now_ist.hour == 15 and now_ist.minute >= 30)
+        is_after_market = now_ist.weekday() >= 5 or now_ist.hour > 15 or (now_ist.hour == 15 and now_ist.minute >= 30)
         return 0 if (is_after_market or all(totals[s]["ticks"]>0 and totals[s]["errors"]==0
                         for s in SYMBOLS)) else 1
     except (KeyboardInterrupt,EOFError):
