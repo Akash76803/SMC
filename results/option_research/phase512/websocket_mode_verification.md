@@ -1,6 +1,6 @@
 # WebSocket Mode Verification — Phase 5.1.2
 
-Generated: 2026-11-21T17:50:48.194997+05:30
+Generated: 2026-11-21T18:07:34.815529+05:30
 
 ## SDK Mode Constants (Verified from SmartApi/smartWebSocketV2.py)
 

@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-11-21T17:50:48.214451+05:30",
+  "timestamp": "2026-11-21T18:07:34.835234+05:30",
   "release_version": "Phase 5.1.2",
   "final_decision": "CONDITIONAL_READY_FOR_FORWARD_SHADOW",
   "summary": "Core correctness items (WebSocket mode, session calendar, fee schedule, lot sizes, timestamp layering, quote quality gates) are verified and implemented. Three non-blocking items deferred: automated holiday detection, automated EOD reconciliation, and cross-restart deduplication checkpoint. Proceed with manual checks for deferred items until automation is added.",
