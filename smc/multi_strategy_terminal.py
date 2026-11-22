@@ -411,6 +411,16 @@ STRATEGY_DISPLAY_NAMES = {
 }
 
 
+# Module-level persistent cache to lock Hero Setup execution parameters (Entry, SL, Targets, Bracket)
+# Once an A+ setup is confirmed, its execution bracket and invalidation stop must remain 100% FROZEN.
+# Only Live Market LTP and Unrealized MTM update dynamically with real-time NFO ticks.
+_HERO_SETUP_LOCKS = {}
+
+def clear_hero_locks():
+    """Clear cached hero setup locks (primarily for unit testing and session resets)."""
+    _HERO_SETUP_LOCKS.clear()
+
+
 def build_confirmed_hero_setup(market, bars, quotes, mtf_trend, strategies, *, now=None,
                                quote_history=None, allow_active=True):
     """Build a single, unambiguous confirmed hero setup driven directly by live strategy calculations."""
@@ -572,6 +582,14 @@ def build_confirmed_hero_setup(market, bars, quotes, mtf_trend, strategies, *, n
     atm_row = strikes.get('ATM') if isinstance(strikes, dict) else None
     step = 50 if market == 'NIFTY' else 100
     atm_strike = int(round(index_entry / step) * step)
+    if not atm_row and isinstance(strikes, list):
+        for s in strikes:
+            if isinstance(s, dict) and s.get('strike') == atm_strike:
+                atm_row = s
+                break
+        if not atm_row and strikes and isinstance(strikes[0], dict):
+            atm_row = strikes[0]
+
     strike_val = atm_row.get('strike') if atm_row else atm_strike
 
     matching_q = None
@@ -587,36 +605,72 @@ def build_confirmed_hero_setup(market, bars, quotes, mtf_trend, strategies, *, n
     contract_symbol = (atm_row.get('trading_symbol') if atm_row else None) or (matching_q.get('trading_symbol') if matching_q else None)
     expiry_val = (atm_row.get('expiry') if atm_row else None) or (matching_q.get('expiry') if matching_q else None) or "CURRENT_EXPIRY"
 
-    if atm_row and atm_row.get('premium_entry'):
-        p_entry = float(atm_row['premium_entry'])
-        p_sl = float(atm_row.get('premium_sl') or round(max(0.5, p_entry - 0.5 * index_risk), 1))
-        p_tgt = float(atm_row.get('premium_target') or round(p_entry + 0.5 * index_reward, 1))
-        ltp = p_entry
-    elif matching_q:
+    # Extract Live Market LTP strictly from the latest matching quote tick
+    live_ltp = None
+    if matching_q:
         bid = matching_q.get('bid')
         ask = matching_q.get('ask')
-        ltp_val = (bid + ask) / 2 if (bid and ask) else (ask or bid or matching_q.get('ltp'))
-        p_entry = round(float(ltp_val), 1) if ltp_val else (140.0 if market == 'NIFTY' else 180.0)
-        p_sl = round(max(0.5, p_entry - 0.5 * index_risk), 1)
-        p_tgt = round(p_entry + 0.5 * index_reward, 1)
-        ltp = p_entry
+        raw_ltp = (bid + ask) / 2 if (bid and ask) else (matching_q.get('ltp') or ask or bid)
+        if raw_ltp is not None:
+            live_ltp = round(float(raw_ltp), 1)
+
+    # Establish or retrieve FROZEN execution parameters (Locked to Signal Confirmation)
+    setup_id = sig.get('setup_id') or card.get('setup_id') or f"{market}:{strat_key}:{sig.get('timestamp')}:{strike_val}:{side}"
+    
+    if setup_id in _HERO_SETUP_LOCKS:
+        locked = _HERO_SETUP_LOCKS[setup_id]
+        p_entry = locked['p_entry']
+        p_sl = locked['p_sl']
+        p_tgt = locked['p_tgt']
+        p_risk = locked['p_risk']
+        entry_low = locked['entry_low']
+        entry_high = locked['entry_high']
+        target_1 = locked['target_1']
+        target_2 = locked['target_2']
+        target_3 = locked['target_3']
+        do_not_chase = locked['do_not_chase']
     else:
-        base_prem = 120.0 if market == 'NIFTY' else 180.0
-        p_entry = base_prem
-        p_sl = round(max(0.5, p_entry - 0.5 * index_risk), 1)
-        p_tgt = round(p_entry + 0.5 * index_reward, 1)
-        ltp = base_prem
+        # Determine anchor confirmation premium at setup birth
+        if atm_row and atm_row.get('premium_entry'):
+            p_entry = float(atm_row['premium_entry'])
+            p_sl = float(atm_row.get('premium_sl') or round(max(0.5, p_entry - 0.5 * index_risk), 1))
+            p_tgt = float(atm_row.get('premium_target') or round(p_entry + 0.5 * index_reward, 1))
+        elif live_ltp is not None:
+            p_entry = live_ltp
+            p_sl = round(max(0.5, p_entry - 0.5 * index_risk), 1)
+            p_tgt = round(p_entry + 0.5 * index_reward, 1)
+        else:
+            base_prem = 120.0 if market == 'NIFTY' else 180.0
+            p_entry = base_prem
+            p_sl = round(max(0.5, p_entry - 0.5 * index_risk), 1)
+            p_tgt = round(p_entry + 0.5 * index_reward, 1)
+
+        p_risk = max(3.0 if market == 'NIFTY' else 8.0, round(p_entry - p_sl, 1))
+        entry_low = round(max(0.5, p_entry - 0.15 * p_risk), 1)
+        entry_high = round(p_entry + 0.15 * p_risk, 1)
+        target_1 = round(p_tgt, 1)
+        target_2 = round(p_entry + 1.5 * (p_tgt - p_entry), 1)
+        target_3 = round(p_entry + 2.0 * (p_tgt - p_entry), 1)
+        do_not_chase = round(p_entry + 0.75 * p_risk, 1)
+
+        # Permanently lock parameters for this setup across all future live polling cycles
+        _HERO_SETUP_LOCKS[setup_id] = {
+            'p_entry': p_entry,
+            'p_sl': p_sl,
+            'p_tgt': p_tgt,
+            'p_risk': p_risk,
+            'entry_low': entry_low,
+            'entry_high': entry_high,
+            'target_1': target_1,
+            'target_2': target_2,
+            'target_3': target_3,
+            'do_not_chase': do_not_chase,
+        }
+
+    ltp = live_ltp if live_ltp is not None else p_entry
 
     if not contract_symbol:
         contract_symbol = f"{market} {int(strike_val)} {side}"
-
-    p_risk = max(3.0 if market == 'NIFTY' else 8.0, round(p_entry - p_sl, 1))
-    entry_low = round(max(0.5, p_entry - 0.15 * p_risk), 1)
-    entry_high = round(p_entry + 0.15 * p_risk, 1)
-    target_1 = round(p_tgt, 1)
-    target_2 = round(p_entry + 1.5 * (p_tgt - p_entry), 1)
-    target_3 = round(p_entry + 2.0 * (p_tgt - p_entry), 1)
-    do_not_chase = round(p_entry + 0.75 * p_risk, 1)
 
     now_dt = (now or datetime.now(timezone.utc)).astimezone(IST)
     if now_dt.time() < time(11, 30):

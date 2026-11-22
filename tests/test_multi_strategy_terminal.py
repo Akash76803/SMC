@@ -352,3 +352,71 @@ def test_dispatcher_publishes_single_engine_and_optional_confluence(tmp_path, mo
     badge, = aligned['confluences']
     assert badge['confluence_score'] == 'HIGH'
     assert set(badge['engines']) == {'orb', 'smc_sweep'}
+
+
+def test_hero_setup_entry_bracket_and_sl_stay_frozen_when_ltp_changes():
+    from smc.multi_strategy_terminal import build_confirmed_hero_setup, clear_hero_locks
+    clear_hero_locks()
+
+    bars = [
+        {'open': 25000, 'high': 25050, 'low': 24980, 'close': 25020,
+         'timestamp': '2026-11-20T09:30:00+05:30'}
+    ]
+    card = {
+        'setup_id': 'NIFTY:ORB:BREAKOUT:2026-11-20T09:30:00',
+        'signal': {
+            'setup_id': 'NIFTY:ORB:BREAKOUT:2026-11-20T09:30:00',
+            'timestamp': '2026-11-20T09:30:00+05:30',
+            'direction': 'BULLISH',
+            'entry': 25020.0,
+            'stop_loss': 24990.0,
+            'target': 25080.0,
+        },
+        'strikes': {
+            'ATM': {
+                'strike': 25000,
+                'side': 'CE',
+                'premium_entry': 120.0,
+                'premium_sl': 105.0,
+                'premium_target': 150.0,
+                'trading_symbol': 'NIFTY26NOV25000CE',
+                'expiry': '2026-11-26',
+            }
+        },
+        'outcome': {'status': 'ACTIVE'},
+    }
+    strategies = {'orb': {'cards': [card]}}
+    mtf_trend = {'master_bias': 'BULLISH'}
+
+    # 1. At signal confirmation time, quote LTP is 120.0
+    quotes_t0 = [{'strike': 25000, 'side': 'CE', 'ltp': 120.0, 'bid': 119.5, 'ask': 120.5}]
+    hero_t0 = build_confirmed_hero_setup('NIFTY', bars, quotes_t0, mtf_trend, strategies, now=NOW)
+
+    assert hero_t0 is not None
+    assert hero_t0['ltp'] == 120.0
+    initial_bracket = hero_t0['entry_bracket']
+    initial_sl = hero_t0['stop_loss']
+    initial_t1 = hero_t0['target_1']
+    initial_do_not_chase = hero_t0['do_not_chase']
+
+    # 2. Next tick: Option premium surges to 125.0
+    quotes_t1 = [{'strike': 25000, 'side': 'CE', 'ltp': 125.0, 'bid': 124.5, 'ask': 125.5}]
+    hero_t1 = build_confirmed_hero_setup('NIFTY', bars, quotes_t1, mtf_trend, strategies, now=NOW)
+
+    # LTP updates dynamically
+    assert hero_t1['ltp'] == 125.0
+    # BUT Entry Bracket, Stop Loss, Target, and Do Not Chase MUST REMAIN 100% FROZEN!
+    assert hero_t1['entry_bracket'] == initial_bracket
+    assert hero_t1['stop_loss'] == initial_sl
+    assert hero_t1['target_1'] == initial_t1
+    assert hero_t1['do_not_chase'] == initial_do_not_chase
+
+    # 3. Next tick: Option premium surges to 132.0 (near Target)
+    quotes_t2 = [{'strike': 25000, 'side': 'CE', 'ltp': 132.0, 'bid': 131.5, 'ask': 132.5}]
+    hero_t2 = build_confirmed_hero_setup('NIFTY', bars, quotes_t2, mtf_trend, strategies, now=NOW)
+
+    assert hero_t2['ltp'] == 132.0
+    assert hero_t2['entry_bracket'] == initial_bracket
+    assert hero_t2['stop_loss'] == initial_sl
+    assert hero_t2['target_1'] == initial_t1
+    assert hero_t2['do_not_chase'] == initial_do_not_chase
