@@ -12,5 +12,5 @@
     "sim_exec_at": "NOT_IN_TAPE \u2014 computed as signal_at + 60s"
   },
   "recommendation": "Phase 5.1.2 live collection should emit all 5 timestamp fields per record. Current tape has exchange_timestamp_ms in some records but not all. Full 5-layer timestamps require the upgraded angel_dual_stream_v318.py.",
-  "generated_at": "2026-11-21T18:07:34.829189+05:30"
+  "generated_at": "2026-11-22T15:08:36.153012+05:30"
 }
